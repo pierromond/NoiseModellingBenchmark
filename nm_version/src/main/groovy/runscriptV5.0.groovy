@@ -412,21 +412,29 @@ static def exec(Connection connection, Map input) {
             def json = new JsonSlurper().parse(geojsonFile)
 
             def values = []
+            int nNan = 0
+            double silenceThreshold = -89.0
 
             json.features.each { f ->
                 def val = f.properties?.LAEQ
                 if (val != null) {
-                    values.add( Double.valueOf(val as double))
+                    double laeq = Double.valueOf(val as double)
+                    if (laeq <= silenceThreshold) {
+                        nNan++
+                    } else {
+                        values.add(laeq)
+                    }
                 }
             }
 
-            def mean = values.sum() / values.size()
+            def mean = values ? (values.sum() / values.size()) : 0.0
 
 
 
 
-            def bins = ["<35", "35-40", "40-45", "45-50", "50-55", "55-60", "60-65", "65-70", "70-75", ">75"]
+            def bins = ["<35", "35-40", "40-45", "45-50", "50-55", "55-60", "60-65", "65-70", "70-75", "75-80", ">80", "NaN"]
             def histogram = bins.collectEntries { [it, 0] }
+            histogram["NaN"] = nNan
 
             values.each { v ->
                 if      (v < 35)  histogram["<35"]++
@@ -438,7 +446,8 @@ static def exec(Connection connection, Map input) {
                 else if (v < 65)  histogram["60-65"]++
                 else if (v < 70)  histogram["65-70"]++
                 else if (v < 75)  histogram["70-75"]++
-                else              histogram[">75"]++
+                else if (v < 80)  histogram["75-80"]++
+                else              histogram[">80"]++
             }
 
             DecimalFormat f = new DecimalFormat()
@@ -452,6 +461,8 @@ static def exec(Connection connection, Map input) {
                     timePerRays: timerays,
                     java: System.getProperty("java.version"),
                     runner: "v4-custom",
+                    nNan: nNan,
+                    silenceThreshold: silenceThreshold,
                     histogram: histogram
             ]
                 def outFile = new File("$outputFolder/stats_${version}.json")
@@ -558,6 +569,11 @@ static def exec(Connection connection, Map input) {
             int nbRays = 0
 
             if(redoCompute) {                long startCompute = System.currentTimeMillis()
+
+                if (!(version in ["v5.0.0", "v5.0.1"])) {
+                    throw new IllegalArgumentException("Version non supportee par runscriptV5.0.groovy : ${version}. Ajouter un script dedie dans nm_version/src/main/groovy/ puis un branchement ici.")
+                }
+
                 if(version=="v5.0.0") {
 
                     def scriptFile = new File("nm_version/src/main/groovy/v500Noise_level_from_source.groovy")
@@ -687,20 +703,28 @@ static def exec(Connection connection, Map input) {
             def json = new JsonSlurper().parse(geojsonFile)
 
             def values = []
+            int nNan = 0
+            double silenceThreshold = -89.0
 
             json.features.each { f ->
                 def val = f.properties?.LAEQ
                 def period = f.properties?.PERIOD
                 if (val != null && period=="D") {
-                    values.add( Double.valueOf(val as double))
+                    double laeq = Double.valueOf(val as double)
+                    if (laeq <= silenceThreshold) {
+                        nNan++
+                    } else {
+                        values.add(laeq)
+                    }
                 }
             }
 
-            def mean = values.sum() / values.size()
+            def mean = values ? (values.sum() / values.size()) : 0.0
 
 
-            def bins = ["<35", "35-40", "40-45", "45-50", "50-55", "55-60", "60-65", "65-70", "70-75", ">75"]
+            def bins = ["<35", "35-40", "40-45", "45-50", "50-55", "55-60", "60-65", "65-70", "70-75", "75-80", ">80", "NaN"]
             def histogram = bins.collectEntries { [it, 0] }
+            histogram["NaN"] = nNan
 
             values.each { v ->
                 if      (v < 35)  histogram["<35"]++
@@ -712,7 +736,8 @@ static def exec(Connection connection, Map input) {
                 else if (v < 65)  histogram["60-65"]++
                 else if (v < 70)  histogram["65-70"]++
                 else if (v < 75)  histogram["70-75"]++
-                else              histogram[">75"]++
+                else if (v < 80)  histogram["75-80"]++
+                else              histogram[">80"]++
             }
             DecimalFormat f = new DecimalFormat()
             f.setMaximumFractionDigits(2)
@@ -726,6 +751,8 @@ static def exec(Connection connection, Map input) {
                     timePerRays: timerays,
                     java: System.getProperty("java.version"),
                     runner: "v5-custom",
+                    nNan: nNan,
+                    silenceThreshold: silenceThreshold,
                     histogram: histogram
             ]
 

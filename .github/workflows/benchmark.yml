@@ -15,9 +15,8 @@ on:
     - cron: '0 4 15 * *'
 
 permissions:
-  contents: write
+  contents: read
   pages: write
-  actions: write
   id-token: write
 
 
@@ -134,7 +133,7 @@ jobs:
         run: |
           NM_VERSION="${{ steps.target.outputs.target_version }}"
           REPO="Universite-Gustave-Eiffel/NoiseModelling"
-          CI_WORKFLOW_ID="5665989"
+          CI_WORKFLOW_PATH=".github/workflows/CI.yml"
 
           if [ -z "$GH_TOKEN" ]; then
             echo "GH_PAT absent : récupération d'artifact ignorée."
@@ -142,6 +141,25 @@ jobs:
             echo "artifact_name=" >> $GITHUB_OUTPUT
             exit 0
           fi
+
+          CI_WORKFLOW_ID=$(curl -sS -f \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${REPO}/actions/workflows" | python3 -c "
+          import sys, json
+          for w in json.load(sys.stdin).get('workflows', []):
+              if w.get('path') == '${CI_WORKFLOW_PATH}':
+                  print(w['id']); break
+          " || true)
+
+          if [ -z "$CI_WORKFLOW_ID" ]; then
+            echo "Workflow ${CI_WORKFLOW_PATH} introuvable dans ${REPO} — artifact ignoré."
+            echo "artifact_url=" >> $GITHUB_OUTPUT
+            echo "artifact_name=" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "Workflow CI : ${CI_WORKFLOW_PATH} (id=${CI_WORKFLOW_ID})"
           
               
           LAST_RUN=$(curl -sS -f \
@@ -262,9 +280,6 @@ jobs:
           retention-days: 1
 
 
-      - name: Install jq
-        run: sudo apt-get install -y jq
-
       - name: Update versions.json via GitHub API
         if: steps.detect.outputs.has_new == 'true' && steps.detect.outputs.new_version != ''
         env:
@@ -317,8 +332,35 @@ jobs:
         - name: Checkout repo
           uses: actions/checkout@v4
           with:
-            lfs: true
-  
+            lfs: false
+
+        - name: Compute input cache key
+          id: clisson_key
+          run: echo "key=clisson-${{ hashFiles('input/clisson/**') }}" >> "$GITHUB_OUTPUT"
+
+        - name: Restore Clisson input data
+          id: clisson
+          uses: actions/cache/restore@v4
+          with:
+            path: input/clisson
+            key: ${{ steps.clisson_key.outputs.key }}
+
+        - name: Fetch Clisson LFS data
+          id: clisson_fetch
+          if: steps.clisson.outputs.cache-hit != 'true'
+          run: |
+            git config --local --unset-all lfs.fetchexclude || true
+            git lfs pull --include="input/clisson/**"
+            test "$(stat -c%s input/clisson/clisson/DEM.geojson)" -gt 100000
+
+        - name: Save Clisson input data
+          if: steps.clisson.outputs.cache-hit != 'true' && steps.clisson_fetch.outcome == 'success'
+          continue-on-error: true
+          uses: actions/cache/save@v4
+          with:
+            path: input/clisson
+            key: ${{ steps.clisson_key.outputs.key }}
+
         - name: Set up Java 25
           uses: actions/setup-java@v4
           with:
@@ -330,8 +372,15 @@ jobs:
         - name: Check disk space
           run: df -h
 
+        - name: Restore result for target version
+          id: result
+          uses: actions/cache/restore@v4
+          with:
+            path: output/v${{ needs.check-new-version.outputs.target_version }}
+            key: result-v${{ needs.check-new-version.outputs.target_version }}-${{ needs.check-new-version.outputs.artifact_name }}-${{ hashFiles('benchmark_run.sh', 'versions.json', 'nm_version/**', 'input/clisson/**', '.github/workflows/benchmark.yml') }}
+
         - name: Restore NM binary for target version
-          if: needs.check-new-version.outputs.has_target == 'true'
+          if: steps.result.outputs.cache-hit != 'true'
           uses: actions/download-artifact@v4
           with:
             name: nm-binary-${{ needs.check-new-version.outputs.target_version }}
@@ -339,9 +388,18 @@ jobs:
           continue-on-error: true
 
         - name: Run benchmark for target version
-          if: needs.check-new-version.outputs.has_target == 'true'
+          id: run
+          if: steps.result.outputs.cache-hit != 'true'
           continue-on-error: true
           run: bash -x benchmark_run.sh --version v${{ needs.check-new-version.outputs.target_version }}
+
+        - name: Save result in cache for target version
+          if: steps.result.outputs.cache-hit != 'true' && steps.run.outcome == 'success'
+          continue-on-error: true
+          uses: actions/cache/save@v4
+          with:
+            path: output/v${{ needs.check-new-version.outputs.target_version }}
+            key: result-v${{ needs.check-new-version.outputs.target_version }}-${{ needs.check-new-version.outputs.artifact_name }}-${{ hashFiles('benchmark_run.sh', 'versions.json', 'nm_version/**', 'input/clisson/**', '.github/workflows/benchmark.yml') }}
 
         - name: Show simulation log for target version ${{ needs.check-new-version.outputs.target_version }}
           if: always()
@@ -380,8 +438,35 @@ jobs:
         - name: Checkout repo
           uses: actions/checkout@v4
           with:
-            lfs: true
-  
+            lfs: false
+
+        - name: Compute input cache key
+          id: clisson_key
+          run: echo "key=clisson-${{ hashFiles('input/clisson/**') }}" >> "$GITHUB_OUTPUT"
+
+        - name: Restore Clisson input data
+          id: clisson
+          uses: actions/cache/restore@v4
+          with:
+            path: input/clisson
+            key: ${{ steps.clisson_key.outputs.key }}
+
+        - name: Fetch Clisson LFS data
+          id: clisson_fetch
+          if: steps.clisson.outputs.cache-hit != 'true'
+          run: |
+            git config --local --unset-all lfs.fetchexclude || true
+            git lfs pull --include="input/clisson/**"
+            test "$(stat -c%s input/clisson/clisson/DEM.geojson)" -gt 100000
+
+        - name: Save Clisson input data
+          if: steps.clisson.outputs.cache-hit != 'true' && steps.clisson_fetch.outcome == 'success'
+          continue-on-error: true
+          uses: actions/cache/save@v4
+          with:
+            path: input/clisson
+            key: ${{ steps.clisson_key.outputs.key }}
+
         - name: Set up Java 11
           uses: actions/setup-java@v4
           with:
@@ -402,10 +487,27 @@ jobs:
           with:
             path: input/NoiseModelling_without_gui_${{ matrix.version }}/
             key: nm-binary-${{ matrix.version }}
+
+        - name: Restore result for ${{ matrix.version }}
+          id: result
+          uses: actions/cache/restore@v4
+          with:
+            path: output/${{ matrix.version }}
+            key: result-${{ matrix.version }}-${{ hashFiles('benchmark_run.sh', 'versions.json', 'nm_version/**', 'input/clisson/**', '.github/workflows/benchmark.yml') }}
   
         - name: Run benchmark for ${{ matrix.version }}
+          id: run
+          if: steps.result.outputs.cache-hit != 'true'
           continue-on-error: true
           run: bash -x benchmark_run.sh --version ${{ matrix.version }}
+
+        - name: Save result in cache for ${{ matrix.version }}
+          if: steps.result.outputs.cache-hit != 'true' && steps.run.outcome == 'success'
+          continue-on-error: true
+          uses: actions/cache/save@v4
+          with:
+            path: output/${{ matrix.version }}
+            key: result-${{ matrix.version }}-${{ hashFiles('benchmark_run.sh', 'versions.json', 'nm_version/**', 'input/clisson/**', '.github/workflows/benchmark.yml') }}
   
         - name: Check disk space after run
           if: always()
@@ -450,7 +552,34 @@ jobs:
         - name: Checkout repo
           uses: actions/checkout@v4
           with:
-            lfs: true
+            lfs: false
+
+        - name: Compute input cache key
+          id: clisson_key
+          run: echo "key=clisson-${{ hashFiles('input/clisson/**') }}" >> "$GITHUB_OUTPUT"
+
+        - name: Restore Clisson input data
+          id: clisson
+          uses: actions/cache/restore@v4
+          with:
+            path: input/clisson
+            key: ${{ steps.clisson_key.outputs.key }}
+
+        - name: Fetch Clisson LFS data
+          id: clisson_fetch
+          if: steps.clisson.outputs.cache-hit != 'true'
+          run: |
+            git config --local --unset-all lfs.fetchexclude || true
+            git lfs pull --include="input/clisson/**"
+            test "$(stat -c%s input/clisson/clisson/DEM.geojson)" -gt 100000
+
+        - name: Save Clisson input data
+          if: steps.clisson.outputs.cache-hit != 'true' && steps.clisson_fetch.outcome == 'success'
+          continue-on-error: true
+          uses: actions/cache/save@v4
+          with:
+            path: input/clisson
+            key: ${{ steps.clisson_key.outputs.key }}
 
         - name: Set up Java 25
           uses: actions/setup-java@v4
@@ -467,9 +596,26 @@ jobs:
             path: input/NoiseModelling_without_gui_${{ matrix.version }}/
             key: nm-binary-${{ matrix.version }}
 
+        - name: Restore result for ${{ matrix.version }}
+          id: result
+          uses: actions/cache/restore@v4
+          with:
+            path: output/${{ matrix.version }}
+            key: result-${{ matrix.version }}-${{ hashFiles('benchmark_run.sh', 'versions.json', 'nm_version/**', 'input/clisson/**', '.github/workflows/benchmark.yml') }}
+
         - name: Run benchmark for ${{ matrix.version }}
+          id: run
+          if: steps.result.outputs.cache-hit != 'true'
           continue-on-error: true
           run: bash -x benchmark_run.sh --version ${{ matrix.version }}
+
+        - name: Save result in cache for ${{ matrix.version }}
+          if: steps.result.outputs.cache-hit != 'true' && steps.run.outcome == 'success'
+          continue-on-error: true
+          uses: actions/cache/save@v4
+          with:
+            path: output/${{ matrix.version }}
+            key: result-${{ matrix.version }}-${{ hashFiles('benchmark_run.sh', 'versions.json', 'nm_version/**', 'input/clisson/**', '.github/workflows/benchmark.yml') }}
 
         - name: Check disk space after run
           if: always()
@@ -497,7 +643,34 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          lfs: true
+          lfs: false
+
+      - name: Compute input cache key
+        id: clisson_key
+        run: echo "key=clisson-${{ hashFiles('input/clisson/**') }}" >> "$GITHUB_OUTPUT"
+
+      - name: Restore Clisson input data
+        id: clisson
+        uses: actions/cache/restore@v4
+        with:
+          path: input/clisson
+          key: ${{ steps.clisson_key.outputs.key }}
+
+      - name: Fetch Clisson LFS data
+        id: clisson_fetch
+        if: steps.clisson.outputs.cache-hit != 'true'
+        run: |
+          git config --local --unset-all lfs.fetchexclude || true
+          git lfs pull --include="input/clisson/**"
+          test "$(stat -c%s input/clisson/clisson/DEM.geojson)" -gt 100000
+
+      - name: Save Clisson input data
+        if: steps.clisson.outputs.cache-hit != 'true' && steps.clisson_fetch.outcome == 'success'
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: input/clisson
+          key: ${{ steps.clisson_key.outputs.key }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -522,6 +695,12 @@ jobs:
 
       - name: Generate website
         run: bash benchmark_run.sh --aggregate-only
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Drop template from published site
+        run: rm -f website/template.html
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

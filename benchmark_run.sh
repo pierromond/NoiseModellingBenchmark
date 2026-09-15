@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#set -euo pipefail
+set -eo pipefail
 
 GROOVY_SCRIPT="nm_version/src/main/groovy/runscriptV5.0.groovy"
 GROOVY_SCRIPT_v6="nm_version/src/main/groovy/runscriptV6.0.groovy"
@@ -65,7 +65,7 @@ download_nm_version() {
 find_wps_binary() {
     local nm_dir="$1"
     local bin
-    bin=$(find "$nm_dir" -name "wps_scripts" -type f 2>/dev/null | head -n 1)
+    bin=$(find "$nm_dir" -name "wps_scripts" -type f -print -quit 2>/dev/null)
     if [ -z "$bin" ]; then
         return 1
     fi
@@ -76,7 +76,7 @@ find_wps_binary() {
 find_wps_binary_v6() {
     local nm_dir="$1"
     local bin
-    bin=$(find "$nm_dir" -name "ScriptRunner" -type f 2>/dev/null | head -n 1)
+    bin=$(find "$nm_dir" -name "ScriptRunner" -type f -print -quit 2>/dev/null)
     if [ -z "$bin" ]; then
         return 1
     fi
@@ -136,44 +136,26 @@ run_simulation() {
 }
 
 aggregate_results() {
-    local agg_file="$DATA_DIR/results.json"
-
-    echo "[" > "$agg_file"
-    local first=true
-
-    for version_dir in "$OUTPUT_DIR"/*/; do
-        [ -d "$version_dir" ] || continue
-
-        local version
-        version="$(basename "$version_dir")"
-
-        local stats="$version_dir/stats_${version}.json"
-
-        if [ ! -f "$stats" ]; then
-            continue
-        fi
-
-        if [ "$first" = false ]; then
-            echo "," >> "$agg_file"
-        fi
-
-        python3 - "$version" "$stats" >> "$agg_file" <<'EOF'
+    python3 - "$OUTPUT_DIR" "$DATA_DIR/results.json" <<'PY'
 import json, sys
+from pathlib import Path
 
-version = sys.argv[1]
+out_dir = Path(sys.argv[1])
+results = []
 
-with open(sys.argv[2]) as f:
-    data = json.load(f)
+for version_dir in sorted(out_dir.iterdir()):
+    if not version_dir.is_dir():
+        continue
+    stats = version_dir / f"stats_{version_dir.name}.json"
+    if not stats.exists():
+        continue
+    data = json.loads(stats.read_text())
+    data["version"] = version_dir.name
+    results.append(data)
 
-data["version"] = version
-
-print(json.dumps(data, indent=2))
-EOF
-
-        first=false
-    done
-
-    echo "]" >> "$agg_file"
+Path(sys.argv[2]).write_text(json.dumps(results, indent=2) + "\n")
+print(f"results.json : {len(results)} version(s)")
+PY
 }
 
 
@@ -183,7 +165,6 @@ copy_geojson() {
     declare -A COMMON_LAYERS=(
         ["BUILDINGS.geojson"]="BUILDINGS.geojson"
         ["RECEIVERS.geojson"]="RECEIVERS.geojson"
-        ["DEM.geojson"]="DEM.geojson"
         ["ROADS.geojson"]="ROADS.geojson"
         ["GROUNDS.geojson"]="GROUNDS.geojson"
     )

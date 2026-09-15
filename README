@@ -2,7 +2,8 @@
 
 This code will download:
 
-1. main versions of NoiseModelling
+1. the released versions of NoiseModelling listed in `versions.json`, plus a "head" version
+   (an entry with an empty URL) taken from the NoiseModelling CI artifact
 2. reference input data (Clisson)
 
 Then will run with the same parameters and output the result as a static website and publish it on github pages.
@@ -13,3 +14,21 @@ To generate the static site (linux/macos only):
 bash benchmark_run.sh
 ```
 
+## Layout
+
+| Path | Role |
+|---|---|
+| `versions.json` | source of truth: `version -> release zip URL` (empty URL = head version, Java 25, binary from the CI artifact) |
+| `benchmark.yml` | CI: per-version Java matrix (11 for v4/v5, 25 for v6), head job, website build, Pages deploy |
+| `benchmark_run.sh` | download, simulate, aggregate |
+| `compare_versions.py` | pairwise comparisons (payload capped, silenced receivers excluded as NaN) |
+| `generate_site.py` | builds `website/index.html` from `website/template.html` |
+| `nm_version/src/main/groovy/` | simulation scripts, one per NoiseModelling version when the API changed |
+| `input/clisson/` | reference dataset, stored with Git LFS |
+
+A version is benchmarked with Java 25 when its name starts with `v6`, otherwise with Java 11.
+
+## License
+
+GPL-3.0, see `LICENSE`. The NoiseModelling scripts vendored under `nm_version/src/main/groovy/`
+come from NoiseModelling and are GPL-3 as well.

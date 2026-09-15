@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="dem-url" content="{{DEM_URL}}" />
   <title>NoiseModelling — Benchmark</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet" />
@@ -523,7 +524,6 @@
       animation: pulse 2s ease infinite;
     }
   </style>
-<!-- built: 2026-09-01 10:16 UTC -->
 </head>
 <body>
 
@@ -707,7 +707,7 @@
 const RESULTS_URL = 'data/results.json';
 
 // Color palette per version index
-const PALETTE = ['#00e5ff','#ff6b35','#7fff6b','#f7d716','#c77dff'];
+const PALETTE = ['#00e5ff','#ff6b35','#7fff6b','#f7d716','#c77dff','#ff4081','#00e676','#ff9100','#40c4ff','#ea80fc','#b388ff','#1de9b6'];
 
 
 const ISO_COLORS_BY_LVL = {
@@ -781,7 +781,21 @@ function renderCards(data) {
   if (!data.length) { grid.innerHTML = '<div class="empty">No results found.</div>'; return; }
 
   grid.innerHTML = data.map((row, i) => {
-    const color = PALETTE[i];
+    const color = PALETTE[i % PALETTE.length];
+    const raysRows = (row.nbRays && row.timePerRays) ? `
+          <div class="stat-row">
+            <span class="stat-label">Rays number</span>
+            <span class="stat-value accent3">${row.nbRays}</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Compute time Per Rays</span>
+            <span class="stat-value accent2">${fmt(row.timePerRays)} ms</span>
+          </div>` : '';
+    const silencedRow = row.nNan ? `
+          <div class="stat-row">
+            <span class="stat-label">Silenced receivers (≤ ${row.silenceThreshold ?? -89} dB)</span>
+            <span class="stat-value">${row.nNan.toLocaleString()}</span>
+          </div>` : '';
     return `
       <div class="card" style="--card-accent:${color}">
         <div class="card-version">${row.version}</div>
@@ -797,14 +811,14 @@ function renderCards(data) {
           <div class="stat-row">
             <span class="stat-label">Compute time Per Receiver</span>
             <span class="stat-value accent2">${row.timePerReceive  || '—'} ms</span>
+          </div>${raysRows}${silencedRow}
+          <div class="stat-row">
+            <span class="stat-label">Java</span>
+            <span class="stat-value">${row.java || '—'}</span>
           </div>
           <div class="stat-row">
-            <span class="stat-label">Rays number</span>
-            <span class="stat-value accent3">${row.nbRays  || '—'}</span>
-          </div>
-          <div class="stat-row">
-            <span class="stat-label">Compute time Per Rays</span>
-            <span class="stat-value accent2">${fmt(row.timePerRays)  || '—'} ms</span>
+            <span class="stat-label">Runner</span>
+            <span class="stat-value">${row.runner || '—'}</span>
           </div>
         </div>
       </div>
@@ -818,10 +832,15 @@ function renderCards(data) {
 function renderHeaderMeta(data) {
   const el = document.getElementById('header-meta');
   const date = new Date().toISOString().slice(0, 10);
+  const demUrl = (document.querySelector('meta[name="dem-url"]') || {}).content || '';
+  const demRow = demUrl
+    ? `DEM (652 MB, open data): <a href="${demUrl}" style="color:var(--accent)">download</a><br>`
+    : '';
   el.innerHTML = `
     <b>${data.length}</b> version${data.length > 1 ? 's' : ''} compared<br>
     Input: <b>Clisson, France</b><br>
     Number of Receiver: <b>29411</b><br>
+    ${demRow}
     *Max Error: <b>0.1</b><br>
     Reflexion Order: <b>1</b><br>
     Propagation Distance: <b>300</b><br>
@@ -1109,6 +1128,13 @@ function renderComparisonCard(c, vA, vB) {
   const warn   = c.rmse >= 0.1 && c.rmse < 0.5;
   const badgeColor = stable ? 'var(--accent3)' : warn ? 'var(--accent2)' : '#f44336';
   const verdict = stable ? 'Numerically stable' : warn ? 'Minor differences' : 'Significant differences';
+  const nCompared = (c.n_valid ?? c.n_common);
+  const nCommon   = (c.n_common ?? nCompared);
+  const silencedRow = (c.n_nan_a || c.n_nan_b) ? `
+        <div class="stat-row">
+          <span class="stat-label">Silenced receivers (a / b)</span>
+          <span class="stat-value">${(c.n_nan_a ?? 0).toLocaleString()} / ${(c.n_nan_b ?? 0).toLocaleString()}</span>
+        </div>` : '';
   wrap.innerHTML = `
     <div class="card" style="--card-accent:${badgeColor}">
       <div class="card-version">
@@ -1117,12 +1143,25 @@ function renderComparisonCard(c, vA, vB) {
       </div>
       <div class="card-stats">
         <div class="stat-row">
+          <span class="stat-label">RMSE</span>
+          <span class="stat-value accent2">${fmt(c.rmse)} dB</span>
+        </div>
+        <div class="stat-row">
           <span class="stat-label">Standard deviation</span>
           <span class="stat-value accent2">${fmt(c.std_delta)} dB</span>
         </div>
         <div class="stat-row">
           <span class="stat-label">Mean |delta|</span>
           <span class="stat-value">${fmt(c.mean_delta)} dB</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Max |delta|</span>
+          <span class="stat-value">${fmt(c.max_delta)} dB</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Compared receivers</span>
+          <span class="stat-value">${nCompared.toLocaleString()} / ${nCommon.toLocaleString()}</span>
+        </div>${silencedRow}
       </div>
     </div>`;
 }
@@ -1199,19 +1238,12 @@ function setupPairSelector() {
 // ─────────────────────────────────────────────
 // HISTOGRAM
 // ─────────────────────────────────────────────
-const HISTO_BINS = ['<35','35-40','40-45','45-50','50-55','55-60','60-65','65-70','70-75','>75'];
-const HISTO_COLORS = [
-  '#2196f3','#2196f3','#4caf50','#4caf50','#8bc34a',
-  '#ffeb3b','#ff9800','#f44336','#9c27b0','#9c27b0'
-];
+const HISTO_BINS = ['<35','35-40','40-45','45-50','50-55','55-60','60-65','65-70','70-75','75-80','>80','NaN'];
 
 let histoChart = null;
 
 // Palette par version (une couleur stable par index)
-const VERSION_COLORS = [
-  '#00e5ff','#ff6b35','#7fff6b','#f7d716','#c77dff',
-  '#ff4081','#00e676','#ff9100','#40c4ff','#ea80fc'
-];
+const VERSION_COLORS = PALETTE;
 
 function renderHistogram(data) {
   const ctrl   = document.getElementById('histo-controls');
@@ -1249,7 +1281,7 @@ function renderHistogram(data) {
       const histo  = row.histogram || {};
       const counts = HISTO_BINS.map(b => histo[b] || 0);
       const total  = counts.reduce((a, b) => a + b, 0) || 1;
-      const colorIdx = withHisto.indexOf(row);
+      const colorIdx = Math.max(0, data.findIndex(r => r.version === row.version));
       const color = VERSION_COLORS[colorIdx % VERSION_COLORS.length];
       return {
         label: row.version,
@@ -1313,8 +1345,8 @@ function renderHistogram(data) {
     });
   }
 
-  ctrl.innerHTML = withHisto.map((row, i) => {
-    const color = VERSION_COLORS[i % VERSION_COLORS.length];
+  ctrl.innerHTML = withHisto.map(row => {
+    const color = VERSION_COLORS[Math.max(0, data.findIndex(r => r.version === row.version)) % VERSION_COLORS.length];
     return `<button class="map-btn active" data-version="${row.version}"
       style="border-color:${color};color:${color}">${row.version}</button>`;
   }).join('');
@@ -1392,12 +1424,13 @@ async function renderBoxplot() {
       if (r.ok) {
         const results = await r.json();
         const BIN_MIDS = {'<35':32,'35-40':37.5,'40-45':42.5,'45-50':47.5,
-                          '50-55':52.5,'55-60':57.5,'60-65':62.5,'65-70':67.5,'70-75':72.5,'>75':78};
+                          '50-55':52.5,'55-60':57.5,'60-65':62.5,'65-70':67.5,'70-75':72.5,'75-80':77.5,'>80':82};
         results.forEach(row => {
           if (!row.histogram) return;
           const vals = [];
           Object.entries(row.histogram).forEach(([bin, count]) => {
-            const mid = BIN_MIDS[bin] ?? 50;
+            const mid = BIN_MIDS[bin];
+            if (mid === undefined) return;
             for (let i = 0; i < count; i++) vals.push(mid + (Math.random() - 0.5) * 4);
           });
           if (vals.length) valuesByVersion[row.version] = vals;
@@ -1622,7 +1655,7 @@ function drawScatterForPair(vA, vB, c){
       datasets: [
         {
           type: 'scatter',
-          label: `Receivers (n=${c.n_common.toLocaleString()})`,
+          label: `Receivers (n=${(c.n_valid ?? c.n_common).toLocaleString()})`,
           data: points,
           backgroundColor: 'rgba(255,107,53,0.25)',
           pointRadius: 2,

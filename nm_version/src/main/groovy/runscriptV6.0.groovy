@@ -277,23 +277,31 @@ static def exec(Connection connection, Map input) {
     def json = new JsonSlurper().parse(geojsonFile)
 
     def values = []
+    int nNan = 0
+    double silenceThreshold = -89.0
 
     json.features.each { f ->
         def props = f.get("properties")
         def val = props.get("LAEQ")
         def period = props.get("PERIOD")
         if (val != null && period=="D") {
-            values.add(Double.valueOf(val as double))
+            double laeq = Double.valueOf(val as double)
+            if (laeq <= silenceThreshold) {
+                nNan++
+            } else {
+                values.add(laeq)
+            }
         }
     }
 
-    def mean = values.sum() / values.size()
+    def mean = values ? (values.sum() / values.size()) : 0.0
 
 
 
 
-    def bins = ["<35", "35-40", "40-45", "45-50", "50-55", "55-60", "60-65", "65-70", "70-75", ">75"]
+    def bins = ["<35", "35-40", "40-45", "45-50", "50-55", "55-60", "60-65", "65-70", "70-75", "75-80", ">80", "NaN"]
     def histogram = bins.collectEntries { [it, 0] }
+    histogram["NaN"] = nNan
 
     values.each { v ->
         if      (v < 35)  histogram["<35"]++
@@ -305,7 +313,8 @@ static def exec(Connection connection, Map input) {
         else if (v < 65)  histogram["60-65"]++
         else if (v < 70)  histogram["65-70"]++
         else if (v < 75)  histogram["70-75"]++
-        else              histogram[">75"]++
+        else if (v < 80)  histogram["75-80"]++
+        else              histogram[">80"]++
     }
 
     DecimalFormat f = new DecimalFormat()
@@ -318,6 +327,8 @@ static def exec(Connection connection, Map input) {
             timePerReceive: f.format(time),
             java: System.getProperty("java.version"),
             runner: runner,
+            nNan: nNan,
+            silenceThreshold: silenceThreshold,
             histogram: histogram
     ]
 

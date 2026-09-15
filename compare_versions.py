@@ -9,6 +9,27 @@ ROOT     = Path(__file__).parent
 OUTPUT   = ROOT / "output"
 DATA_DIR = ROOT / "website" / "data"
 SCATTER_MAX_POINTS = 29411
+SILENCE_THRESHOLD  = -89.0
+RNG                = random.Random(42)
+
+
+def clean_laeq(value: float) -> float:
+    value = float(value)
+    return 0.0 if value <= SILENCE_THRESHOLD else value
+
+
+def parse_coords(geometry: dict) -> list:
+    if not geometry:
+        return None
+    gtype = geometry.get("type", "")
+    c = geometry.get("coordinates")
+    if c is None:
+        return None
+    if gtype == "Point":
+        return [round(c[0], 3), round(c[1], 3)]
+    if gtype in ("MultiPoint", "LineString") and c:
+        return [round(c[0][0], 3), round(c[0][1], 3)]
+    return None
 
 
 def load_receivers(version: str) -> dict[str, float]:
@@ -21,54 +42,21 @@ def load_receivers(version: str) -> dict[str, float]:
         data = json.load(f)
 
     receivers = {}
-    skipped = 0
     for feature in data.get("features", []):
-        if version.startswith("v4."):
-            props    = feature.get("properties", {})
-            geometry = feature.get("geometry")
-            laeq = props.get("LAEQ") or props.get("laeq")
-            key  = props.get("IDRECEIVER")
-            if key is None or laeq is None:
-                skipped += 1
-                continue
+        props = feature.get("properties", {})
 
-            coords = None
-            if geometry:
-                gtype = geometry.get("type", "")
-                c = geometry.get("coordinates")
-                if c is not None:
-                    if gtype == "Point":
-                        coords = [round(c[0], 6), round(c[1], 6)]
-                    elif gtype in ("MultiPoint", "LineString") and c:
-                        coords = [round(c[0][0], 6), round(c[0][1], 6)]
+        if not version.startswith("v4.") and props.get("PERIOD", "") != "D":
+            continue
 
+        laeq = props.get("LAEQ") or props.get("laeq")
+        key  = props.get("IDRECEIVER")
+        if key is None or laeq is None:
+            continue
 
-            receivers[key] = {"laeq": float(laeq), "coords": coords}
-
-
-        else:
-            props    = feature.get("properties", {})
-            geometry = feature.get("geometry")
-            period   = props.get("PERIOD", "")
-            if period != "D":
-                continue
-            laeq = props.get("LAEQ") or props.get("laeq")
-            key  = props.get("IDRECEIVER")
-            if key is None or laeq is None:
-                skipped += 1
-                continue
-            coords = None
-            if geometry:
-                gtype = geometry.get("type", "")
-                c = geometry.get("coordinates")
-                if c is not None:
-                    if gtype == "Point":
-                        coords = [round(c[0], 6), round(c[1], 6)]
-                    elif gtype in ("MultiPoint", "LineString") and c:
-                        coords = [round(c[0][0], 6), round(c[0][1], 6)]
-
-
-            receivers[key] = {"laeq": float(laeq), "coords": coords}
+        receivers[key] = {
+            "laeq"  : clean_laeq(laeq),
+            "coords": parse_coords(feature.get("geometry")),
+        }
 
     return receivers
 
@@ -86,15 +74,11 @@ def compare(v_a: str, data_a: dict, v_b: str, data_b: dict) -> dict:
     mean_delta  = sum(deltas) / n
     std_delta  = math.sqrt(sum((d - mean_delta) ** 2 for d in deltas) / n)
 
-    sample_keys = random.sample(common_keys, min(SCATTER_MAX_POINTS, n))
+    sample_keys = RNG.sample(common_keys, min(SCATTER_MAX_POINTS, n))
 
     scatter = []
     for k in sample_keys:
-        if data_a[k]["laeq"] <= -89.00:
-            data_a[k]["laeq"] = 0.00
-        if data_b[k]["laeq"] <= -89.00:
-            data_b[k]["laeq"] = 0.00
-        scatter.append([round(data_a[k]["laeq"],2), round(data_b[k]["laeq"],2)])
+        scatter.append([round(data_a[k]["laeq"], 2), round(data_b[k]["laeq"], 2)])
     deltas_signed = [round(data_b[k]["laeq"] - data_a[k]["laeq"], 2) for k in common_keys]
 
     diff_map = []

@@ -12,4 +12,4 @@ plugins {
 }
 
 rootProject.name = 'NoiseModellingBenchmark'
-include('nm_v5.0')
+include('nm_version')

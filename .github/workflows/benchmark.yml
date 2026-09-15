@@ -27,11 +27,30 @@ concurrency:
 
 jobs:
 
+  versions:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix11: ${{ steps.list.outputs.matrix11 }}
+      matrix25: ${{ steps.list.outputs.matrix25 }}
+    steps:
+      - name: Checkout Benchmark repo
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+
+      - name: Build version matrices from versions.json
+        id: list
+        run: |
+          python3 -c "import json;d=json.load(open('versions.json'));rel=[v for v in sorted(d) if d[v]];print('matrix11=' + json.dumps([v for v in rel if not v.startswith('v6')]));print('matrix25=' + json.dumps([v for v in rel if v.startswith('v6')]))" >> "$GITHUB_OUTPUT"
+          python3 -c "import json;d=json.load(open('versions.json'));print('java11 :', sorted(v for v,url in d.items() if url and not v.startswith('v6')));print('java25 :', sorted(v for v,url in d.items() if url and v.startswith('v6')));print('head (artifact, java25) :', sorted(v for v,url in d.items() if not url))"
+
   check-new-version:
     runs-on: ubuntu-latest
     outputs:
       new_version:  ${{ steps.detect.outputs.new_version }}
       has_new:      ${{ steps.detect.outputs.has_new }}
+      target_version: ${{ steps.target.outputs.target_version }}
+      has_target:     ${{ steps.target.outputs.has_target }}
       artifact_url: ${{ steps.artifact.outputs.artifact_url }}
       artifact_name: ${{ steps.artifact.outputs.artifact_name }}
 
@@ -39,16 +58,18 @@ jobs:
       - name: Checkout Benchmark repo
         uses: actions/checkout@v4
         with:
-          lfs: true
+          lfs: false
           
 
       - name: Detect new NM version from pom.xml
         id: detect
+        env:
+          NM_VERSION_INPUT: ${{ inputs.nm_version }}
         run: |
-          if [ -n "${{ inputs.nm_version }}" ]; then
-            echo "new_version=${{ inputs.nm_version }}" >> $GITHUB_OUTPUT
+          if [ -n "$NM_VERSION_INPUT" ]; then
+            echo "new_version=$NM_VERSION_INPUT" >> $GITHUB_OUTPUT
             echo "has_new=true" >> $GITHUB_OUTPUT
-            echo "Version forcée : v${{ inputs.nm_version }}"
+            echo "Version forcée : v$NM_VERSION_INPUT"
             exit 0
           fi
 
@@ -60,22 +81,22 @@ jobs:
           POM=$(curl -sS -f \
             -H "Authorization: Bearer ${{ secrets.GH_PAT }}" \
             -H "Accept: application/vnd.github.raw" \
-            "https://api.github.com/repos/Universite-Gustave-Eiffel/NoiseModelling/contents/pom.xml?ref=main")
-          
+            "https://api.github.com/repos/Universite-Gustave-Eiffel/NoiseModelling/contents/pom.xml?ref=main" || true)
+
           if [ -z "$POM" ]; then
             echo "Impossible de récupérer pom.xml"
             echo "has_new=false" >> $GITHUB_OUTPUT
             exit 0
           fi
 
-          
+
           LATEST=$(echo "$POM" | grep -m1 '<version>' | \
             sed 's/.*<version>\(.*\)<\/version>.*/\1/' | tr -d '[:space:]')
-          
+
           echo "LATEST=[$LATEST]"
 
-          
-          if grep -q "$LATEST" .github/workflows/benchmark.yml 2>/dev/null; then
+
+          if python3 -c "import json,sys;sys.exit(0 if sys.argv[1] in json.load(open('versions.json')) else 1)" "v$LATEST"; then
             echo "v${LATEST} déjà dans le benchmark."
             echo "has_new=false" >> $GITHUB_OUTPUT
           else
@@ -85,26 +106,56 @@ jobs:
           fi
         
 
+      - name: Resolve target version
+        id: target
+        run: |
+          NEW_VERSION="${{ steps.detect.outputs.new_version }}"
+          HAS_NEW="${{ steps.detect.outputs.has_new }}"
+          if [ "$HAS_NEW" = "true" ] && [ -n "$NEW_VERSION" ]; then
+            TARGET="$NEW_VERSION"
+          else
+            TARGET=$(python3 -c "import json;d=json.load(open('versions.json'));h=sorted(v for v,url in d.items() if not url);print(h[-1][1:] if h else '')")
+          fi
+          if [ -n "$TARGET" ]; then
+            echo "target_version=$TARGET" >> "$GITHUB_OUTPUT"
+            echo "has_target=true" >> "$GITHUB_OUTPUT"
+            echo "Version cible : v$TARGET"
+          else
+            echo "target_version=" >> "$GITHUB_OUTPUT"
+            echo "has_target=false" >> "$GITHUB_OUTPUT"
+            echo "Aucune version cible : aucune entree sans URL dans versions.json."
+          fi
+
       - name: Find artifact from latest run if successful
         id: artifact
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
-        if: steps.detect.outputs.has_new == 'true'
+        if: steps.target.outputs.has_target == 'true'
         run: |
-          NM_VERSION="${{ steps.detect.outputs.new_version }}"
+          NM_VERSION="${{ steps.target.outputs.target_version }}"
           REPO="Universite-Gustave-Eiffel/NoiseModelling"
           CI_WORKFLOW_ID="5665989"
+
+          if [ -z "$GH_TOKEN" ]; then
+            echo "GH_PAT absent : récupération d'artifact ignorée."
+            echo "artifact_url=" >> $GITHUB_OUTPUT
+            echo "artifact_name=" >> $GITHUB_OUTPUT
+            exit 0
+          fi
           
               
           LAST_RUN=$(curl -sS -f \
           -H "Authorization: Bearer $GH_TOKEN" \
           -H "Accept: application/vnd.github+json" \
-          "https://api.github.com/repos/${REPO}/actions/workflows/${CI_WORKFLOW_ID}/runs?branch=main&status=success&per_page=1") 
+          "https://api.github.com/repos/${REPO}/actions/workflows/${CI_WORKFLOW_ID}/runs?branch=main&status=success&per_page=1" || true)
           
 
           RUN_INFO=$(echo "$LAST_RUN" | python3 -c "
           import sys, json
-          runs = json.load(sys.stdin).get('workflow_runs', [])
+          try:
+              runs = json.load(sys.stdin).get('workflow_runs', [])
+          except Exception:
+              runs = []
           if not runs:
               print('NONE'); sys.exit(0)
           r = runs[0]
@@ -130,11 +181,14 @@ jobs:
           ARTIFACTS=$(curl -sS -f \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/Universite-Gustave-Eiffel/NoiseModelling/actions/runs/${RUN_ID}/artifacts")
+            "https://api.github.com/repos/Universite-Gustave-Eiffel/NoiseModelling/actions/runs/${RUN_ID}/artifacts" || true)
 
           ARTIFACT_INFO=$(echo "$ARTIFACTS" | python3 -c "
           import sys, json
-          arts = json.load(sys.stdin)
+          try:
+              arts = json.load(sys.stdin)
+          except Exception:
+              arts = {}
           for a in arts.get('artifacts', []):
               name = a['name']
               if name.startswith('NoiseModelling-'):
@@ -160,9 +214,9 @@ jobs:
           echo "artifact_name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
 
       - name: Download and prepare NM artifact
-        if: steps.detect.outputs.has_new == 'true' && steps.artifact.outputs.artifact_url != ''
+        if: steps.target.outputs.has_target == 'true' && steps.artifact.outputs.artifact_url != ''
         run: |
-          NM_VERSION="${{ steps.detect.outputs.new_version }}"
+          NM_VERSION="${{ steps.target.outputs.target_version }}"
           ARTIFACT_URL="${{ steps.artifact.outputs.artifact_url }}"
 
           mkdir -p input
@@ -200,60 +254,62 @@ jobs:
           ls "input/NoiseModelling_without_gui_v${NM_VERSION}/"
           
       - name: Upload extracted NM binary as artifact
-        if: steps.detect.outputs.has_new == 'true' && steps.artifact.outputs.artifact_url != ''
+        if: steps.target.outputs.has_target == 'true' && steps.artifact.outputs.artifact_url != ''
         uses: actions/upload-artifact@v4
         with:
-          name: nm-binary-${{ steps.detect.outputs.new_version }}
-          path: input/NoiseModelling_without_gui_v${{ steps.detect.outputs.new_version }}/
+          name: nm-binary-${{ steps.target.outputs.target_version }}
+          path: input/NoiseModelling_without_gui_v${{ steps.target.outputs.target_version }}/
           retention-days: 1
 
 
       - name: Install jq
         run: sudo apt-get install -y jq
 
-      - name: Update benchmark.yml via GitHub API
+      - name: Update versions.json via GitHub API
         if: steps.detect.outputs.has_new == 'true' && steps.detect.outputs.new_version != ''
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          NM_VERSION: ${{ steps.detect.outputs.new_version }}
+          BRANCH: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
         run: |
-          NM_VERSION="${{ steps.detect.outputs.new_version }}"
           python3 - "$NM_VERSION" << 'PYEOF'
-          import sys, re
-          version = sys.argv[1]
-          key = f'v{version}'
-          with open('.github/workflows/benchmark.yml') as f:
-              content = f.read()
-          pattern = r'(matrix:\s*\n\s*version:\s*\[)([^\]]*)(\])'
-          match = re.search(pattern, content)
-          if not match:
-              print("Pattern matrix non trouvé")
-              sys.exit(1)
-          if key in match.group(2):
+          import json, sys
+          key = f"v{sys.argv[1]}"
+          path = "versions.json"
+          with open(path) as f:
+              versions = json.load(f)
+          if key in versions:
               print(f"{key} déjà présent")
               sys.exit(0)
-          new_str = match.group(1) + match.group(2).rstrip() + f', {key}' + match.group(3)
-          new_content = content[:match.start()] + new_str + content[match.end():]
-          with open('.github/workflows/benchmark.yml', 'w') as f:
-              f.write(new_content)
-          print(f"{key} ajoutée dans la matrice")
+          versions[key] = ""
+          with open(path, "w") as f:
+              json.dump(versions, f, indent=2, sort_keys=True)
+              f.write("\n")
+          print(f"{key} ajoutée dans versions.json (URL à compléter)")
           PYEOF
-      
-          FILE_SHA=$(curl -s -H "Authorization: Bearer ${{ secrets.GH_PAT }}" \
-            "https://api.github.com/repos/${{ github.repository }}/contents/.github/workflows/benchmark.yml?ref=benchmarkWebsiteGenerator-fixed" | jq -r '.sha')
-      
-          CONTENT_BASE64=$(base64 -w 0 .github/workflows/benchmark.yml | tr -d '\n')
-      
-          curl -X PUT \
-            -H "Authorization: Bearer ${{ secrets.GH_PAT }}" \
+
+          FILE_SHA=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/${REPO}/contents/versions.json?ref=${BRANCH}" | jq -r '.sha')
+
+          CONTENT_BASE64=$(base64 -w 0 versions.json | tr -d '\n')
+
+          curl -sS -X PUT \
+            -H "Authorization: Bearer $GH_TOKEN" \
             -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/${{ github.repository }}/contents/.github/workflows/benchmark.yml" \
+            "https://api.github.com/repos/${REPO}/contents/versions.json" \
             -d "{
               \"message\": \"chore: add NoiseModelling v${NM_VERSION} to benchmark matrix [skip ci]\",
               \"content\": \"${CONTENT_BASE64}\",
               \"sha\": \"${FILE_SHA}\",
-              \"branch\": \"benchmarkWebsiteGenerator-fixed\"
+              \"branch\": \"${BRANCH}\"
             }"
           
   benchmark_new_version:
       needs: check-new-version
+      if: |
+        needs.check-new-version.outputs.has_target == 'true' &&
+        needs.check-new-version.outputs.artifact_url != ''
       runs-on: ubuntu-latest
       timeout-minutes: 300
       steps:
@@ -274,44 +330,44 @@ jobs:
         - name: Check disk space
           run: df -h
 
-        - name: Restore new NM binary from artifact
-          if: |
-            needs.check-new-version.outputs.has_new == 'true' &&
-            needs.check-new-version.outputs.new_version !=''
+        - name: Restore NM binary for target version
+          if: needs.check-new-version.outputs.has_target == 'true'
           uses: actions/download-artifact@v4
           with:
-            name: nm-binary-${{ needs.check-new-version.outputs.new_version }}
-            path: input/NoiseModelling_without_gui_v${{ needs.check-new-version.outputs.new_version }}
+            name: nm-binary-${{ needs.check-new-version.outputs.target_version }}
+            path: input/NoiseModelling_without_gui_v${{ needs.check-new-version.outputs.target_version }}
           continue-on-error: true
-          
-        - name: Run benchmark for new version download
-          if: needs.check-new-version.outputs.has_new == 'true' && needs.check-new-version.outputs.new_version !=''
-          run: bash -x benchmark_run.sh --version v${{ needs.check-new-version.outputs.new_version }}
 
-        - name: Show simulation log for new version ${{ needs.check-new-version.outputs.new_version }}
+        - name: Run benchmark for target version
+          if: needs.check-new-version.outputs.has_target == 'true'
+          continue-on-error: true
+          run: bash -x benchmark_run.sh --version v${{ needs.check-new-version.outputs.target_version }}
+
+        - name: Show simulation log for target version ${{ needs.check-new-version.outputs.target_version }}
           if: always()
           run: |
             find output -name simulation.log -exec sh -c 'echo ==== $1 ====; tail -100 "$1"' _ {} \;
             
-        - name: Upload output for ${{ needs.check-new-version.outputs.new_version }}
+        - name: Upload output for ${{ needs.check-new-version.outputs.target_version }}
           if: always()
           uses: actions/upload-artifact@v4
           with:
-            name: output-v${{ needs.check-new-version.outputs.new_version }}
-            path: output/v${{ needs.check-new-version.outputs.new_version }}
+            name: output-v${{ needs.check-new-version.outputs.target_version }}
+            path: output/v${{ needs.check-new-version.outputs.target_version }}
+            if-no-files-found: ignore
             retention-days: 1
             
   benchmark:
-      needs: check-new-version
+      needs: versions
       runs-on: ubuntu-latest
       timeout-minutes: 300
       strategy:
         fail-fast: false
         matrix:
-          version: [v4.0.0, v4.0.1, v4.0.2, v4.0.4, v4.0.5, v5.0.0, v5.0.1, v6.0.0, v6.0.2-SNAPSHOT]
+          version: ${{ fromJSON(needs.versions.outputs.matrix11) }}
       steps:
         - name: Free disk space
-          uses: jlumbroso/free-disk-space@main
+          uses: jlumbroso/free-disk-space@v1.3.1
           with:
             tool-cache: true
             android: true
@@ -347,17 +403,8 @@ jobs:
             path: input/NoiseModelling_without_gui_${{ matrix.version }}/
             key: nm-binary-${{ matrix.version }}
   
-        - name: Restore artifact-based NM binary
-          if: |
-            needs.check-new-version.outputs.has_new == 'true' &&
-            matrix.version == format('v{0}', needs.check-new-version.outputs.new_version)
-          uses: actions/download-artifact@v4
-          with:
-            name: nm-artifact-${{ needs.check-new-version.outputs.new_version }}
-            path: input/NoiseModelling_without_gui_${{ matrix.version }}/
-          continue-on-error: true
-  
         - name: Run benchmark for ${{ matrix.version }}
+          continue-on-error: true
           run: bash -x benchmark_run.sh --version ${{ matrix.version }}
   
         - name: Check disk space after run
@@ -375,12 +422,76 @@ jobs:
           with:
             name: output-${{ matrix.version }}
             path: output/${{ matrix.version }}/
+            if-no-files-found: ignore
             retention-days: 1
       
 
 
+  benchmark_java25:
+      needs: versions
+      runs-on: ubuntu-latest
+      timeout-minutes: 300
+      strategy:
+        fail-fast: false
+        matrix:
+          version: ${{ fromJSON(needs.versions.outputs.matrix25) }}
+      steps:
+        - name: Free disk space
+          uses: jlumbroso/free-disk-space@v1.3.1
+          with:
+            tool-cache: true
+            android: true
+            dotnet: true
+            haskell: true
+            large-packages: true
+            docker-images: true
+            swap-storage: true
+
+        - name: Checkout repo
+          uses: actions/checkout@v4
+          with:
+            lfs: true
+
+        - name: Set up Java 25
+          uses: actions/setup-java@v4
+          with:
+            distribution: temurin
+            java-version: '25'
+
+        - name: Check disk space
+          run: df -h
+
+        - name: Cache NM binary for ${{ matrix.version }}
+          uses: actions/cache@v4
+          with:
+            path: input/NoiseModelling_without_gui_${{ matrix.version }}/
+            key: nm-binary-${{ matrix.version }}
+
+        - name: Run benchmark for ${{ matrix.version }}
+          continue-on-error: true
+          run: bash -x benchmark_run.sh --version ${{ matrix.version }}
+
+        - name: Check disk space after run
+          if: always()
+          run: df -h && du -sh input/ output/ 2>/dev/null | sort -rh
+
+        - name: Show simulation log
+          if: always()
+          run: |
+            find output -name simulation.log -exec sh -c 'echo ==== $1 ====; tail -100 "$1"' _ {} \;
+
+        - name: Upload output for ${{ matrix.version }}
+          if: always()
+          uses: actions/upload-artifact@v4
+          with:
+            name: output-${{ matrix.version }}
+            path: output/${{ matrix.version }}/
+            if-no-files-found: ignore
+            retention-days: 1
+
   build-website:
-    needs: benchmark
+    needs: [benchmark, benchmark_java25, benchmark_new_version]
+    if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
@@ -403,6 +514,7 @@ jobs:
       - name: Fix artifact folder names
         run: |
           for d in output/output-*; do
+            [ -d "$d" ] || continue
             v=$(basename "$d" | sed 's/^output-//')
             mv "$d" "output/$v"
           done

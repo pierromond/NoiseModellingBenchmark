@@ -183,33 +183,41 @@ static def exec(Connection connection, Map input) {
 
     }
     long elapsed = 0
+    def runner = "v6-generic"
 
     if(redoCompute) {
 
         long startCompute = System.currentTimeMillis()
-        if(version == "v6.0.0"){
 
-                def scriptFile = new File("nm_version/src/main/groovy/v600Noise_level_from_source.groovy")
-                        .getAbsoluteFile()
-        
-                if (!scriptFile.exists()) {
-                    throw new FileNotFoundException("Fichier introuvable : ${scriptFile.absolutePath}")
-                }
-        
-                def customClass = new GroovyClassLoader().parseClass(scriptFile)
-                def customScript = customClass.newInstance()
-                customScript.exec(connection, [
-                        "tableBuilding" : "BUILDINGS",
-                         "tableSources"      : "LW_ROADS",
-                         "tableReceivers"    : "RECEIVERS",
-                         "tableDEM"          : "DEM",
-                         "tableGroundAbs"    : "GROUNDS",
-                         "confReflOrder"     : 1,
-                         "confMaxSrcDist"    : 300,
-                         "confDiffHorizontal": true,
-                         "confMaxError": 0.1,
-                         "confFavorableOccurrencesDefault":'0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25'
-                ])
+        def customScripts = [
+                "v6.0.0": "nm_version/src/main/groovy/v600Noise_level_from_source.groovy"
+        ]
+        def scriptPath = customScripts[version]
+
+        if(scriptPath != null){
+            runner = "v6-custom"
+
+            def scriptFile = new File(scriptPath)
+                    .getAbsoluteFile()
+
+            if (!scriptFile.exists()) {
+                throw new FileNotFoundException("Fichier introuvable : ${scriptFile.absolutePath}")
+            }
+
+            def customClass = new GroovyClassLoader().parseClass(scriptFile)
+            def customScript = customClass.newInstance()
+            customScript.exec(connection, [
+                    "tableBuilding" : "BUILDINGS",
+                    "tableSources"      : "LW_ROADS",
+                    "tableReceivers"    : "RECEIVERS",
+                    "tableDEM"          : "DEM",
+                    "tableGroundAbs"    : "GROUNDS",
+                    "confReflOrder"     : 1,
+                    "confMaxSrcDist"    : 300,
+                    "confDiffHorizontal": true,
+                    "confMaxError": 0.1,
+                    "confFavorableOccurrencesDefault":'0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25'
+            ])
         }
         else{
 
@@ -262,7 +270,7 @@ static def exec(Connection connection, Map input) {
     long seconds = TimeUnit.MILLISECONDS.toSeconds(elapsed)
     String timeString = String.format(Locale.ROOT, "%02d:%02d:%02d", hours, minutes, seconds)
 
-    println("Compuation of $cpt receivers in $timeString ( ${elapsed/cpt} milliseconds per receiver")
+    println("Compuation of $cpt receivers in $timeString ( ${time} milliseconds per receiver")
 
     def geojsonFile = new File("$outputFolder/RECEIVERS_LEVEL.geojson")
 
@@ -308,6 +316,8 @@ static def exec(Connection connection, Map input) {
             mean: mean,
             time: timeString,
             timePerReceive: f.format(time),
+            java: System.getProperty("java.version"),
+            runner: runner,
             histogram: histogram
     ]
 

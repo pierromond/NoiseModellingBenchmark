@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import os, sys, json, shutil, subprocess
+import os, re, sys, json, shutil, subprocess
 from pathlib import Path
 from datetime import datetime
 
@@ -13,9 +13,9 @@ TEMPLATE  = ROOT / "website" / "index.html"
 def patch_build_date(html_path):
     content = html_path.read_text()
     tag = f"<!-- built: {datetime.utcnow().strftime('%Y-%m-%d %H:%M')} UTC -->"
-    if "<!-- built:" not in content:
-        content = content.replace("</head>", f"{tag}\n</head>", 1)
-        html_path.write_text(content)
+    content = re.sub(r"<!-- built:.*?-->\n?", "", content)
+    content = content.replace("</head>", f"{tag}\n</head>", 1)
+    html_path.write_text(content)
 
 def main():
 

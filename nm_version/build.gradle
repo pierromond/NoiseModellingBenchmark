@@ -19,10 +19,6 @@ repositories {
     mavenCentral()
 }
 
-dependencies {
-    implementation(fileTree('../input/scriptrunnerv5.0/lib'))
-}
-
 // Apply a specific Java toolchain to ease working on different environments.
 java {
     toolchain {

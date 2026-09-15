@@ -4,6 +4,7 @@
 output/
 target/
 build/
+website/data/
 
 
 # Ignore Gradle project-specific cache directory

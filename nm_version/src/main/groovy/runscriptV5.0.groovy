@@ -405,7 +405,7 @@ static def exec(Connection connection, Map input) {
             long seconds = TimeUnit.MILLISECONDS.toSeconds(elapsed)
             String timeString = String.format(Locale.ROOT, "%02d:%02d:%02d", hours, minutes, seconds)
 
-            println("Compuation of $cpt receivers in $timeString ( ${elapsed/cpt} milliseconds per receiver")
+            println("Compuation of $cpt receivers in $timeString ( ${time} milliseconds per receiver")
 
             def geojsonFile = new File("$outputFolder/RECEIVERS_LEVEL.geojson")
 
@@ -450,6 +450,8 @@ static def exec(Connection connection, Map input) {
                     timePerReceive: f.format(time),
                     nbRays : nbRays,
                     timePerRays: timerays,
+                    java: System.getProperty("java.version"),
+                    runner: "v4-custom",
                     histogram: histogram
             ]
                 def outFile = new File("$outputFolder/stats_${version}.json")
@@ -678,7 +680,7 @@ static def exec(Connection connection, Map input) {
             long seconds = TimeUnit.MILLISECONDS.toSeconds(elapsed)
             String timeString = String.format(Locale.ROOT, "%02d:%02d:%02d", hours, minutes, seconds)
 
-            println("Compuation of $cpt receivers in $timeString ( ${elapsed/cpt} milliseconds per receiver")
+            println("Compuation of $cpt receivers in $timeString ( ${time} milliseconds per receiver")
 
             def geojsonFile = new File("$outputFolder/RECEIVERS_LEVEL.geojson")
 
@@ -722,6 +724,8 @@ static def exec(Connection connection, Map input) {
                     timePerReceive: f.format(time),
                     nbRays : nbRays,
                     timePerRays: timerays,
+                    java: System.getProperty("java.version"),
+                    runner: "v5-custom",
                     histogram: histogram
             ]
 

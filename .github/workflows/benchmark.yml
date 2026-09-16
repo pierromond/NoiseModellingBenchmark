@@ -282,23 +282,6 @@ jobs:
           unzip -q "input/NoiseModelling_v${NM_VERSION}_artifact.zip" \
             -d "input/NoiseModelling_without_gui_v${NM_VERSION}" || true
             
-          echo "Structure extraite before tmp :"
-          ls "input/NoiseModelling_without_gui_v${NM_VERSION}/"
-
-          INNER_ZIP=$(find "input/NoiseModelling_without_gui_v${NM_VERSION}" \
-            -name "*.zip" | head -n 1)
-          echo " in zipp $INNER_ZIP"
-
-          #if [ -n "$INNER_ZIP" ]; then
-          #  echo "Zip interne trouvé : $INNER_ZIP"
-           # mkdir -p "input/NoiseModelling_without_gui_v${NM_VERSION}"
-           # unzip -q "$INNER_ZIP" -d "input/NoiseModelling_without_gui_v${NM_VERSION}"
-          #else
-          #  echo "Pas de zip interne — l'artifact est directement les fichiers NM"
-          #  mv "input/NoiseModelling_without_gui_v${NM_VERSION}_tmp" \
-          #     "input/NoiseModelling_without_gui_v${NM_VERSION}"
-          # fi
-
           echo "Structure extraite :"
           ls "input/NoiseModelling_without_gui_v${NM_VERSION}/"
           
@@ -413,7 +396,7 @@ jobs:
           uses: actions/cache/restore@v4
           with:
             path: output/v${{ needs.check-new-version.outputs.target_version }}
-            key: result-${{ env.JAVA_TAG }}-v${{ needs.check-new-version.outputs.target_version }}-${{ needs.check-new-version.outputs.artifact_name }}-${{ hashFiles('benchmark_run.sh', 'versions.json', 'nm_version/**', 'input/clisson/**') }}
+            key: result-${{ env.JAVA_TAG }}-v${{ needs.check-new-version.outputs.target_version }}-${{ needs.check-new-version.outputs.artifact_name }}-${{ hashFiles('benchmark_run.sh', 'versions.json', 'nm_version/src/main/groovy/**', 'input/clisson/**') }}
 
         - name: Restore NM binary for target version
           if: steps.result.outputs.cache-hit != 'true'
@@ -435,7 +418,7 @@ jobs:
           uses: actions/cache/save@v4
           with:
             path: output/v${{ needs.check-new-version.outputs.target_version }}
-            key: result-${{ env.JAVA_TAG }}-v${{ needs.check-new-version.outputs.target_version }}-${{ needs.check-new-version.outputs.artifact_name }}-${{ hashFiles('benchmark_run.sh', 'versions.json', 'nm_version/**', 'input/clisson/**') }}
+            key: result-${{ env.JAVA_TAG }}-v${{ needs.check-new-version.outputs.target_version }}-${{ needs.check-new-version.outputs.artifact_name }}-${{ hashFiles('benchmark_run.sh', 'versions.json', 'nm_version/src/main/groovy/**', 'input/clisson/**') }}
 
         - name: Show simulation log for target version ${{ needs.check-new-version.outputs.target_version }}
           if: always()
@@ -514,12 +497,6 @@ jobs:
         - name: Check disk space
           run: df -h
   
-        - name: Check LW_ROADS.geojson
-          run: |
-            echo "File info:"
-            file input/clisson/clisson/LW_ROADS.geojson
-            echo "First lines:"
-            head -5 input/clisson/clisson/LW_ROADS.geojson
         - name: Cache NM binary for ${{ matrix.version }}
           uses: actions/cache@v4
           with:
@@ -531,7 +508,7 @@ jobs:
           uses: actions/cache/restore@v4
           with:
             path: output/${{ matrix.version }}
-            key: result-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ hashFiles('benchmark_run.sh', 'versions.json', 'nm_version/**', 'input/clisson/**') }}
+            key: result-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ hashFiles('benchmark_run.sh', 'versions.json', 'nm_version/src/main/groovy/**', 'input/clisson/**') }}
   
         - name: Run benchmark for ${{ matrix.version }}
           id: run
@@ -545,7 +522,7 @@ jobs:
           uses: actions/cache/save@v4
           with:
             path: output/${{ matrix.version }}
-            key: result-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ hashFiles('benchmark_run.sh', 'versions.json', 'nm_version/**', 'input/clisson/**') }}
+            key: result-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ hashFiles('benchmark_run.sh', 'versions.json', 'nm_version/src/main/groovy/**', 'input/clisson/**') }}
   
         - name: Check disk space after run
           if: always()
@@ -641,7 +618,7 @@ jobs:
           uses: actions/cache/restore@v4
           with:
             path: output/${{ matrix.version }}
-            key: result-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ hashFiles('benchmark_run.sh', 'versions.json', 'nm_version/**', 'input/clisson/**') }}
+            key: result-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ hashFiles('benchmark_run.sh', 'versions.json', 'nm_version/src/main/groovy/**', 'input/clisson/**') }}
 
         - name: Run benchmark for ${{ matrix.version }}
           id: run
@@ -655,7 +632,7 @@ jobs:
           uses: actions/cache/save@v4
           with:
             path: output/${{ matrix.version }}
-            key: result-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ hashFiles('benchmark_run.sh', 'versions.json', 'nm_version/**', 'input/clisson/**') }}
+            key: result-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ hashFiles('benchmark_run.sh', 'versions.json', 'nm_version/src/main/groovy/**', 'input/clisson/**') }}
 
         - name: Check disk space after run
           if: always()

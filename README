@@ -1,34 +1,48 @@
-# NoiseModelling Benchmark website generator
+# NoiseModelling Benchmark
 
-This code will download:
+Compares several NoiseModelling versions on the same dataset (Clisson, France) and publishes the results as a
+static website on GitHub Pages: <https://universite-gustave-eiffel.github.io/NoiseModellingBenchmark/>
 
-1. the released versions of NoiseModelling listed in `versions.json`, plus a "head" version
-   (an entry with an empty URL) taken from the NoiseModelling CI artifact
-2. reference input data (Clisson)
+## Where is what
 
-Then will run with the same parameters and output the result as a static website and publish it on github pages.
+| Path | What it does |
+|---|---|
+| `versions.json` | the list of versions to compare: `version -> release zip URL`. An **empty URL** marks the "head" version, taken from the NoiseModelling CI binary |
+| `benchmark_run.sh` | the driver: download the binary, run the simulation, aggregate the results |
+| `compare_versions.py` | builds the pairwise comparisons (`comparisons.json`) |
+| `generate_site.py` | builds `website/index.html` from `website/template.html` and the JSON files |
+| `website/template.html` | the page structure (HTML only) |
+| `website/app.js` | all the page JavaScript |
+| `website/index.css` | all the page CSS |
+| `website/data/` | **generated, not in git**: `results.json`, `comparisons.json`, `settings.json`, `build.json`, and one folder of map layers per version |
+| `nm_version/src/main/groovy/` | the simulation scripts launched by NoiseModelling: `runscriptV5.0.groovy`, `runscriptV6.0.groovy`, plus one script per version when the API changed |
+| `input/clisson/` | the reference dataset (Git LFS) |
+| `.github/workflows/benchmark.yml` | the CI: one job matrix per Java version, the "head" job, the website build, the Pages deploy |
+| `LICENSE` | GPL-3.0 |
 
-To generate the static site (linux/macos only):
+## How it works
+
+1. `benchmark_run.sh --version v5.0.1` downloads that release, then NoiseModelling's ScriptRunner runs
+   `nm_version/src/main/groovy/runscriptV5.0.groovy` on `input/clisson/`; results land in `output/v5.0.1/`.
+2. `benchmark_run.sh --aggregate-only` turns `output/*/` into `website/data/` and computes the comparisons.
+3. The CI does 1 and 2 for every version of `versions.json`, then publishes `website/` on GitHub Pages.
+
+## Run it locally
 
 ```bash
-bash benchmark_run.sh
+bash benchmark_run.sh --version v5.0.1   # one version
+bash benchmark_run.sh                    # every version of versions.json (skips the head)
+bash benchmark_run.sh --aggregate-only   # only rebuild the site from output/
 ```
 
-## Layout
+Needs Python 3, git-lfs (for `input/clisson/`) and Java 11 for v4/v5 or Java 25 for v6.
+The NoiseModelling binary is downloaded automatically from the release URL in `versions.json`.
 
-| Path | Role |
-|---|---|
-| `versions.json` | source of truth: `version -> release zip URL` (empty URL = head version, Java 25, binary from the CI artifact) |
-| `benchmark.yml` | CI: per-version Java matrix (11 for v4/v5, 25 for v6), head job, website build, Pages deploy |
-| `benchmark_run.sh` | download, simulate, aggregate |
-| `compare_versions.py` | pairwise comparisons (payload capped, silenced receivers excluded as NaN) |
-| `generate_site.py` | builds `website/index.html` from `website/template.html` |
-| `nm_version/src/main/groovy/` | simulation scripts, one per NoiseModelling version when the API changed |
-| `input/clisson/` | reference dataset, stored with Git LFS |
+## Rules that keep the results comparable
 
-A version is benchmarked with Java 25 when its name starts with `v6`, otherwise with Java 11.
-
-## License
-
-GPL-3.0, see `LICENSE`. The NoiseModelling scripts vendored under `nm_version/src/main/groovy/`
-come from NoiseModelling and are GPL-3 as well.
+- A version runs with **Java 25** when its name starts with `v6`, with **Java 11** otherwise.
+- Levels ≤ **-89 dB** are treated as `NaN`: excluded from means, histograms and comparisons (they appear as a
+  `NaN` column in the histogram).
+- Keep **one single entry without URL** in `versions.json`: it is the "head" version, built by the
+  NoiseModelling CI (on a fork this needs the optional `GH_PAT` secret).
+- Do not modify `input/clisson/`: published results would no longer be comparable.

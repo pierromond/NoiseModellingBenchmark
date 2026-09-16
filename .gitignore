@@ -13,3 +13,4 @@ website/index.html
 
 # Ignore Gradle build output directory
 build
+__pycache__/

@@ -83,6 +83,12 @@ static def exec(Connection connection, Map input) {
 
     long maxUsedMemory = 0
 
+    long tStep = System.currentTimeMillis()
+    def logPhase = { String name ->
+        println("PHASE ${name}: ${(System.currentTimeMillis() - tStep) / 1000} s")
+        tStep = System.currentTimeMillis()
+    }
+
     if (!JDBCUtilities.tableExists(connection, "BUILDINGS")) {
         new Import_File().exec(connection,
                 ["pathFile" : "input/clisson/clisson/BUILDINGS.geojson",
@@ -125,6 +131,8 @@ static def exec(Connection connection, Map input) {
                  "inputSRID": "2154",
                  "tableName": "TRIANGLES"])
     }
+
+    logPhase("imports")
 
     if (redoDelaunayGrid) {
         sql.execute("DROP TABLE RECEIVERS IF EXISTS")
@@ -182,6 +190,8 @@ static def exec(Connection connection, Map input) {
                  "tableToExport": "LW_ROADS_LW"])
 
     }
+    logPhase("preparation")
+
     long elapsed = 0
     def runner = "v6-generic"
 
@@ -244,6 +254,8 @@ static def exec(Connection connection, Map input) {
 
     }
 
+    logPhase("compute")
+
     new Create_Isosurface().exec(connection,
             ["resultTable": "RECEIVERS_LEVEL",
              "keepTriangles": false,
@@ -256,6 +268,8 @@ static def exec(Connection connection, Map input) {
     new Export_Table().exec(connection,
             ["exportPath"   : "$outputFolder/ISO_CONTOUR.geojson",
              "tableToExport": "KEPLERGL"])
+
+    logPhase("isosurface+export")
 
     threadDump(true, true)
 

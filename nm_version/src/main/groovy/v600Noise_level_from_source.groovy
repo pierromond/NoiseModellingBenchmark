@@ -38,6 +38,9 @@ import java.sql.Connection
 import java.sql.SQLException
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
+import org.noise_planet.noisemodelling.pathfinder.utils.profiler.ProfilerThread
+import org.noise_planet.noisemodelling.pathfinder.utils.profiler.ReceiverStatsMetric
+import org.noise_planet.noisemodelling.pathfinder.utils.profiler.JVMMemoryMetric
 
 title = 'Computes the propagation from the sounds sources to the receivers'
 description = '&#10145;&#65039; Computes the propagation from the sounds sources to the receivers location using the noise emission table.' +
@@ -520,10 +523,17 @@ def exec(Connection connection, Map input, ProgressVisitor progress) {
     pointNoiseMap.setThreadCount(n_thread)
 
 
+    ProfilerThread profilerThread = null
+    Thread profilerRunner = null
     if(recordProfile) {
-        LocalDateTime now = LocalDateTime.now()
-        pointNoiseMap.noiseMapDatabaseParameters.CSVProfilerOutputPath = new File("output/v6.0.0/profile.csv")
-        pointNoiseMap.noiseMapDatabaseParameters.CSVProfilerWriteInterval = 120 // delay write csv line in seconds
+        profilerThread = new ProfilerThread(new File("output/v6.0.0/profile.csv"))
+        profilerThread.addMetric(new JVMMemoryMetric())
+        profilerThread.addMetric(new ReceiverStatsMetric())
+        profilerThread.setWriteInterval(120)
+        profilerThread.setFlushInterval(120)
+        pointNoiseMap.setProfilerThread(profilerThread)
+        profilerRunner = new Thread(profilerThread)
+        profilerRunner.start()
     }
 
     // Do not propagate for low emission or far away sources
@@ -536,6 +546,12 @@ def exec(Connection connection, Map input, ProgressVisitor progress) {
     logger.info("Start calculation... ")
 
     pointNoiseMap.run(connection, progress)
+    if(profilerThread != null) {
+        profilerThread.stop()
+        if (profilerRunner != null) {
+            profilerRunner.join(3000)
+        }
+    }
 
     long elapsed = System.currentTimeMillis() - startCompute;
     long hours = TimeUnit.MILLISECONDS.toHours(elapsed)

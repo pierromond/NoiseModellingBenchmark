@@ -189,7 +189,7 @@ static def exec(Connection connection, Map input) {
                         def lines = csvFile.readLines()
                         if (lines.size() >= 1) {
                             def headers = lines[0].split(',')
-                            def raysIdx = headers.findIndexOf { it.trim() == 'receiver_median_rays' }
+                            def raysIdx = headers.findIndexOf { it.trim() in ['receiver_median_rays', 'receiver_median_profiles_count'] }
                             if (raysIdx >= 0) {
                                 def lastLine = lines[lines.size() - 1].split(',')
                                 if (lastLine.size() > raysIdx) {
@@ -229,7 +229,7 @@ static def exec(Connection connection, Map input) {
                         def lines = csvFile.readLines()
                         if (lines.size() >= 1) {
                             def headers = lines[0].split(',')
-                            def raysIdx = headers.findIndexOf { it.trim() == 'receiver_median_rays' }
+                            def raysIdx = headers.findIndexOf { it.trim() in ['receiver_median_rays', 'receiver_median_profiles_count'] }
                             if (raysIdx >= 0) {
                                 def lastLine = lines[lines.size() - 1].split(',')
                                 if (lastLine.size() > raysIdx) {
@@ -269,7 +269,7 @@ static def exec(Connection connection, Map input) {
                         def lines = csvFile.readLines()
                         if (lines.size() >= 1) {
                             def headers = lines[0].split(',')
-                            def raysIdx = headers.findIndexOf { it.trim() == 'receiver_median_rays' }
+                            def raysIdx = headers.findIndexOf { it.trim() in ['receiver_median_rays', 'receiver_median_profiles_count'] }
                             if (raysIdx >= 0) {
                                 def lastLine = lines[lines.size() - 1].split(',')
                                 if (lastLine.size() > raysIdx) {
@@ -310,7 +310,7 @@ static def exec(Connection connection, Map input) {
                         def lines = csvFile.readLines()
                         if (lines.size() >= 1) {
                             def headers = lines[0].split(',')
-                            def raysIdx = headers.findIndexOf { it.trim() == 'receiver_median_rays' }
+                            def raysIdx = headers.findIndexOf { it.trim() in ['receiver_median_rays', 'receiver_median_profiles_count'] }
                             if (raysIdx >= 0) {
                                 def lastLine = lines[lines.size() - 1].split(',')
                                 if (lastLine.size() > raysIdx) {
@@ -351,7 +351,7 @@ static def exec(Connection connection, Map input) {
                         def lines = csvFile.readLines()
                         if (lines.size() >= 1) {
                             def headers = lines[0].split(',')
-                            def raysIdx = headers.findIndexOf { it.trim() == 'receiver_median_rays' }
+                            def raysIdx = headers.findIndexOf { it.trim() in ['receiver_median_rays', 'receiver_median_profiles_count'] }
                             if (raysIdx >= 0) {
                                 def lastLine = lines[lines.size() - 1].split(',')
                                 if (lastLine.size() > raysIdx) {
@@ -604,7 +604,7 @@ static def exec(Connection connection, Map input) {
                         def lines = csvFile.readLines()
                         if (lines.size() >=1) {
                             def headers = lines[0].split(',')
-                            def raysIdx = headers.findIndexOf { it.trim() == 'receiver_median_rays' }
+                            def raysIdx = headers.findIndexOf { it.trim() in ['receiver_median_rays', 'receiver_median_profiles_count'] }
                             if (raysIdx >= 0) {
                                 def lastLine = lines[lines.size() - 1].split(',')
                                 if (lastLine.size() > raysIdx) {
@@ -642,7 +642,7 @@ static def exec(Connection connection, Map input) {
                         def lines = csvFile.readLines()
                         if (lines.size() >= 1) {
                             def headers = lines[0].split(',')
-                            def raysIdx = headers.findIndexOf { it.trim() == 'receiver_median_rays' }
+                            def raysIdx = headers.findIndexOf { it.trim() in ['receiver_median_rays', 'receiver_median_profiles_count'] }
                             if (raysIdx >= 0) {
                                 def lastLine = lines[lines.size() - 1].split(',')
                                 if (lastLine.size() > raysIdx) {

@@ -241,7 +241,8 @@ static def exec(Connection connection, Map input) {
                          "confMaxSrcDist"    : 300,
                          "confDiffHorizontal": true,
                          "confMaxError": 0.1,
-                         "confFavorableOccurrencesDefault":'0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25'
+                         "confFavorableOccurrencesDefault":'0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25',
+                         "confRecordProfile"     : true
                 ])
         }
         
@@ -255,6 +256,32 @@ static def exec(Connection connection, Map input) {
     }
 
     logPhase("compute")
+
+    // Nombre de rayons : lu dans le CSV du profiler. La colonne a ete renommee au passage a la v5
+    // (receiver_median_rays est devenu receiver_median_profiles_count), on accepte les deux noms.
+    // nbRays est un total estime : mediane de rayons par recepteur x nombre de recepteurs.
+    int receiverCount = sql.firstRow("SELECT COUNT(*) FROM RECEIVERS")[0] as Integer
+    double raysPerReceiver = 0
+    def profileCsv = new File("$outputFolder/profile.csv")
+    if (!profileCsv.exists()) {
+        def candidates = new File(".").listFiles()?.findAll { it.name.startsWith("profile") && it.name.endsWith(".csv") }
+        if (candidates) profileCsv = candidates.max { it.lastModified() }
+    }
+    if (profileCsv?.exists()) {
+        def lines = profileCsv.readLines()
+        if (lines.size() >= 2) {
+            def headers = lines[0].split(',')
+            def raysIdx = headers.findIndexOf { it.trim() in ['receiver_median_rays', 'receiver_median_profiles_count'] }
+            if (raysIdx >= 0) {
+                def lastLine = lines[lines.size() - 1].split(',')
+                if (lastLine.size() > raysIdx) {
+                    raysPerReceiver = lastLine[raysIdx].trim().toDouble()
+                }
+            }
+        }
+    }
+    def nbRays = raysPerReceiver * receiverCount
+    def timePerRays = nbRays > 0 ? elapsed / nbRays : 0
 
     new Create_Isosurface().exec(connection,
             ["resultTable": "RECEIVERS_LEVEL",
@@ -341,6 +368,8 @@ static def exec(Connection connection, Map input) {
             timePerReceive: f.format(time),
             java: System.getProperty("java.version"),
             runner: runner,
+            nbRays: nbRays,
+            timePerRays: timePerRays,
             nNan: nNan,
             silenceThreshold: silenceThreshold,
             histogram: histogram

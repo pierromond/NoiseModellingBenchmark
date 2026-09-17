@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - benchmarkWebsiteGenerator-fixed
   workflow_dispatch:
     inputs:
       nm_version:

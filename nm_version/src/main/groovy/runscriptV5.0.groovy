@@ -597,7 +597,7 @@ static def exec(Connection connection, Map input) {
                              "confMaxSrcDist"                  : 300,
                              "confDiffHorizontal"              : true,
                              "confMaxError"                    : 0.1,
-                             "confFavourableOccurrencesDefault": '0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25'])
+                             "confFavorableOccurrencesDefault": '0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25'])
 
                     def csvFile = new File("$outputFolder/profile.csv")
                     if (csvFile.exists()) {
@@ -635,7 +635,7 @@ static def exec(Connection connection, Map input) {
                              "confMaxSrcDist"                  : 300,
                              "confDiffHorizontal"              : true,
                              "confMaxError"                    : 0.1,
-                             "confFavourableOccurrencesDefault": '0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25'])
+                             "confFavorableOccurrencesDefault": '0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25'])
 
                     def csvFile = new File("$outputFolder/profile.csv")
                     if (csvFile.exists()) {

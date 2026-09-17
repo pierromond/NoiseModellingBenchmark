@@ -233,7 +233,7 @@ inputs = [
                 default    : 15,
                 type       : Double.class
         ],
-        confFavourableOccurrencesDefault: [
+        confFavorableOccurrencesDefault: [
                 name       : 'Probability of occurrences',
                 title      : 'Probability of occurrences',
                 description: 'Comma-delimited string containing the probability ([0,1]) of occurrences of favourable propagation conditions. Follow the clockwise direction. The north slice is the last array index (n°16 in the schema below) not the first one. </br> </br>' +
@@ -484,8 +484,8 @@ def exec(Connection connection, Map input, ProgressVisitor progress) {
     DefaultTableLoader defaultTableLoader = (DefaultTableLoader)pointNoiseMap.tableLoader
     AttenuationParameters environmentalData = defaultTableLoader.defaultParameters
 
-    if (input.containsKey('confFavourableOccurrencesDefault')) {
-        StringTokenizer tk = new StringTokenizer(input['confFavourableOccurrencesDefault'] as String, ',')
+    if (input.containsKey('confFavorableOccurrencesDefault')) {
+        StringTokenizer tk = new StringTokenizer(input['confFavorableOccurrencesDefault'] as String, ',')
         double[] favOccurrences = new double[AttenuationParameters.DEFAULT_WIND_ROSE.length]
         for (int i = 0; i < favOccurrences.length; i++) {
             favOccurrences[i] = Math.max(0, Math.min(1, Double.valueOf(tk.nextToken().trim())))

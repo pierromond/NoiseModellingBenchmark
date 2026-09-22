@@ -21,7 +21,6 @@
 
 import groovy.sql.Sql
 import org.h2gis.api.ProgressVisitor
-import org.noise_planet.noisemodelling.scripts.Acoustic_Tools.Create_Isosurface
 import org.noise_planet.noisemodelling.scripts.NoiseModelling.Road_Emission_from_Traffic
 import org.noise_planet.noisemodelling.scripts.NoiseModelling.Noise_level_from_source
 import org.noise_planet.noisemodelling.scripts.Receivers.Delaunay_Grid
@@ -185,26 +184,16 @@ static def exec(Connection connection, Map input) {
 
     }
 
-    /*new Create_Isosurface().exec(connection,
-            ["resultTable": "RECEIVERS_LEVEL",
-             "keepTriangles": false,
-             "smoothCoefficient" : 0])
-
-    sql.execute("DROP TABLE IF EXISTS KEPLERGL")
-
-    sql.execute("CREATE TABLE KEPLERGL AS SELECT ST_Transform(THE_GEOM, 4326) THE_GEOM, ISOLABEL FROM CONTOURING_NOISE_MAP WHERE PERIOD='DEN'")
-
-    new Export_Table().exec(connection,
-            ["exportPath"   : "$outputFolder/ISO_CONTOUR.geojson",
-             "tableToExport": "KEPLERGL"])*/
-
     threadDump(true, true)
 
 
     def cpt = sql.firstRow("SELECT COUNT(*) FROM RECEIVERS")[0] as Integer
     def nbRays =  sql.firstRow("SELECT COUNT(*) FROM RAYS")[0] as Integer
     double time = elapsed/cpt
-    def timeray = elapsed/nbRays
+    def timeray = 0
+    if (nbRays != 0) {
+        timeray = elapsed/nbRays
+    }
 
     long hours = TimeUnit.MILLISECONDS.toHours(elapsed)
     elapsed -= TimeUnit.HOURS.toMillis(hours)

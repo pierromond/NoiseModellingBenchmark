@@ -181,16 +181,6 @@ EOF
 
 
 copy_geojson() {
-    local CLISSON_DIR="$INPUT_DIR/montagne"
-
-    declare -A COMMON_LAYERS=(
-        ["BUILDINGS.geojson"]="BUILDINGS.geojson"
-        ["RECEIVERS.geojson"]="RECEIVERS.geojson"
-        ["DEM.geojson"]="DEM.geojson"
-        ["LW_ROADS.geojson"]="LW_ROADS.geojson"
-        ["GROUNDS.geojson"]="GROUNDS.geojson"
-    )
-
     for version_dir in "$OUTPUT_DIR"/*/; do
         [ -d "$version_dir" ] || continue
 
@@ -205,23 +195,14 @@ copy_geojson() {
             cp "$receivgeojson" \
                "$DATA_DIR/$version/RECEIVERS_LEVEL.geojson"
         fi
-
-        local iso_src="$version_dir/ISO_CONTOUR.geojson"
-
-        if [ -f "$iso_src" ]; then
-            cp "$iso_src" \
-               "$DATA_DIR/$version/ISO_CONTOUR.geojson"
-        fi
-
-        for dest_name in "${!COMMON_LAYERS[@]}"; do
-            local src_name="${COMMON_LAYERS[$dest_name]}"
-            local src="$CLISSON_DIR/$src_name"
-
-            if [ -f "$src" ]; then
-                cp "$src" "$DATA_DIR/$version/$dest_name"
-            fi
-        done
     done
+
+    # Référence mesurée (petite, pas le DEM de 219 Mo) publiée pour le site.
+    local measure_src="$INPUT_DIR/montagne/measure/RECEIVERS_LEVEL.geojson"
+    if [ -f "$measure_src" ]; then
+        mkdir -p "$DATA_DIR/measure"
+        cp "$measure_src" "$DATA_DIR/measure/RECEIVERS_LEVEL.geojson"
+    fi
 }
 
 
@@ -258,7 +239,7 @@ run_one_version() {
 run_aggregate_only() {
     aggregate_results
     copy_geojson
-    python3 generate_site.py
+    python3 compare_versions_montagne.py
 }
 
 

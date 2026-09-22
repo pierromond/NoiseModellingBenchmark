@@ -379,6 +379,33 @@ jobs:
             path: input/clisson
             key: ${{ steps.clisson_key.outputs.key }}
 
+        - name: Compute La Montagne input cache key
+          id: montagne_key
+          run: echo "key=montagne-${{ hashFiles('input/montagne/**') }}" >> "$GITHUB_OUTPUT"
+
+        - name: Restore La Montagne input data
+          id: montagne
+          uses: actions/cache/restore@v4
+          with:
+            path: input/montagne
+            key: ${{ steps.montagne_key.outputs.key }}
+
+        - name: Fetch La Montagne LFS data
+          id: montagne_fetch
+          if: steps.montagne.outputs.cache-hit != 'true'
+          run: |
+            git config --local --unset-all lfs.fetchexclude || true
+            git lfs pull --include="input/montagne/**"
+            test "$(stat -c%s input/montagne/DEM.geojson)" -gt 100000
+
+        - name: Save La Montagne input data
+          if: steps.montagne.outputs.cache-hit != 'true' && steps.montagne_fetch.outcome == 'success'
+          continue-on-error: true
+          uses: actions/cache/save@v4
+          with:
+            path: input/montagne
+            key: ${{ steps.montagne_key.outputs.key }}
+
         - name: Set up Java 25
           uses: actions/setup-java@v4
           with:
@@ -395,7 +422,7 @@ jobs:
           uses: actions/cache/restore@v4
           with:
             path: output/v${{ needs.check-new-version.outputs.target_version }}
-            key: result-${{ env.JAVA_TAG }}-v${{ needs.check-new-version.outputs.target_version }}-${{ needs.check-new-version.outputs.artifact_name }}-${{ hashFiles('benchmark_run.sh', 'versions.json', 'nm_version/src/main/groovy/**', 'input/clisson/**') }}
+            key: result-${{ env.JAVA_TAG }}-v${{ needs.check-new-version.outputs.target_version }}-${{ needs.check-new-version.outputs.artifact_name }}-${{ hashFiles('benchmark_run_clisson.sh', 'versions.json', 'nm_version/src/main/groovy/**', 'input/clisson/**') }}
 
         - name: Restore NM binary for target version
           if: steps.result.outputs.cache-hit != 'true'
@@ -409,7 +436,7 @@ jobs:
           id: run
           if: steps.result.outputs.cache-hit != 'true'
           continue-on-error: true
-          run: bash -x benchmark_run.sh --version v${{ needs.check-new-version.outputs.target_version }}
+          run: bash -x benchmark_run_clisson.sh --version v${{ needs.check-new-version.outputs.target_version }}
 
         - name: Save result in cache for target version
           if: steps.result.outputs.cache-hit != 'true' && steps.run.outcome == 'success'
@@ -417,7 +444,28 @@ jobs:
           uses: actions/cache/save@v4
           with:
             path: output/v${{ needs.check-new-version.outputs.target_version }}
-            key: result-${{ env.JAVA_TAG }}-v${{ needs.check-new-version.outputs.target_version }}-${{ needs.check-new-version.outputs.artifact_name }}-${{ hashFiles('benchmark_run.sh', 'versions.json', 'nm_version/src/main/groovy/**', 'input/clisson/**') }}
+            key: result-${{ env.JAVA_TAG }}-v${{ needs.check-new-version.outputs.target_version }}-${{ needs.check-new-version.outputs.artifact_name }}-${{ hashFiles('benchmark_run_clisson.sh', 'versions.json', 'nm_version/src/main/groovy/**', 'input/clisson/**') }}
+
+        - name: Restore La Montagne result for target version
+          id: result_montagne
+          uses: actions/cache/restore@v4
+          with:
+            path: output/montagne/v${{ needs.check-new-version.outputs.target_version }}
+            key: result-montagne-${{ env.JAVA_TAG }}-v${{ needs.check-new-version.outputs.target_version }}-${{ needs.check-new-version.outputs.artifact_name }}-${{ hashFiles('benchmark_run_montagne.sh', 'versions.json', 'nm_version/src/main/groovy/**', 'input/montagne/**') }}
+
+        - name: Run La Montagne benchmark for target version
+          id: run_montagne
+          if: steps.result_montagne.outputs.cache-hit != 'true'
+          continue-on-error: true
+          run: bash -x benchmark_run_montagne.sh --version v${{ needs.check-new-version.outputs.target_version }}
+
+        - name: Save La Montagne result in cache for target version
+          if: steps.result_montagne.outputs.cache-hit != 'true' && steps.run_montagne.outcome == 'success'
+          continue-on-error: true
+          uses: actions/cache/save@v4
+          with:
+            path: output/montagne/v${{ needs.check-new-version.outputs.target_version }}
+            key: result-montagne-${{ env.JAVA_TAG }}-v${{ needs.check-new-version.outputs.target_version }}-${{ needs.check-new-version.outputs.artifact_name }}-${{ hashFiles('benchmark_run_montagne.sh', 'versions.json', 'nm_version/src/main/groovy/**', 'input/montagne/**') }}
 
         - name: Show simulation log for target version ${{ needs.check-new-version.outputs.target_version }}
           if: always()
@@ -430,6 +478,15 @@ jobs:
           with:
             name: output-v${{ needs.check-new-version.outputs.target_version }}
             path: output/v${{ needs.check-new-version.outputs.target_version }}
+            if-no-files-found: ignore
+            retention-days: 1
+
+        - name: Upload La Montagne output for ${{ needs.check-new-version.outputs.target_version }}
+          if: always()
+          uses: actions/upload-artifact@v4
+          with:
+            name: montagne-v${{ needs.check-new-version.outputs.target_version }}
+            path: output/montagne/v${{ needs.check-new-version.outputs.target_version }}
             if-no-files-found: ignore
             retention-days: 1
             
@@ -487,6 +544,33 @@ jobs:
             path: input/clisson
             key: ${{ steps.clisson_key.outputs.key }}
 
+        - name: Compute La Montagne input cache key
+          id: montagne_key
+          run: echo "key=montagne-${{ hashFiles('input/montagne/**') }}" >> "$GITHUB_OUTPUT"
+
+        - name: Restore La Montagne input data
+          id: montagne
+          uses: actions/cache/restore@v4
+          with:
+            path: input/montagne
+            key: ${{ steps.montagne_key.outputs.key }}
+
+        - name: Fetch La Montagne LFS data
+          id: montagne_fetch
+          if: steps.montagne.outputs.cache-hit != 'true'
+          run: |
+            git config --local --unset-all lfs.fetchexclude || true
+            git lfs pull --include="input/montagne/**"
+            test "$(stat -c%s input/montagne/DEM.geojson)" -gt 100000
+
+        - name: Save La Montagne input data
+          if: steps.montagne.outputs.cache-hit != 'true' && steps.montagne_fetch.outcome == 'success'
+          continue-on-error: true
+          uses: actions/cache/save@v4
+          with:
+            path: input/montagne
+            key: ${{ steps.montagne_key.outputs.key }}
+
         - name: Set up Java 11
           uses: actions/setup-java@v4
           with:
@@ -507,13 +591,13 @@ jobs:
           uses: actions/cache/restore@v4
           with:
             path: output/${{ matrix.version }}
-            key: result-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ hashFiles('benchmark_run.sh', 'versions.json', 'nm_version/src/main/groovy/**', 'input/clisson/**') }}
+            key: result-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ hashFiles('benchmark_run_clisson.sh', 'versions.json', 'nm_version/src/main/groovy/**', 'input/clisson/**') }}
   
         - name: Run benchmark for ${{ matrix.version }}
           id: run
           if: steps.result.outputs.cache-hit != 'true'
           continue-on-error: true
-          run: bash -x benchmark_run.sh --version ${{ matrix.version }}
+          run: bash -x benchmark_run_clisson.sh --version ${{ matrix.version }}
 
         - name: Save result in cache for ${{ matrix.version }}
           if: steps.result.outputs.cache-hit != 'true' && steps.run.outcome == 'success'
@@ -521,7 +605,28 @@ jobs:
           uses: actions/cache/save@v4
           with:
             path: output/${{ matrix.version }}
-            key: result-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ hashFiles('benchmark_run.sh', 'versions.json', 'nm_version/src/main/groovy/**', 'input/clisson/**') }}
+            key: result-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ hashFiles('benchmark_run_clisson.sh', 'versions.json', 'nm_version/src/main/groovy/**', 'input/clisson/**') }}
+
+        - name: Restore La Montagne result for ${{ matrix.version }}
+          id: result_montagne
+          uses: actions/cache/restore@v4
+          with:
+            path: output/montagne/${{ matrix.version }}
+            key: result-montagne-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ hashFiles('benchmark_run_montagne.sh', 'versions.json', 'nm_version/src/main/groovy/**', 'input/montagne/**') }}
+
+        - name: Run La Montagne benchmark for ${{ matrix.version }}
+          id: run_montagne
+          if: steps.result_montagne.outputs.cache-hit != 'true'
+          continue-on-error: true
+          run: bash -x benchmark_run_montagne.sh --version ${{ matrix.version }}
+
+        - name: Save La Montagne result in cache for ${{ matrix.version }}
+          if: steps.result_montagne.outputs.cache-hit != 'true' && steps.run_montagne.outcome == 'success'
+          continue-on-error: true
+          uses: actions/cache/save@v4
+          with:
+            path: output/montagne/${{ matrix.version }}
+            key: result-montagne-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ hashFiles('benchmark_run_montagne.sh', 'versions.json', 'nm_version/src/main/groovy/**', 'input/montagne/**') }}
   
         - name: Check disk space after run
           if: always()
@@ -538,6 +643,15 @@ jobs:
           with:
             name: output-${{ matrix.version }}
             path: output/${{ matrix.version }}/
+            if-no-files-found: ignore
+            retention-days: 1
+
+        - name: Upload La Montagne output for ${{ matrix.version }}
+          if: always()
+          uses: actions/upload-artifact@v4
+          with:
+            name: montagne-${{ matrix.version }}
+            path: output/montagne/${{ matrix.version }}/
             if-no-files-found: ignore
             retention-days: 1
       
@@ -597,6 +711,33 @@ jobs:
             path: input/clisson
             key: ${{ steps.clisson_key.outputs.key }}
 
+        - name: Compute La Montagne input cache key
+          id: montagne_key
+          run: echo "key=montagne-${{ hashFiles('input/montagne/**') }}" >> "$GITHUB_OUTPUT"
+
+        - name: Restore La Montagne input data
+          id: montagne
+          uses: actions/cache/restore@v4
+          with:
+            path: input/montagne
+            key: ${{ steps.montagne_key.outputs.key }}
+
+        - name: Fetch La Montagne LFS data
+          id: montagne_fetch
+          if: steps.montagne.outputs.cache-hit != 'true'
+          run: |
+            git config --local --unset-all lfs.fetchexclude || true
+            git lfs pull --include="input/montagne/**"
+            test "$(stat -c%s input/montagne/DEM.geojson)" -gt 100000
+
+        - name: Save La Montagne input data
+          if: steps.montagne.outputs.cache-hit != 'true' && steps.montagne_fetch.outcome == 'success'
+          continue-on-error: true
+          uses: actions/cache/save@v4
+          with:
+            path: input/montagne
+            key: ${{ steps.montagne_key.outputs.key }}
+
         - name: Set up Java 25
           uses: actions/setup-java@v4
           with:
@@ -617,13 +758,13 @@ jobs:
           uses: actions/cache/restore@v4
           with:
             path: output/${{ matrix.version }}
-            key: result-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ hashFiles('benchmark_run.sh', 'versions.json', 'nm_version/src/main/groovy/**', 'input/clisson/**') }}
+            key: result-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ hashFiles('benchmark_run_clisson.sh', 'versions.json', 'nm_version/src/main/groovy/**', 'input/clisson/**') }}
 
         - name: Run benchmark for ${{ matrix.version }}
           id: run
           if: steps.result.outputs.cache-hit != 'true'
           continue-on-error: true
-          run: bash -x benchmark_run.sh --version ${{ matrix.version }}
+          run: bash -x benchmark_run_clisson.sh --version ${{ matrix.version }}
 
         - name: Save result in cache for ${{ matrix.version }}
           if: steps.result.outputs.cache-hit != 'true' && steps.run.outcome == 'success'
@@ -631,7 +772,28 @@ jobs:
           uses: actions/cache/save@v4
           with:
             path: output/${{ matrix.version }}
-            key: result-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ hashFiles('benchmark_run.sh', 'versions.json', 'nm_version/src/main/groovy/**', 'input/clisson/**') }}
+            key: result-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ hashFiles('benchmark_run_clisson.sh', 'versions.json', 'nm_version/src/main/groovy/**', 'input/clisson/**') }}
+
+        - name: Restore La Montagne result for ${{ matrix.version }}
+          id: result_montagne
+          uses: actions/cache/restore@v4
+          with:
+            path: output/montagne/${{ matrix.version }}
+            key: result-montagne-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ hashFiles('benchmark_run_montagne.sh', 'versions.json', 'nm_version/src/main/groovy/**', 'input/montagne/**') }}
+
+        - name: Run La Montagne benchmark for ${{ matrix.version }}
+          id: run_montagne
+          if: steps.result_montagne.outputs.cache-hit != 'true'
+          continue-on-error: true
+          run: bash -x benchmark_run_montagne.sh --version ${{ matrix.version }}
+
+        - name: Save La Montagne result in cache for ${{ matrix.version }}
+          if: steps.result_montagne.outputs.cache-hit != 'true' && steps.run_montagne.outcome == 'success'
+          continue-on-error: true
+          uses: actions/cache/save@v4
+          with:
+            path: output/montagne/${{ matrix.version }}
+            key: result-montagne-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ hashFiles('benchmark_run_montagne.sh', 'versions.json', 'nm_version/src/main/groovy/**', 'input/montagne/**') }}
 
         - name: Check disk space after run
           if: always()
@@ -648,6 +810,15 @@ jobs:
           with:
             name: output-${{ matrix.version }}
             path: output/${{ matrix.version }}/
+            if-no-files-found: ignore
+            retention-days: 1
+
+        - name: Upload La Montagne output for ${{ matrix.version }}
+          if: always()
+          uses: actions/upload-artifact@v4
+          with:
+            name: montagne-${{ matrix.version }}
+            path: output/montagne/${{ matrix.version }}/
             if-no-files-found: ignore
             retention-days: 1
 
@@ -688,6 +859,33 @@ jobs:
           path: input/clisson
           key: ${{ steps.clisson_key.outputs.key }}
 
+      - name: Compute La Montagne input cache key
+        id: montagne_key
+        run: echo "key=montagne-${{ hashFiles('input/montagne/**') }}" >> "$GITHUB_OUTPUT"
+
+      - name: Restore La Montagne input data
+        id: montagne
+        uses: actions/cache/restore@v4
+        with:
+          path: input/montagne
+          key: ${{ steps.montagne_key.outputs.key }}
+
+      - name: Fetch La Montagne LFS data
+        id: montagne_fetch
+        if: steps.montagne.outputs.cache-hit != 'true'
+        run: |
+          git config --local --unset-all lfs.fetchexclude || true
+          git lfs pull --include="input/montagne/**"
+          test "$(stat -c%s input/montagne/DEM.geojson)" -gt 100000
+
+      - name: Save La Montagne input data
+        if: steps.montagne.outputs.cache-hit != 'true' && steps.montagne_fetch.outcome == 'success'
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: input/montagne
+          key: ${{ steps.montagne_key.outputs.key }}
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -709,8 +907,29 @@ jobs:
           done
           ls -la output/
 
+      - name: Download La Montagne outputs
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: montagne-*
+          path: output/montagne/
+          merge-multiple: false
+
+      - name: Fix La Montagne artifact folder names
+        run: |
+          mkdir -p output/montagne
+          for d in output/montagne/montagne-*; do
+            [ -d "$d" ] || continue
+            v=$(basename "$d" | sed 's/^montagne-//')
+            mv "$d" "output/montagne/$v"
+          done
+          ls -la output/montagne/
+
       - name: Generate website
-        run: bash benchmark_run.sh --aggregate-only
+        run: bash benchmark_run_clisson.sh --aggregate-only
+
+      - name: Generate La Montagne website data
+        run: bash benchmark_run_montagne.sh --aggregate-only
 
       - name: Configure Pages
         uses: actions/configure-pages@v5

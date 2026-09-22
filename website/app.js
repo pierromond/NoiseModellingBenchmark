@@ -298,7 +298,7 @@ function renderMethod(data) {
       ${st ? `(${st.minCompared.toLocaleString()} to ${st.maxCompared.toLocaleString()} per pair)` : ''};
       distributions and the diff map use a ${samplePoints.toLocaleString()}-point sample per pair.<br>
       <b>JVM</b> — Java 11 for v4.x/v5.x, Java 25 for v6.x.<br>
-      <b>Reproduce</b> — <a href="https://github.com/${repo}#readme" target="_blank" rel="noopener">benchmark_run.sh + versions.json</a>
+      <b>Reproduce</b> — <a href="https://github.com/${repo}#readme" target="_blank" rel="noopener">benchmark_run_clisson.sh + versions.json</a>
       · <a href="data/results.json" download>results.json</a>
       · <a href="data/comparisons.json" download>comparisons.json</a>
       · <a href="#" onclick="downloadCsv();return false">results.csv</a><br>
@@ -1512,6 +1512,185 @@ function setupDiffMapButton() {
 }
 
 // ─────────────────────────────────────────────
+// LA MONTAGNE — COMPARAISON A LA MESURE
+// ─────────────────────────────────────────────
+let montagneChart = null;
+
+function drawMontagneScatter(entry) {
+  const nodata = document.getElementById('montagne-nodata');
+  const canvas = document.getElementById('montagne-scatter-chart');
+
+  if (!entry || !entry.scatter || !entry.scatter.length) {
+    nodata.style.display = 'block';
+    canvas.style.display = 'none';
+    if (montagneChart) { montagneChart.destroy(); montagneChart = null; }
+    return;
+  }
+  nodata.style.display = 'none';
+  canvas.style.display = 'block';
+
+  const points = entry.scatter.map(([measured, computed]) => ({ x: measured, y: computed }));
+  const allVals = points.flatMap(p => [p.x, p.y]);
+  const minV = Math.floor(Math.min(...allVals) / 5) * 5;
+  const maxV = Math.ceil(Math.max(...allVals) / 5) * 5;
+  const diagLine = [{ x: minV, y: minV }, { x: maxV, y: maxV }];
+
+  if (montagneChart) montagneChart.destroy();
+
+  const ctx = canvas.getContext('2d');
+  montagneChart = new Chart(ctx, {
+    data: {
+      datasets: [
+        {
+          type: 'scatter',
+          label: `Receivers (n=${entry.n_compared})`,
+          data: points,
+          backgroundColor: 'rgba(0,229,255,0.35)',
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          order: 2,
+        },
+        {
+          type: 'line',
+          label: 'y = x',
+          data: diagLine,
+          borderColor: 'rgba(255,255,255,0.5)',
+          borderWidth: 1.5,
+          borderDash: [6, 4],
+          pointRadius: 0,
+          fill: false,
+          order: 1,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      animation: false,
+      plugins: {
+        legend: {
+          labels: {
+            color: '#6b7280',
+            font: { family: 'Space Mono', size: 11 },
+            filter: item => item.datasetIndex === 0,
+          }
+        },
+        tooltip: {
+          backgroundColor: '#12161f',
+          borderColor: '#252b3b',
+          borderWidth: 1,
+          titleColor: '#00e5ff',
+          bodyColor: '#e8eaf0',
+          titleFont: { family: 'Space Mono' },
+          bodyFont:  { family: 'Space Mono' },
+          callbacks: {
+            title: () => '',
+            label: ctx => {
+              if (ctx.datasetIndex !== 0) return null;
+              const { x, y } = ctx.parsed;
+              return ` measured ${x} dB → ${entry.version} ${y} dB (Δ=${(y - x).toFixed(2)} dB)`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          type: 'linear',
+          min: minV, max: maxV,
+          ticks: { color: '#6b7280', font: { family: 'Space Mono', size: 11 },
+            callback: v => v + ' dB' },
+          grid: { color: '#252b3b' },
+          title: { display: true, text: 'Measured LAeq,D (dB)',
+            color: '#6b7280', font: { family: 'Space Mono', size: 11 } },
+        },
+        y: {
+          type: 'linear',
+          min: minV, max: maxV,
+          ticks: { color: '#00e5ff', font: { family: 'Space Mono', size: 11 },
+            callback: v => v + ' dB' },
+          grid: { color: '#252b3b' },
+          title: { display: true, text: `${entry.version} corrected LAeq,D (dB)`,
+            color: '#00e5ff', font: { family: 'Space Mono', size: 11 } },
+        }
+      }
+    }
+  });
+}
+
+function renderMontagne(data) {
+  const section = document.getElementById('montagne-section');
+  if (!section) return;
+  if (!data.length) { section.style.display = 'none'; return; }
+
+  const ctrl = document.getElementById('montagne-controls');
+  const tableEl = document.getElementById('montagne-table');
+  const note = document.getElementById('montagne-note');
+
+  let selected = data[0].version;
+
+  function updateNote() {
+    const e = data.find(d => d.version === selected) || {};
+    note.innerHTML =
+      `Reference receiver <b>#${e.reference_receiver}</b> (closest to the source, ${fmt(e.reference_distance, 1)} m): ` +
+      `offset = measured − computed = <b>${fmt(e.offset)} dB</b>. ` +
+      `Errors are computed after applying this offset to every receiver (zero at the reference by construction).` +
+      `<br>Download: <a href="data/montagne/measure_comparison.json" download>measure_comparison.json</a> · ` +
+      `<a href="data/montagne/comparisons.json" download>comparisons.json</a> · ` +
+      `<a href="data/montagne/results.json" download>results.json</a>`;
+  }
+
+  ctrl.innerHTML = data.map((row, i) =>
+    `<button class="map-btn${i === 0 ? ' active' : ''}" data-version="${row.version}" aria-pressed="${i === 0}">
+      ${row.version}
+    </button>`
+  ).join('');
+
+  ctrl.querySelectorAll('.map-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      ctrl.querySelectorAll('.map-btn').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-pressed', 'false'); });
+      btn.classList.add('active');
+      btn.setAttribute('aria-pressed', 'true');
+      selected = btn.dataset.version;
+      drawMontagneScatter(data.find(d => d.version === selected));
+      updateNote();
+    });
+  });
+
+  const rows = data.map(row => `
+    <tr>
+      <td style="padding:.15rem .8rem .15rem 0">${row.version}</td>
+      <td style="padding:.15rem .8rem">#${row.reference_receiver}</td>
+      <td style="padding:.15rem .8rem">${fmt(row.offset)}</td>
+      <td style="padding:.15rem .8rem">${fmt(row.mean_error)}</td>
+      <td style="padding:.15rem .8rem">${fmt(row.std_error)}</td>
+      <td style="padding:.15rem .8rem">${fmt(row.rmse)}</td>
+      <td style="padding:.15rem .8rem">${fmt(row.max_abs_error)}</td>
+      <td style="padding:.15rem 0">${row.n_compared}/${row.n_measured}</td>
+    </tr>`).join('');
+
+  tableEl.innerHTML = `
+    <table style="border-collapse:collapse;margin-top:.5rem">
+      <thead>
+        <tr style="color:var(--accent)">
+          <th align="left">Version</th><th align="left">Ref.</th><th align="left">Offset (dB)</th>
+          <th align="left">Mean error</th><th align="left">Std</th><th align="left">RMSE</th>
+          <th align="left">Max |error|</th><th align="left">Receivers</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+
+  drawMontagneScatter(data[0]);
+  updateNote();
+}
+
+async function initMontagne() {
+  const section = document.getElementById('montagne-section');
+  if (!section) return;
+  const data = await loadJson('data/montagne/measure_comparison.json', []);
+  renderMontagne(data);
+}
+
+// ─────────────────────────────────────────────
 // SIDEBAR TOGGLE
 // ─────────────────────────────────────────────
 function toggleSidebar(panelId, btn) {
@@ -1581,6 +1760,7 @@ async function init() {
   setupDiffMapButton();
   await applyState(data, initialState);
   renderMethod(data);
+  await initMontagne();
 }
 
 window.addEventListener('resize', debounce(() => {

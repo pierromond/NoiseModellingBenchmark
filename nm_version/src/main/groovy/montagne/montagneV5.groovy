@@ -122,6 +122,10 @@ static def exec(Connection connection, Map input) {
         long elapsed = 0
         def nbRays = 0
 
+        // v4.0.0 / v4.0.1 écrivent leur profile.csv dans output/$version (chemin codé en dur
+        // dans les scripts v4xx). On garantit l'existence du dossier pour que le profiler écrive.
+        new File("output/$version").mkdirs()
+
         if(redoCompute) {
             long startCompute = System.currentTimeMillis()
             if(version=="v4.0.0") {
@@ -154,6 +158,9 @@ static def exec(Connection connection, Map input) {
                          "confFavorableOccurrencesDay"     : '0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25'])
 
                 def csvFile = new File("$outputFolder/profile.csv")
+                if (!csvFile.exists()) {
+                    csvFile = new File("output/$version/profile.csv")
+                }
                 if (csvFile.exists()) {
                     def lines = csvFile.readLines()
                     if (lines.size() >= 1) {
@@ -197,6 +204,9 @@ static def exec(Connection connection, Map input) {
                          "confMaxError"                    : 0.1,
                          "confFavorableOccurrencesDay"     : '0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25'])
                 def csvFile = new File("$outputFolder/profile.csv")
+                if (!csvFile.exists()) {
+                    csvFile = new File("output/$version/profile.csv")
+                }
                 if (csvFile.exists()) {
                     def lines = csvFile.readLines()
                     if (lines.size() >= 1) {

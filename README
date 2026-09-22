@@ -1,6 +1,6 @@
 # NoiseModelling Benchmark
 
-Compares several NoiseModelling versions on the same dataset (Clisson, France) and publishes the results as a
+Compares several NoiseModelling versions on the same datasets (Clisson and La Montagne, France) and publishes the results as a
 static website on GitHub Pages: <https://universite-gustave-eiffel.github.io/NoiseModellingBenchmark/>
 
 ## Where is what
@@ -8,31 +8,39 @@ static website on GitHub Pages: <https://universite-gustave-eiffel.github.io/Noi
 | Path | What it does |
 |---|---|
 | `versions.json` | the list of versions to compare: `version -> release zip URL`. An **empty URL** marks the "head" version, taken from the NoiseModelling CI binary |
-| `benchmark_run.sh` | the driver: download the binary, run the simulation, aggregate the results |
-| `compare_versions.py` | builds the pairwise comparisons (`comparisons.json`) |
+| `benchmark_run_clisson.sh` | the driver for Clisson: download the binary, run the simulation, aggregate the results |
+| `benchmark_run_montagne.sh` | the driver for La Montagne (comparison against measurements) |
+| `compare_versions.py` | builds the Clisson pairwise comparisons (`comparisons.json`) |
+| `compare_versions_montagne.py` | builds the La Montagne pairwise comparisons and the comparison to the measurements |
 | `generate_site.py` | builds `website/index.html` from `website/template.html` and the JSON files |
 | `website/template.html` | the page structure (HTML only) |
 | `website/app.js` | all the page JavaScript |
 | `website/index.css` | all the page CSS |
 | `website/data/` | **generated, not in git**: `results.json`, `comparisons.json`, `settings.json`, `build.json`, and one folder of map layers per version |
 | `nm_version/src/main/groovy/` | the simulation scripts launched by NoiseModelling: `runscriptV5.0.groovy`, `runscriptV6.0.groovy`, plus one script per version when the API changed |
-| `input/clisson/` | the reference dataset (Git LFS) |
+| `input/clisson/` | the Clisson reference dataset (Git LFS) |
+| `input/montagne/` | the La Montagne dataset (Git LFS) and its measured reference `measure/RECEIVERS_LEVEL.geojson` |
 | `.github/workflows/benchmark.yml` | the CI: one job matrix per Java version, the "head" job, the website build, the Pages deploy |
 | `LICENSE` | GPL-3.0 |
 
 ## How it works
 
-1. `benchmark_run.sh --version v5.0.1` downloads that release, then NoiseModelling's ScriptRunner runs
+1. `benchmark_run_clisson.sh --version v5.0.1` downloads that release, then NoiseModelling's ScriptRunner runs
    `nm_version/src/main/groovy/runscriptV5.0.groovy` on `input/clisson/`; results land in `output/v5.0.1/`.
-2. `benchmark_run.sh --aggregate-only` turns `output/*/` into `website/data/` and computes the comparisons.
-3. The CI does 1 and 2 for every version of `versions.json`, then publishes `website/` on GitHub Pages.
+2. `benchmark_run_clisson.sh --aggregate-only` turns `output/*/` into `website/data/` and computes the comparisons.
+3. `benchmark_run_montagne.sh --version v5.0.1` runs `nm_version/src/main/groovy/montagne/montagneV5.groovy` on
+   `input/montagne/`; results land in `output/montagne/v5.0.1/`, and `--aggregate-only` builds
+   `website/data/montagne/` (including the comparison to the measured levels).
+4. The CI does 1–3 for every version of `versions.json`, then publishes `website/` on GitHub Pages.
 
 ## Run it locally
 
 ```bash
-bash benchmark_run.sh --version v5.0.1   # one version
-bash benchmark_run.sh                    # every version of versions.json (skips the head)
-bash benchmark_run.sh --aggregate-only   # only rebuild the site from output/
+bash benchmark_run_clisson.sh --version v5.0.1   # one Clisson version
+bash benchmark_run_clisson.sh                    # every version of versions.json (skips the head)
+bash benchmark_run_clisson.sh --aggregate-only   # only rebuild the Clisson site data from output/
+bash benchmark_run_montagne.sh --version v5.0.1  # one La Montagne version
+bash benchmark_run_montagne.sh --aggregate-only  # only rebuild the La Montagne site data from output/montagne/
 ```
 
 Needs Python 3, git-lfs (for `input/clisson/`) and Java 11 for v4/v5 or Java 25 for v6.
@@ -46,3 +54,6 @@ The NoiseModelling binary is downloaded automatically from the release URL in `v
 - Keep **one single entry without URL** in `versions.json`: it is the "head" version, built by the
   NoiseModelling CI (on a fork this needs the optional `GH_PAT` secret).
 - Do not modify `input/clisson/`: published results would no longer be comparable.
+- For La Montagne, the comparison to the measurements is **calibrated per version**: `offset = measured − computed`
+  at the receiver closest to the source (`input/montagne/LW_ROADS.geojson`), so the error is zero there for every model.
+- Do not modify `input/montagne/` nor `input/montagne/measure/`: published results would no longer be comparable.

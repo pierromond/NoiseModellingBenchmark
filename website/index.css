@@ -79,6 +79,55 @@
 
     .header-meta b { color: var(--text); }
 
+    /* ── DATASET TABS ── */
+    .dataset-tabs {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      gap: 0;
+      padding: 0 2rem;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .dataset-tab {
+      font-family: var(--font-mono);
+      font-size: .72rem;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      padding: .75rem 1.5rem;
+      border: none;
+      border-bottom: 2px solid transparent;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: color .15s, border-color .15s;
+      margin-bottom: -1px;
+    }
+
+    .dataset-tab:hover { color: var(--text); }
+
+    .dataset-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .dataset-badge {
+      display: inline-block;
+      font-size: .55rem;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: .1rem .35rem;
+      margin-left: .4rem;
+      color: var(--text-muted);
+      vertical-align: middle;
+    }
+
+    /* ── DATASET PANELS ── */
+    .dataset-panel { display: none; }
+    .dataset-panel.active { display: grid; gap: 2.5rem; }
+
     /* ── MAIN LAYOUT ── */
     main {
       position: relative;

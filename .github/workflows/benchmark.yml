@@ -422,7 +422,7 @@ jobs:
           uses: actions/cache/restore@v4
           with:
             path: output/v${{ needs.check-new-version.outputs.target_version }}
-            key: result-${{ env.JAVA_TAG }}-v${{ needs.check-new-version.outputs.target_version }}-${{ needs.check-new-version.outputs.artifact_name }}-${{ hashFiles('benchmark_run_clisson.sh', 'versions.json', 'nm_version/src/main/groovy/**', 'input/clisson/**') }}
+            key: result-${{ env.JAVA_TAG }}-v${{ needs.check-new-version.outputs.target_version }}-${{ needs.check-new-version.outputs.artifact_name }}-${{ hashFiles('benchmark_run_clisson.sh', 'versions.json', 'nm_version/src/main/groovy/runscript*.groovy', 'nm_version/src/main/groovy/v*.groovy', 'input/clisson/**') }}
 
         - name: Restore NM binary for target version
           if: steps.result.outputs.cache-hit != 'true'
@@ -444,7 +444,7 @@ jobs:
           uses: actions/cache/save@v4
           with:
             path: output/v${{ needs.check-new-version.outputs.target_version }}
-            key: result-${{ env.JAVA_TAG }}-v${{ needs.check-new-version.outputs.target_version }}-${{ needs.check-new-version.outputs.artifact_name }}-${{ hashFiles('benchmark_run_clisson.sh', 'versions.json', 'nm_version/src/main/groovy/**', 'input/clisson/**') }}
+            key: result-${{ env.JAVA_TAG }}-v${{ needs.check-new-version.outputs.target_version }}-${{ needs.check-new-version.outputs.artifact_name }}-${{ hashFiles('benchmark_run_clisson.sh', 'versions.json', 'nm_version/src/main/groovy/runscript*.groovy', 'nm_version/src/main/groovy/v*.groovy', 'input/clisson/**') }}
 
         - name: Restore La Montagne result for target version
           id: result_montagne
@@ -591,7 +591,7 @@ jobs:
           uses: actions/cache/restore@v4
           with:
             path: output/${{ matrix.version }}
-            key: result-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ hashFiles('benchmark_run_clisson.sh', 'versions.json', 'nm_version/src/main/groovy/**', 'input/clisson/**') }}
+            key: result-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ hashFiles('benchmark_run_clisson.sh', 'versions.json', 'nm_version/src/main/groovy/runscript*.groovy', 'nm_version/src/main/groovy/v*.groovy', 'input/clisson/**') }}
   
         - name: Run benchmark for ${{ matrix.version }}
           id: run
@@ -605,7 +605,7 @@ jobs:
           uses: actions/cache/save@v4
           with:
             path: output/${{ matrix.version }}
-            key: result-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ hashFiles('benchmark_run_clisson.sh', 'versions.json', 'nm_version/src/main/groovy/**', 'input/clisson/**') }}
+            key: result-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ hashFiles('benchmark_run_clisson.sh', 'versions.json', 'nm_version/src/main/groovy/runscript*.groovy', 'nm_version/src/main/groovy/v*.groovy', 'input/clisson/**') }}
 
         - name: Restore La Montagne result for ${{ matrix.version }}
           id: result_montagne
@@ -758,7 +758,7 @@ jobs:
           uses: actions/cache/restore@v4
           with:
             path: output/${{ matrix.version }}
-            key: result-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ hashFiles('benchmark_run_clisson.sh', 'versions.json', 'nm_version/src/main/groovy/**', 'input/clisson/**') }}
+            key: result-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ hashFiles('benchmark_run_clisson.sh', 'versions.json', 'nm_version/src/main/groovy/runscript*.groovy', 'nm_version/src/main/groovy/v*.groovy', 'input/clisson/**') }}
 
         - name: Run benchmark for ${{ matrix.version }}
           id: run
@@ -772,7 +772,7 @@ jobs:
           uses: actions/cache/save@v4
           with:
             path: output/${{ matrix.version }}
-            key: result-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ hashFiles('benchmark_run_clisson.sh', 'versions.json', 'nm_version/src/main/groovy/**', 'input/clisson/**') }}
+            key: result-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ hashFiles('benchmark_run_clisson.sh', 'versions.json', 'nm_version/src/main/groovy/runscript*.groovy', 'nm_version/src/main/groovy/v*.groovy', 'input/clisson/**') }}
 
         - name: Restore La Montagne result for ${{ matrix.version }}
           id: result_montagne

@@ -29,7 +29,18 @@
   </div>
 </header>
 
+<div class="dataset-tabs">
+  <button class="dataset-tab active" data-dataset="clisson" onclick="switchDataset('clisson')">
+    Clisson <span class="dataset-badge">reference</span>
+  </button>
+  <button class="dataset-tab" data-dataset="montagne" onclick="switchDataset('montagne')">
+    La Montagne <span class="dataset-badge">measure</span>
+  </button>
+</div>
+
 <main>
+
+  <div class="dataset-panel active" id="panel-clisson">
 
   <!-- ── KPI CARDS ── -->
   <section>
@@ -180,19 +191,29 @@
   </section>
 
 
-  <!-- ── LA MONTAGNE ── -->
-  <section id="montagne-section">
-    <div class="section-title">La Montagne — comparison to measurements</div>
-    <div class="chart-wrap">
-      <div class="map-controls" id="montagne-controls"></div>
-      <canvas id="montagne-scatter-chart" role="img" aria-label="Computed (calibrated) vs measured levels per receiver" style="width:100%;min-height:420px"></canvas>
-      <div id="montagne-nodata" style="display:none;padding:2rem;text-align:center;font-family:'Space Mono',monospace;font-size:.8rem;color:var(--text-muted)">
-        No La Montagne data — run benchmark_run_montagne.sh.
+  </div><!-- /panel-clisson -->
+
+  <div class="dataset-panel" id="panel-montagne">
+
+    <section>
+      <div class="section-title">La Montagne — results per version</div>
+      <div id="montagne-versions" style="font-family:var(--font-mono);font-size:.7rem;color:var(--text-muted);line-height:1.9"></div>
+    </section>
+
+    <section>
+      <div class="section-title">La Montagne — computed (calibrated) vs measured</div>
+      <div class="chart-wrap">
+        <div class="map-controls" id="montagne-controls"></div>
+        <canvas id="montagne-scatter-chart" role="img" aria-label="Computed (calibrated) vs measured levels per receiver" style="width:100%;min-height:420px"></canvas>
+        <div id="montagne-nodata" style="display:none;padding:2rem;text-align:center;font-family:'Space Mono',monospace;font-size:.8rem;color:var(--text-muted)">
+          No La Montagne data — run benchmark_run_montagne.sh.
+        </div>
+        <div id="montagne-note" style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-muted);margin-top:.75rem;line-height:1.7"></div>
       </div>
-      <div id="montagne-note" style="font-family:var(--font-mono);font-size:.65rem;color:var(--text-muted);margin-top:.75rem;line-height:1.7"></div>
-    </div>
-    <div id="montagne-table" style="font-family:var(--font-mono);font-size:.7rem;color:var(--text-muted);line-height:1.9;margin-top:1rem"></div>
-  </section>
+      <div id="montagne-table" style="font-family:var(--font-mono);font-size:.7rem;color:var(--text-muted);line-height:1.9;margin-top:1rem"></div>
+    </section>
+
+  </div><!-- /panel-montagne -->
 
 </main>
 

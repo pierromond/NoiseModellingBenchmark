@@ -126,6 +126,13 @@ static def exec(Connection connection, Map input) {
         // dans les scripts v4xx). On garantit l'existence du dossier pour que le profiler écrive.
         new File("output/$version").mkdirs()
 
+        new Set_Height().exec(connection,
+                ["tableName": "LW_ROADS_LW",
+                 "height": 12.4])
+        new Set_Height().exec(connection,
+                ["tableName": "RECEIVERS",
+                 "height": 1.5])
+
         if(redoCompute) {
             long startCompute = System.currentTimeMillis()
             if(version=="v4.0.0") {
@@ -150,12 +157,17 @@ static def exec(Connection connection, Map input) {
                          "tableGroundAbs"                  : "GROUNDS",
                          "confRaysName"                    : "RAYS",
                          "confReflOrder"                   : 2,
-                         "confMaxReflDist"                   : 1000,
+                         "confMaxReflDist"                   : 500,
                          "confDiffVertical"                   : true,
-                         "confMaxSrcDist"                  : 1000,
+                         "confMaxSrcDist"                  : 10000,
                          "confDiffHorizontal"              : true,
-                         "confMaxError"                    : 0.1,
-                         "confFavorableOccurrencesDay"     : '0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25'])
+                         "confTemperature"                 : 24,
+                         "confExportSourceId"              : false,
+                         "confSkipLevening"                : true,
+                         "confSkipLnight"                  : true,
+                         "confSkipLden"                    : true,
+                         "confMaxError"                    : 0,
+                         "confFavorableOccurrencesDay"     : '0.5, 0.5, 0.75, 1.0, 0.75, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.0, 0.25, 0.5, 0.5, 0.5'])
 
                 def csvFile = new File("$outputFolder/profile.csv")
                 if (!csvFile.exists()) {
@@ -197,12 +209,17 @@ static def exec(Connection connection, Map input) {
                          "tableGroundAbs"                  : "GROUNDS",
                          "confRaysName"                    : "RAYS",
                          "confReflOrder"                   : 2,
-                         "confMaxReflDist"                   : 1000,
+                         "confMaxReflDist"                   : 500,
                          "confDiffVertical"                   : true,
-                         "confMaxSrcDist"                  : 1000,
+                         "confMaxSrcDist"                  : 10000,
                          "confDiffHorizontal"              : true,
-                         "confMaxError"                    : 0.1,
-                         "confFavorableOccurrencesDay"     : '0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25'])
+                         "confTemperature"                 : 24,
+                         "confExportSourceId"              : false,
+                         "confSkipLevening"                : true,
+                         "confSkipLnight"                  : true,
+                         "confSkipLden"                    : true,
+                         "confMaxError"                    : 0,
+                         "confFavorableOccurrencesDay"     : '0.5, 0.5, 0.75, 1.0, 0.75, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.0, 0.25, 0.5, 0.5, 0.5'])
                 def csvFile = new File("$outputFolder/profile.csv")
                 if (!csvFile.exists()) {
                     csvFile = new File("output/$version/profile.csv")
@@ -243,12 +260,17 @@ static def exec(Connection connection, Map input) {
                          "tableGroundAbs"                  : "GROUNDS",
                          "confRaysName"                    : "RAYS",
                          "confReflOrder"                   : 2,
-                         "confMaxReflDist"                   : 1000,
+                         "confMaxReflDist"                   : 500,
                          "confDiffVertical"                   : true,
-                         "confMaxSrcDist"                  : 1000,
+                         "confMaxSrcDist"                  : 10000,
                          "confDiffHorizontal"              : true,
-                         "confMaxError"                    : 0.1,
-                         "confFavorableOccurrencesDay"     : '0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25'])
+                         "confTemperature"                 : 24,
+                         "confExportSourceId"              : false,
+                         "confSkipLevening"                : true,
+                         "confSkipLnight"                  : true,
+                         "confSkipLden"                    : true,
+                         "confMaxError"                    : 0,
+                         "confFavorableOccurrencesDay"     : '0.5, 0.5, 0.75, 1.0, 0.75, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.0, 0.25, 0.5, 0.5, 0.5'])
                 def csvFile = new File("$outputFolder/profile.csv")
                 if (csvFile.exists()) {
                     def lines = csvFile.readLines()
@@ -287,12 +309,17 @@ static def exec(Connection connection, Map input) {
                          "tableGroundAbs"                  : "GROUNDS",
                          "confRaysName"                    : "RAYS",
                          "confReflOrder"                   : 2,
-                         "confMaxReflDist"                   : 1000,
+                         "confMaxReflDist"                   : 500,
                          "confDiffVertical"                   : true,
-                         "confMaxSrcDist"                  : 1000,
+                         "confMaxSrcDist"                  : 10000,
                          "confDiffHorizontal"              : true,
-                         "confMaxError"                    : 0.1,
-                         "confFavorableOccurrencesDay"     : '0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25'])
+                         "confTemperature"                 : 24,
+                         "confExportSourceId"              : false,
+                         "confSkipLevening"                : true,
+                         "confSkipLnight"                  : true,
+                         "confSkipLden"                    : true,
+                         "confMaxError"                    : 0,
+                         "confFavorableOccurrencesDay"     : '0.5, 0.5, 0.75, 1.0, 0.75, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.0, 0.25, 0.5, 0.5, 0.5'])
 
                 def csvFile = new File("$outputFolder/profile.csv")
                 if (csvFile.exists()) {
@@ -332,12 +359,17 @@ static def exec(Connection connection, Map input) {
                          "tableGroundAbs"                  : "GROUNDS",
                          "confRaysName"                    : "RAYS",
                          "confReflOrder"                   : 2,
-                         "confMaxReflDist"                   : 1000,
+                         "confMaxReflDist"                   : 500,
                          "confDiffVertical"                   : true,
-                         "confMaxSrcDist"                  : 1000,
+                         "confMaxSrcDist"                  : 10000,
                          "confDiffHorizontal"              : true,
-                         "confMaxError"                    : 0.1,
-                         "confFavorableOccurrencesDay"     : '0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25'])
+                         "confTemperature"                 : 24,
+                         "confExportSourceId"              : false,
+                         "confSkipLevening"                : true,
+                         "confSkipLnight"                  : true,
+                         "confSkipLden"                    : true,
+                         "confMaxError"                    : 0,
+                         "confFavorableOccurrencesDay"     : '0.5, 0.5, 0.75, 1.0, 0.75, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.0, 0.25, 0.5, 0.5, 0.5'])
 
                 def csvFile = new File("$outputFolder/profile.csv")
                 if (csvFile.exists()) {
@@ -445,7 +477,8 @@ static def exec(Connection connection, Map input) {
             else if (v < 65)  histogram["60-65"]++
             else if (v < 70)  histogram["65-70"]++
             else if (v < 75)  histogram["70-75"]++
-            else              histogram[">75"]++
+            else if (v < 80)  histogram["75-80"]++
+            else              histogram[">80"]++
         }
 
         DecimalFormat f = new DecimalFormat()
@@ -525,10 +558,10 @@ static def exec(Connection connection, Map input) {
 
                 new Set_Height().exec(connection,
                         ["tableName": "LW_ROADS",
-                         "height": 0.05])
+                         "height": 12.4])
                 new Set_Height().exec(connection,
                         ["tableName": "RECEIVERS",
-                         "height": 1.2])
+                         "height": 1.5])
 
                 customScript.exec(connection,
                         ["tableBuilding"                   : "BUILDINGS",
@@ -538,12 +571,17 @@ static def exec(Connection connection, Map input) {
                          "tableGroundAbs"                  : "GROUNDS",
                          "confRaysName"                    : "RAYS",
                          "confReflOrder"                   : 2,
-                         "confMaxReflDist"                   : 1000,
+                         "confMaxReflDist"                   : 500,
                          "confDiffVertical"                   : true,
-                         "confMaxSrcDist"                  : 1000,
+                         "confMaxSrcDist"                  : 10000,
                          "confDiffHorizontal"              : true,
-                         "confMaxError"                    : 0.1,
-                         "confFavorableOccurrencesDefault": '0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25'])
+                         "confTemperature"                 : 24,
+                         "confExportSourceId"              : false,
+                         "confSkipLevening"                : true,
+                         "confSkipLnight"                  : true,
+                         "confSkipLden"                    : true,
+                         "confMaxError"                    : 0,
+                         "confFavorableOccurrencesDefault": '0.5, 0.5, 0.75, 1.0, 0.75, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.0, 0.25, 0.5, 0.5, 0.5'])
 
                 def csvFile = new File("$outputFolder/profile.csv")
                 if (csvFile.exists()) {
@@ -575,10 +613,10 @@ static def exec(Connection connection, Map input) {
 
                 new Set_Height().exec(connection,
                         ["tableName": "LW_ROADS",
-                         "height": 0.05])
+                         "height": 12.4])
                 new Set_Height().exec(connection,
                         ["tableName": "RECEIVERS",
-                         "height": 1.2])
+                         "height": 1.5])
 
                 customScript.exec(connection,
                         ["tableBuilding"                   : "BUILDINGS",
@@ -588,12 +626,17 @@ static def exec(Connection connection, Map input) {
                          "tableGroundAbs"                  : "GROUNDS",
                          "confRaysName"                    : "RAYS",
                          "confReflOrder"                   : 2,
-                         "confMaxReflDist"                   : 1000,
+                         "confMaxReflDist"                   : 500,
                          "confDiffVertical"                   : true,
-                         "confMaxSrcDist"                  : 1000,
+                         "confMaxSrcDist"                  : 10000,
                          "confDiffHorizontal"              : true,
-                         "confMaxError"                    : 0.1,
-                         "confFavorableOccurrencesDefault": '0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25'])
+                         "confTemperature"                 : 24,
+                         "confExportSourceId"              : false,
+                         "confSkipLevening"                : true,
+                         "confSkipLnight"                  : true,
+                         "confSkipLden"                    : true,
+                         "confMaxError"                    : 0,
+                         "confFavorableOccurrencesDefault": '0.5, 0.5, 0.75, 1.0, 0.75, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.0, 0.25, 0.5, 0.5, 0.5'])
 
                 def csvFile = new File("$outputFolder/profile.csv")
                 if (csvFile.exists()) {
@@ -700,7 +743,8 @@ static def exec(Connection connection, Map input) {
             else if (v < 65)  histogram["60-65"]++
             else if (v < 70)  histogram["65-70"]++
             else if (v < 75)  histogram["70-75"]++
-            else              histogram[">75"]++
+            else if (v < 80)  histogram["75-80"]++
+            else              histogram[">80"]++
         }
         DecimalFormat f = new DecimalFormat()
         f.setMaximumFractionDigits(2)

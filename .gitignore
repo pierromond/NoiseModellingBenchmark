@@ -7,6 +7,10 @@ build/
 website/data/
 website/index.html
 
+# NoiseModelling binaries/archives downloaded locally or by the CI
+input/NoiseModelling_without_gui_*/
+input/NoiseModelling_without_gui_*.zip
+
 
 # Ignore Gradle project-specific cache directory
 .gradle

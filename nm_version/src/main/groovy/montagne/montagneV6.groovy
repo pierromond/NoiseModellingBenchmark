@@ -139,21 +139,26 @@ static def exec(Connection connection, Map input) {
                     "tableDEM"          : "DEM",
                     "tableGroundAbs"    : "GROUNDS",
                     "confReflOrder"     : 2,
-                    "confMaxReflDist"     : 1000,
+                    "confMaxReflDist"     : 500,
                     "confDiffVertical"     : true,
                     "confMaxSrcDist"    : 300,
                     "confDiffHorizontal": true,
-                    "confMaxError": 0.1,
-                    "confFavorableOccurrencesDefault":'0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25'
+                    "confTemperature"                 : 24,
+                    "confExportSourceId"              : false,
+                    "confSkipLevening"                : true,
+                    "confSkipLnight"                  : true,
+                    "confSkipLden"                    : true,
+                    "confMaxError": 0,
+                    "confFavorableOccurrencesDefault":'0.5, 0.5, 0.75, 1.0, 0.75, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.0, 0.25, 0.5, 0.5, 0.5'
             ])
         }
         else{*/
             new Set_Height().exec(connection,
                     ["tableName": "LW_ROADS",
-                     "height": 0.05])
+                     "height": 12.4])
             new Set_Height().exec(connection,
                     ["tableName": "RECEIVERS",
-                     "height": 1.2])
+                     "height": 1.5])
 
             new Noise_level_from_source().exec(connection,
                     ["tableBuilding"     : "BUILDINGS",
@@ -163,12 +168,17 @@ static def exec(Connection connection, Map input) {
                      "tableGroundAbs"    : "GROUNDS",
                      "confRaysName"      : "RAYS",
                      "confReflOrder"     : 2,
-                     "confMaxReflDist"     : 1000,
+                     "confMaxReflDist"     : 500,
                      "confDiffVertical"     : true,
-                     "confMaxSrcDist"    : 1000,
+                     "confMaxSrcDist"    : 10000,
                      "confDiffHorizontal": true,
-                     "confMaxError": 0.1,
-                     "confFavorableOccurrencesDefault":'0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25'
+                     "confTemperature"                 : 24,
+                     "confExportSourceId"              : false,
+                     "confSkipLevening"                : true,
+                     "confSkipLnight"                  : true,
+                     "confSkipLden"                    : true,
+                     "confMaxError": 0,
+                     "confFavorableOccurrencesDefault":'0.5, 0.5, 0.75, 1.0, 0.75, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.0, 0.25, 0.5, 0.5, 0.5'
                     ])
        // }
 

@@ -222,6 +222,26 @@ function renderHeaderMeta(data) {
     <span style="font-size:.62rem;opacity:.8">Settings published from <code>${SETTINGS.source || 'the simulation script'}</code></span><br>
     <button class="map-btn" onclick="copyLink(this)" style="margin-top:.5rem">Copy link to this view</button>
   `;
+  clissonHeaderHtml = el.innerHTML;
+}
+
+let clissonHeaderHtml = '';
+
+function renderMontagneHeaderMeta() {
+  const el = document.getElementById('header-meta');
+  if (!el) return;
+  const n = montagneData.length;
+  const ref = montagneEntry(montagneSelected) || {};
+  el.innerHTML = `
+    La Montagne — comparison to measurements<br>
+    Input: <b>La Montagne, France</b> (EPSG:2154)<br>
+    <b>${n}</b> version${n > 1 ? 's' : ''} calibrated per version<br>
+    Reference receiver: <b>#${ref.reference_receiver ?? '—'}</b>
+      (${fmt(ref.reference_distance, 1)} m from the source)<br>
+    Offset = measured − computed at that receiver<br>
+    <span style="font-size:.62rem;opacity:.8">Measured reference: <code>input/montagne/measure/RECEIVERS_LEVEL.geojson</code></span><br>
+    <button class="map-btn" onclick="copyLink(this)" style="margin-top:.5rem">Copy link to this view</button>
+  `;
 }
 
 function renderFooter() {
@@ -1616,27 +1636,66 @@ function drawMontagneScatter(entry) {
   });
 }
 
+let montagneData = [];
+let montagneSelected = null;
+
+function montagneEntry(version) {
+  return montagneData.find(d => d.version === version) || montagneData[0] || null;
+}
+
+function updateMontagneNote() {
+  const note = document.getElementById('montagne-note');
+  if (!note) return;
+  const e = montagneEntry(montagneSelected) || {};
+  note.innerHTML =
+    `Reference receiver <b>#${e.reference_receiver}</b> (closest to the source, ${fmt(e.reference_distance, 1)} m): ` +
+    `offset = measured − computed = <b>${fmt(e.offset)} dB</b>. ` +
+    `Errors are computed after applying this offset to every receiver (zero at the reference by construction).` +
+    `<br>Download: <a href="data/montagne/measure_comparison.json" download>measure_comparison.json</a> · ` +
+    `<a href="data/montagne/comparisons.json" download>comparisons.json</a> · ` +
+    `<a href="data/montagne/results.json" download>results.json</a>`;
+}
+
+function renderMontagneVersions(results) {
+  const el = document.getElementById('montagne-versions');
+  if (!el) return;
+  if (!results.length) { el.innerHTML = '<div class="empty">No La Montagne results.</div>'; return; }
+  const rows = results.map(r => `
+    <tr>
+      <td style="padding:.15rem .8rem .15rem 0">${r.version}</td>
+      <td style="padding:.15rem .8rem">${r.nbRays ?? '—'}</td>
+      <td style="padding:.15rem .8rem">${fmt(r.mean)}</td>
+      <td style="padding:.15rem .8rem">${r.time || '—'}</td>
+      <td style="padding:.15rem .8rem">${(r.nNan ?? 0).toLocaleString()}</td>
+    </tr>`).join('');
+  el.innerHTML = `
+    <table style="border-collapse:collapse;margin-top:.5rem">
+      <thead>
+        <tr style="color:var(--accent)">
+          <th align="left">Version</th><th align="left">Rays</th><th align="left">Mean LAEQ</th>
+          <th align="left">Compute</th><th align="left">Silenced</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
 function renderMontagne(data) {
-  const section = document.getElementById('montagne-section');
-  if (!section) return;
-  if (!data.length) { section.style.display = 'none'; return; }
+  const panel = document.getElementById('panel-montagne');
+  const tab   = document.querySelector('.dataset-tab[data-dataset="montagne"]');
+  if (!panel) return;
+
+  if (!data.length) {
+    panel.style.display = 'none';
+    if (tab) tab.style.display = 'none';
+    return;
+  }
+
+  montagneData = data;
+  montagneSelected = data[0].version;
 
   const ctrl = document.getElementById('montagne-controls');
   const tableEl = document.getElementById('montagne-table');
-  const note = document.getElementById('montagne-note');
-
-  let selected = data[0].version;
-
-  function updateNote() {
-    const e = data.find(d => d.version === selected) || {};
-    note.innerHTML =
-      `Reference receiver <b>#${e.reference_receiver}</b> (closest to the source, ${fmt(e.reference_distance, 1)} m): ` +
-      `offset = measured − computed = <b>${fmt(e.offset)} dB</b>. ` +
-      `Errors are computed after applying this offset to every receiver (zero at the reference by construction).` +
-      `<br>Download: <a href="data/montagne/measure_comparison.json" download>measure_comparison.json</a> · ` +
-      `<a href="data/montagne/comparisons.json" download>comparisons.json</a> · ` +
-      `<a href="data/montagne/results.json" download>results.json</a>`;
-  }
 
   ctrl.innerHTML = data.map((row, i) =>
     `<button class="map-btn${i === 0 ? ' active' : ''}" data-version="${row.version}" aria-pressed="${i === 0}">
@@ -1649,9 +1708,9 @@ function renderMontagne(data) {
       ctrl.querySelectorAll('.map-btn').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-pressed', 'false'); });
       btn.classList.add('active');
       btn.setAttribute('aria-pressed', 'true');
-      selected = btn.dataset.version;
-      drawMontagneScatter(data.find(d => d.version === selected));
-      updateNote();
+      montagneSelected = btn.dataset.version;
+      drawMontagneScatter(montagneEntry(montagneSelected));
+      updateMontagneNote();
     });
   });
 
@@ -1679,15 +1738,35 @@ function renderMontagne(data) {
       <tbody>${rows}</tbody>
     </table>`;
 
-  drawMontagneScatter(data[0]);
-  updateNote();
+  updateMontagneNote();
+  // Le canvas n'a une taille que lorsque l'onglet est visible.
+  if (panel.classList.contains('active')) {
+    renderMontagneHeaderMeta();
+    drawMontagneScatter(montagneEntry(montagneSelected));
+  }
 }
 
 async function initMontagne() {
-  const section = document.getElementById('montagne-section');
-  if (!section) return;
+  const results = await loadJson('data/montagne/results.json', []);
+  renderMontagneVersions(results);
   const data = await loadJson('data/montagne/measure_comparison.json', []);
   renderMontagne(data);
+}
+
+function switchDataset(name) {
+  document.querySelectorAll('.dataset-tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.dataset === name));
+  document.querySelectorAll('.dataset-panel').forEach(p =>
+    p.classList.toggle('active', p.id === `panel-${name}`));
+
+  if (name === 'montagne') {
+    renderMontagneHeaderMeta();
+    if (montagneData.length) drawMontagneScatter(montagneEntry(montagneSelected));
+  } else {
+    const el = document.getElementById('header-meta');
+    if (el && clissonHeaderHtml) el.innerHTML = clissonHeaderHtml;
+  }
+  syncState({ dataset: name });
 }
 
 // ─────────────────────────────────────────────
@@ -1736,6 +1815,8 @@ async function applyState(data, snapshot) {
     if (b && [...selB.options].some(o => o.value === b)) selB.value = b;
     if (selA.value !== selB.value) selA.dispatchEvent(new Event('change'));
   }
+
+  if (st.get('dataset') === 'montagne') switchDataset('montagne');
 }
 
 async function init() {
@@ -1766,6 +1847,10 @@ async function init() {
 window.addEventListener('resize', debounce(() => {
   if (histoRedraw) histoRedraw();
   if (boxplotRedraw) boxplotRedraw();
+  const mp = document.getElementById('panel-montagne');
+  if (montagneChart && montagneData.length && mp && mp.classList.contains('active')) {
+    drawMontagneScatter(montagneEntry(montagneSelected));
+  }
 }, 250));
 
 init();

@@ -1788,7 +1788,7 @@ function startBytes(n) {
   if (!n && n !== 0) return '—';
   const units = ['B', 'KB', 'MB', 'GB'];
   let i = 0, v = n;
-  while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+  while (v >= 1000 && i < units.length - 1) { v /= 1000; i++; }
   const digits = (i === 0 || v >= 100) ? 0 : 1;
   return `${v.toFixed(digits)} ${units[i]}`;
 }
@@ -1822,7 +1822,10 @@ function codeBlock(label, code) {
 
 function startTimeRows(label, rows, releaseVersion) {
   if (!rows || !rows.length) return '';
-  return rows.map(r => {
+  // Only the latest release matters for someone comparing their own software.
+  const filtered = releaseVersion ? rows.filter(r => r.version === releaseVersion) : rows;
+  const list = filtered.length ? filtered : (releaseVersion ? [] : rows);
+  return list.map(r => {
     const isRelease = releaseVersion && r.version === releaseVersion;
     const perReceiver = r.timePerReceive ? `${normNumber(r.timePerReceive)} ms` : '—';
     const rays = (r.nbRays !== undefined && r.nbRays !== null) ? Number(r.nbRays).toLocaleString() : '—';
@@ -1846,6 +1849,7 @@ function renderStart(start, clissonResults, montagneResults) {
   const relUrl = release.url || 'https://github.com/Universite-Gustave-Eiffel/NoiseModelling/releases/latest';
   const relZip = (relUrl.split('/').pop()) || 'NoiseModelling.zip';
   const nmDocs = (start && start.nmDocs) || 'https://noise-planet.org/noisemodelling.html';
+  const repo = (start && start.repo) || 'Universite-Gustave-Eiffel/NoiseModellingBenchmark';
 
   // ── At a glance ──
   const glanceRows = datasets.map(ds => `
@@ -1918,12 +1922,21 @@ NoiseModelling\\bin\\ScriptRunner.bat -w workspace -s compare_clisson.groovy`;
     <section>
       <div class="section-title">What you will do</div>
       <ol class="start-steps">
-        <li><b>Install Java</b> on your computer.</li>
+        <li><b>Install Java</b> on your computer (the command-line version of NoiseModelling needs it).</li>
         <li><b>Download the data</b> for one of the two datasets below.</li>
         <li><b>Download NoiseModelling</b> ${esc(relVersion)} and the ready-to-run script.</li>
         <li><b>Run the script</b> and get the sound level at every receiver.</li>
         <li><b>Compare</b> those levels with the output of your own software.</li>
+        <li><b>Share your results with the community</b> (optional, but we would be delighted!):
+            send us your receiver levels, the parameters you used, your software (with its version) and the
+            computation time.</li>
       </ol>
+      <p class="start-text" style="margin-top:.85rem">
+        Comparing independent implementations is how the community finds bugs and improves the models.
+        To share your results, open an issue or a pull request on
+        <a href="https://github.com/${esc(repo)}" target="_blank" rel="noopener">this repository</a> —
+        <b>we would be delighted!</b>
+      </p>
 
       <table class="start-table" style="margin-top:1rem">
         <thead><tr><th align="left">Dataset</th><th align="left">Scene</th><th align="left">Typical run time</th><th align="left">Folder</th></tr></thead>
@@ -1939,12 +1952,19 @@ NoiseModelling\\bin\\ScriptRunner.bat -w workspace -s compare_clisson.groovy`;
     <section>
       <div class="section-title">Step 1 — Install Java</div>
       <p class="start-text">
-        NoiseModelling needs a Java runtime. For the latest release (${esc(relVersion)}), install
-        <b>Java 25 or later</b> (older benchmark versions use Java 11, but you do not need them here).
-        Download it from <a href="https://adoptium.net/temurin/releases/" target="_blank" rel="noopener">Eclipse Temurin</a>
+        The portable <code>NoiseModelling_*.zip</code> does <b>not</b> include Java, so you need a Java runtime
+        to run it from the command line. Install <b>Java 25 or later</b> (the version required by
+        ${esc(relVersion)}) from
+        <a href="https://adoptium.net/temurin/releases/" target="_blank" rel="noopener">Eclipse Temurin</a>
         and check the installation by opening a terminal and running:
       </p>
       ${codeBlock('Check Java', 'java -version')}
+      <div class="start-hint">
+        On Windows and macOS, NoiseModelling also provides installers
+        (<code>NoiseModelling-*.exe</code> / <code>NoiseModelling-*.dmg</code>) that include Java, but they
+        install the graphical application. This tutorial uses the command line, which is delivered as the
+        portable zip and therefore needs Java.
+      </div>
     </section>
 
     <section>
@@ -2014,8 +2034,9 @@ NoiseModelling\\bin\\ScriptRunner.bat -w workspace -s compare_clisson.groovy`;
     <section>
       <div class="section-title">How long does NoiseModelling take?</div>
       <p class="start-text">
-        The table below shows the compute time measured for each benchmarked version, on a GitHub Actions runner
-        (4 CPUs). Times depend on your machine and on the parameters, so use them as an order of magnitude.
+        The table below shows the compute time of the latest release (${esc(relVersion)}), measured on a
+        GitHub Actions runner (4 CPUs). Times depend on your machine and on the parameters, so use them as an
+        order of magnitude.
       </p>
       <table class="start-table">
         <thead>

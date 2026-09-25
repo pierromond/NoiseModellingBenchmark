@@ -1794,7 +1794,27 @@ function startBytes(n) {
 }
 
 function normNumber(s) {
-  return String(s).replace(/[\u202f\u00a0\s]/g, '').replace(',', '.');
+  let t = String(s).replace(/[\u202f\u00a0\s]/g, '');
+  if (t.includes(',') && t.includes('.')) {
+    t = t.replace(/,/g, '');       // "4,154.6" -> comma is a thousands separator
+  } else {
+    t = t.replace(',', '.');       // "4154,6" -> comma is the decimal separator
+  }
+  return t;
+}
+
+function startShowPath(which) {
+  const a = document.getElementById('start-path-a');
+  const b = document.getElementById('start-path-b');
+  if (!a || !b) return;
+  a.style.display = (which === 'b') ? 'none' : '';
+  b.style.display = (which === 'a') ? 'none' : '';
+  document.querySelectorAll('.start-path-card').forEach(card => {
+    const cardPath = card.dataset.path;
+    card.classList.toggle('active', which !== 'both' && cardPath === which);
+  });
+  const data = document.getElementById('start-data');
+  if (data) data.scrollIntoView({ behavior: 'smooth' });
 }
 
 function copyPre(btn) {
@@ -1851,7 +1871,6 @@ function renderStart(start, clissonResults, montagneResults) {
   const nmDocs = (start && start.nmDocs) || 'https://noise-planet.org/noisemodelling.html';
   const repo = (start && start.repo) || 'Universite-Gustave-Eiffel/NoiseModellingBenchmark';
 
-  // ── At a glance ──
   const glanceRows = datasets.map(ds => `
     <tr>
       <td><b>${esc(ds.label)}</b></td>
@@ -1860,31 +1879,31 @@ function renderStart(start, clissonResults, montagneResults) {
       <td><code>${esc(ds.folder)}/</code></td>
     </tr>`).join('');
 
-  // ── Files to download, per dataset ──
   const filesHtml = datasets.map(ds => `
     <div class="start-filegroup">
       <div class="start-filegroup-title">
         ${esc(ds.label)} — put these files in a folder named <code>${esc(ds.folder)}/</code>
       </div>
-      <table class="start-table">
+      <div class="table-scroll"><table class="start-table">
         <thead><tr><th align="left">File</th><th align="left">Size</th><th align="left">Link</th></tr></thead>
         <tbody>
           ${ds.files.map(f => `<tr>
             <td><code>${esc(f.name)}</code></td>
-            <td>${startBytes(f.size)}</td>
+            <td>${startBytes(f.size)}${f.size > 100000000 ? ' <span class="start-warn">large file</span>' : ''}</td>
             <td>${f.url ? `<a class="dl-btn" href="${f.url}" download>download</a>` : '—'}</td>
           </tr>`).join('')}
         </tbody>
-      </table>
-      <div class="start-hint">
-        NoiseModelling script for this dataset:
-        ${ds.script && ds.script.url
-          ? `<a class="dl-btn" href="${ds.script.url}" download>${esc(ds.script.name)}</a>`
-          : `<code>${esc(ds.script ? ds.script.name : '')}</code>`}
-      </div>
+      </table></div>
     </div>`).join('');
 
-  // ── Commands ──
+  const scriptsHtml = datasets.map(ds => `
+    <div class="start-hint">
+      ${esc(ds.label)}:
+      ${ds.script && ds.script.url
+        ? `<a class="dl-btn" href="${ds.script.url}" download>${esc(ds.script.name)}</a>`
+        : `<code>${esc(ds.script ? ds.script.name : '')}</code>`}
+    </div>`).join('');
+
   const dlLinux = `# Linux / macOS
 curl -L -o ${relZip} "${relUrl}"
 unzip ${relZip} -d NoiseModelling`;
@@ -1899,171 +1918,288 @@ NoiseModelling\\bin\\ScriptRunner.bat -w workspace -s compare_clisson.groovy`;
   const runWindowsPs = `# Windows (PowerShell) — run from the folder that contains clisson\\ and compare_clisson.groovy
 .\\NoiseModelling\\bin\\ScriptRunner.bat -w workspace -s compare_clisson.groovy`;
 
-  // ── Compute times ──
+  const exampleOutput = `{
+  "type": "Feature",
+  "properties": { "IDRECEIVER": 10, "LAEQ": 84.2 },
+  "geometry": { "type": "Point", "coordinates": [345560.7, 6687172.6] }
+}`;
+
   const timeRows = startTimeRows('Clisson', clissonResults, relVersion)
                   + startTimeRows('La Montagne', montagneResults, relVersion);
+
+  // Reference run (NoiseModelling) — pre-filled example for the submission table.
+  const relClisson = (clissonResults || []).find(r => r.version === relVersion) || {};
+  const relMontagne = (montagneResults || []).find(r => r.version === relVersion) || {};
+  const refDate = (typeof BUILD !== 'undefined' && BUILD.builtAt) ? BUILD.builtAt : '—';
+  const refMachine = 'GitHub Actions ubuntu-latest — 4 vCPU, 16 GB RAM, SSD';
+  const refMs = r => r.timePerReceive ? `${normNumber(r.timePerReceive)} ms` : '—';
+  const refRays = r => (r.nbRays === undefined || r.nbRays === null) ? '—' : Number(r.nbRays).toLocaleString();
+  const refJava = r => r.java
+    || (String(r.version || '').startsWith('v6') ? 'Java 25' : (r.version ? 'Java 11' : '—'));
+  const referenceTable = `
+      <div class="table-scroll"><table class="start-table" style="margin-bottom:1.25rem">
+        <thead>
+          <tr><th align="left">Field</th><th align="left">Clisson</th><th align="left">La Montagne</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Software</td><td>NoiseModelling ${esc(relVersion)}</td><td>NoiseModelling ${esc(relVersion)}</td></tr>
+          <tr><td>Java</td><td>${esc(refJava(relClisson))}</td><td>${esc(refJava(relMontagne))}</td></tr>
+          <tr><td>Computation date</td><td colspan="2">${esc(refDate)} (last benchmark run)</td></tr>
+          <tr><td>Compute time</td><td>${esc(relClisson.time || '—')}</td><td>${esc(relMontagne.time || '—')}</td></tr>
+          <tr><td>Time per receiver</td><td>${esc(refMs(relClisson))}</td><td>${esc(refMs(relMontagne))}</td></tr>
+          <tr><td>Rays</td><td>${esc(refRays(relClisson))}</td><td>${esc(refRays(relMontagne))}</td></tr>
+          <tr><td>Machine</td><td colspan="2">${esc(refMachine)}</td></tr>
+          <tr><td>Threads</td><td colspan="2">all available CPU cores</td></tr>
+          <tr><td>GPU</td><td colspan="2">none</td></tr>
+          <tr><td>Parameters</td>
+              <td>reflection order 1, max source distance 300 m, max error 0.1, 25% favourable occurrences</td>
+              <td>reflection order 2, max source distance 10 km, max reflection distance 500 m, 24 °C, favourable wind rose</td></tr>
+          <tr><td>Output</td>
+              <td><a class="dl-btn" href="data/${esc(relVersion)}/RECEIVERS_LEVEL.geojson" download>RECEIVERS_LEVEL.geojson</a></td>
+              <td><a class="dl-btn" href="data/montagne/${esc(relVersion)}/RECEIVERS_LEVEL.geojson" download>RECEIVERS_LEVEL.geojson</a></td></tr>
+        </tbody>
+      </table></div>`;
+
+  const shareTemplate = [
+    'dataset: ""                # Clisson | La Montagne',
+    'software:',
+    '  name: ""                  # your software',
+    '  version: ""',
+    '  license: ""               # e.g. MIT, GPL-3.0, proprietary',
+    '  url: ""',
+    'run:',
+    '  date: ""                  # YYYY-MM-DD (date of the computation)',
+    '  compute_time: ""          # hh:mm:ss',
+    '  time_per_receiver_ms: ""',
+    '  machine:',
+    '    cpu: ""                 # e.g. AMD Ryzen 9 7950X',
+    '    cores: ""               # physical/logical cores',
+    '    ram_gb: ""',
+    '    os: ""                  # e.g. Ubuntu 24.04, Windows 11',
+    '    storage: ""             # SSD | HDD',
+    '    environment: ""         # laptop | desktop | server | cloud | cluster',
+    '  threads: ""               # number of threads used',
+    '  gpu: "none"               # GPU used, if any',
+    'parameters: ""              # benchmark defaults, or list your own',
+    'experience:',
+    '  noise_mapping: ""         # first_time | occasional | regular | expert',
+    'output: ""                  # link/attachment of your receivers GeoJSON (IDRECEIVER, LAEQ)',
+    'notes: ""                   # anything else relevant (validation, known limits, ...)',
+    'contact: ""                 # name / email / GitHub handle',
+  ].join('\n');
+
+  const issueTitle = 'Results submission — Clisson / La Montagne';
+  const issueBody = '### Results submission\n\nFill in the template below and attach (or link) your receiver output.\n\n```yaml\n'
+    + shareTemplate + '\n```\n';
+  const issueUrl = `https://github.com/${repo}/issues/new?title=${encodeURIComponent(issueTitle)}&body=${encodeURIComponent(issueBody)}`;
 
   el.innerHTML = `
     <section>
       <div class="section-title">Compare your software with NoiseModelling</div>
       <div class="start-intro">
         <p>
-          <b>NoiseModelling</b> is a free and open-source software for computing environmental noise maps.
-          This page gives you everything you need to run NoiseModelling on the benchmark datasets and to
-          compare the sound levels produced by <b>your own software</b> with the NoiseModelling reference output.
+          <b>Bring your own noise model.</b> Run it on the same dataset as NoiseModelling, then compare the
+          sound levels at the receivers. Two ways to get the NoiseModelling reference — pick the one that
+          suits you.
         </p>
         <p>
-          Everything is open: the input data, the simulation scripts and the reference results are published in
-          this repository. You only need Java and a terminal. No prior experience with NoiseModelling is required.
+          Everything is open: the input data, the simulation scripts and the reference results are published
+          in this repository. You only need Java if you choose to run NoiseModelling yourself.
         </p>
       </div>
     </section>
 
     <section>
-      <div class="section-title">What you will do</div>
-      <ol class="start-steps">
-        <li><b>Install Java</b> on your computer (the command-line version of NoiseModelling needs it).</li>
-        <li><b>Download the data</b> for one of the two datasets below.</li>
-        <li><b>Download NoiseModelling</b> ${esc(relVersion)} and the ready-to-run script.</li>
-        <li><b>Run the script</b> and get the sound level at every receiver.</li>
-        <li><b>Compare</b> those levels with the output of your own software.</li>
-        <li><b>Share your results with the community</b> (optional, but we would be delighted!):
-            send us your receiver levels, the parameters you used, your software (with its version) and the
-            computation time.</li>
-      </ol>
-      <p class="start-text" style="margin-top:.85rem">
-        Comparing independent implementations is how the community finds bugs and improves the models.
-        To share your results, open an issue or a pull request on
-        <a href="https://github.com/${esc(repo)}" target="_blank" rel="noopener">this repository</a> —
-        <b>we would be delighted!</b>
-      </p>
-
-      <table class="start-table" style="margin-top:1rem">
-        <thead><tr><th align="left">Dataset</th><th align="left">Scene</th><th align="left">Typical run time</th><th align="left">Folder</th></tr></thead>
-        <tbody>${glanceRows}</tbody>
-      </table>
-      <div class="start-hint">
-        Clisson is a realistic road-traffic scene (many line sources): a full run takes several minutes.
-        La Montagne is a single point source (a siren on a roof) with 10 receivers: it runs in under a minute,
-        which makes it ideal for a first comparison.
+      <div class="section-title">Choose your path</div>
+      <div class="start-paths">
+        <div class="start-path-card" data-path="a">
+          <div class="start-path-head">Path A — Compare only <span class="start-tag">recommended</span></div>
+          <div class="start-path-sub">No installation needed</div>
+          <ol class="start-steps">
+            <li>Download the data.</li>
+            <li>Run <b>your own software</b> and export the receiver levels.</li>
+            <li>Download the published NoiseModelling reference output.</li>
+            <li>Compare the two files.</li>
+          </ol>
+          <button class="dl-btn" onclick="startShowPath('a')">Start Path A</button>
+        </div>
+        <div class="start-path-card" data-path="b">
+          <div class="start-path-head">Path B — Compare and run NoiseModelling</div>
+          <div class="start-path-sub">Compute the reference yourself</div>
+          <ol class="start-steps">
+            <li>Download the data.</li>
+            <li>Run <b>your own software</b>.</li>
+            <li>Install Java, download NoiseModelling and the script.</li>
+            <li>Run the NoiseModelling script.</li>
+            <li>Compare the two files.</li>
+          </ol>
+          <button class="dl-btn" onclick="startShowPath('b')">Start Path B</button>
+        </div>
+      </div>
+      <div class="start-hint" style="margin-top:.6rem">
+        Choosing a path hides the other one below.
+        <a href="#" onclick="startShowPath('both');return false">Show both paths</a>.
       </div>
     </section>
 
-    <section>
-      <div class="section-title">Step 1 — Install Java</div>
-      <p class="start-text">
-        The portable <code>NoiseModelling_*.zip</code> does <b>not</b> include Java, so you need a Java runtime
-        to run it from the command line. Install <b>Java 25 or later</b> (the version required by
-        ${esc(relVersion)}) from
-        <a href="https://adoptium.net/temurin/releases/" target="_blank" rel="noopener">Eclipse Temurin</a>
-        and check the installation by opening a terminal and running:
-      </p>
-      ${codeBlock('Check Java', 'java -version')}
-      <div class="start-hint">
-        On Windows and macOS, NoiseModelling also provides installers
-        (<code>NoiseModelling-*.exe</code> / <code>NoiseModelling-*.dmg</code>) that include Java, but they
-        install the graphical application. This tutorial uses the command line, which is delivered as the
-        portable zip and therefore needs Java.
-      </div>
-    </section>
-
-    <section>
-      <div class="section-title">Step 2 — Download the data</div>
+    <section id="start-data">
+      <div class="section-title">Step 1 (both paths) — Download the data</div>
       <p class="start-text">
         Download the files of the dataset you want to use and place them in a folder named after the dataset
         (<code>clisson/</code> or <code>montagne/</code>). These files are stored with Git LFS; the links below
         download the real content directly.
       </p>
+      <div class="table-scroll"><table class="start-table" style="margin-bottom:1rem">
+        <thead>
+          <tr><th align="left">Dataset</th><th align="left">Scene</th>
+              <th align="left">Typical run time (NoiseModelling)</th><th align="left">Folder</th></tr>
+        </thead>
+        <tbody>${glanceRows}</tbody>
+      </table></div>
       ${filesHtml}
+      <div class="start-hint">
+        <b>Large files:</b> the DEM files are big (652 MB for Clisson, 219 MB for La Montagne) and can take a
+        while to download — the other files are small. Clisson is a realistic road-traffic scene (many line
+        sources): a full NoiseModelling run takes several minutes. La Montagne is a single point source (a
+        siren on a roof) with only 10 receivers: it runs in under a minute, which makes it ideal for a first
+        comparison.
+      </div>
     </section>
 
-    <section>
-      <div class="section-title">Step 3 — Download NoiseModelling</div>
+    <section id="start-you">
+      <div class="section-title">Step 2 (both paths) — Run your own software</div>
       <p class="start-text">
-        Download the latest release
-        <a href="${relUrl}" target="_blank" rel="noopener">NoiseModelling ${esc(relVersion)}</a>
-        and unzip it next to your dataset folder.
+        Run your model on the dataset. The comparison works at the receiver level, so your software must
+        produce <b>one sound level per receiver</b>. Export a GeoJSON <code>FeatureCollection</code> with one
+        point per receiver, using exactly these two properties:
+      </p>
+      <ul class="start-list">
+        <li><code>IDRECEIVER</code> — the receiver identifier. It is the <code>PK</code> value already present
+            in the dataset's <code>RECEIVERS.geojson</code> (Clisson: 0…29410, La Montagne: 1…10).</li>
+        <li><code>LAEQ</code> — the computed A-weighted sound level in dB at that receiver.</li>
+      </ul>
+      ${codeBlock('Expected output format (one feature per receiver)', exampleOutput)}
+      <div class="start-hint">
+        For Clisson you can optionally add <code>"PERIOD": "D"</code> and the octave-band levels
+        (<code>HZ63</code>…<code>HZ8000</code>) like the reference output; only <code>IDRECEIVER</code> and
+        <code>LAEQ</code> are required for the comparison.
+      </div>
+    </section>
+
+    <section id="start-path-a">
+      <div class="section-title">Path A — Download the NoiseModelling reference</div>
+      <p class="start-text">
+        The benchmark already publishes the NoiseModelling output for each dataset. Download the
+        <code>RECEIVERS_LEVEL.geojson</code> of the latest release (${esc(relVersion)}) — no installation, no
+        computation needed:
+      </p>
+      <div class="table-scroll"><table class="start-table">
+        <thead><tr><th align="left">Dataset</th><th align="left">Reference output</th></tr></thead>
+        <tbody>
+          <tr><td>Clisson</td><td><a class="dl-btn" href="data/${esc(relVersion)}/RECEIVERS_LEVEL.geojson" download>RECEIVERS_LEVEL.geojson</a></td></tr>
+          <tr><td>La Montagne</td><td><a class="dl-btn" href="data/montagne/${esc(relVersion)}/RECEIVERS_LEVEL.geojson" download>RECEIVERS_LEVEL.geojson</a></td></tr>
+        </tbody>
+      </table></div>
+      <div class="start-hint">
+        Then go to
+        <a href="#" onclick="document.getElementById('start-compare').scrollIntoView({behavior:'smooth'});return false">Step 3 — Compare the two files</a>.
+      </div>
+    </section>
+
+    <section id="start-path-b">
+      <div class="section-title">Path B — Run NoiseModelling yourself</div>
+
+      <p class="start-text">
+        <b>B.1 — Install Java.</b> The portable <code>NoiseModelling_*.zip</code> does <b>not</b> include Java.
+        Install <b>Java 25 or later</b> (the version required by ${esc(relVersion)}) from
+        <a href="https://adoptium.net/temurin/releases/" target="_blank" rel="noopener">Eclipse Temurin</a>,
+        then check the installation:
+      </p>
+      ${codeBlock('Check Java', 'java -version')}
+      <div class="start-hint">
+        On Windows and macOS, NoiseModelling also provides installers
+        (<code>NoiseModelling-*.exe</code> / <code>NoiseModelling-*.dmg</code>) that include Java, but they
+        install the graphical application. This path uses the command line, delivered as the portable zip.
+      </div>
+
+      <p class="start-text" style="margin-top:1.25rem">
+        <b>B.2 — Download NoiseModelling ${esc(relVersion)}</b> and unzip it next to your dataset folder:
       </p>
       ${codeBlock('Linux / macOS', dlLinux)}
       ${codeBlock('Windows PowerShell', dlWindows)}
-    </section>
 
-    <section>
-      <div class="section-title">Step 4 — Run the script</div>
-      <p class="start-text">
-        Download the script for your dataset (link in Step 2), put it next to the dataset folder, then run it.
-        NoiseModelling imports the data, computes the sound propagation and writes the result to
-        <code>workspace/</code>. Expect the Clisson run to take several minutes and the La Montagne run to
-        finish in under a minute.
+      <p class="start-text" style="margin-top:1.25rem">
+        <b>B.3 — Download the script,</b> put it next to the dataset folder, then run it:
       </p>
+      <div class="start-hints">${scriptsHtml}</div>
       ${codeBlock('Linux / macOS', runLinux)}
       ${codeBlock('Windows (cmd)', runWindowsCmd)}
       ${codeBlock('Windows (PowerShell)', runWindowsPs)}
       <div class="start-hint">
         For La Montagne, use <code>compare_montagne.groovy</code> instead of <code>compare_clisson.groovy</code>
-        (and the <code>montagne/</code> folder).
+        (and the <code>montagne/</code> folder). The script writes <code>output/RECEIVERS_LEVEL.geojson</code>.
       </div>
     </section>
 
-    <section>
-      <div class="section-title">Step 5 — Compare your results</div>
+    <section id="start-compare">
+      <div class="section-title">Step 3 (both paths) — Compare the two files</div>
       <p class="start-text">
-        The script writes <code>output/RECEIVERS_LEVEL.geojson</code>. It is a GeoJSON file with one feature per
-        receiver and the computed sound level in the <code>LAEQ</code> property (in dB). Join this file with your
-        own results on the receiver identifier (<code>IDRECEIVER</code>) and compare the levels.
-      </p>
-      <p class="start-text">
-        Two details matter when comparing:
+        Join your output with the NoiseModelling reference on <code>IDRECEIVER</code> and compare the
+        <code>LAEQ</code> values. Two rules matter for a fair comparison:
       </p>
       <ul class="start-list">
         <li><b>Silence threshold.</b> In the benchmark, levels at or below −89 dB are treated as silence and
-            excluded from the statistics. Apply the same rule for a fair comparison.</li>
-        <li><b>La Montagne calibration.</b> The published La Montagne comparison is calibrated per version:
-            an offset is applied so that the computed level equals the measured level at the receiver closest
-            to the source. The raw <code>output/RECEIVERS_LEVEL.geojson</code> is <i>not</i> calibrated —
-            calibration is only used on the results page.</li>
+            excluded from the statistics. Apply the same rule.</li>
+        <li><b>La Montagne calibration.</b> The published La Montagne comparison is calibrated per version: an
+            offset is applied so that the computed level equals the measured level at the receiver closest to
+            the source. The raw output is <i>not</i> calibrated — calibration is only used on the results page.</li>
       </ul>
+    </section>
+
+    <section id="start-share">
+      <div class="section-title">Share your results with the community</div>
       <p class="start-text">
-        You can also download the reference output published by this benchmark from the
-        <a href="#panel-clisson-top" onclick="switchDataset('clisson');return false">Clisson</a> and
-        <a href="#" onclick="switchDataset('montagne');return false">La Montagne</a> tabs, or directly from the
-        data folder of this website.
+        Comparing independent implementations is how the community finds bugs and improves the models.
+        If you would like to share your run, copy the template below into an
+        <a href="${issueUrl}" target="_blank" rel="noopener">issue on this repository</a> (or a pull request).
+        <b>We would be delighted!</b>
+      </p>
+      <p class="start-text" style="margin-top:1rem">
+        Here is the <b>reference run</b> produced by NoiseModelling in this benchmark. Use it as the baseline
+        for your comparison, and as an example of what a submission looks like:
+      </p>
+      ${referenceTable}
+      ${codeBlock('Results submission template (copy and fill in)', shareTemplate)}
+      <p class="start-text">
+        <a class="dl-btn" href="${issueUrl}" target="_blank" rel="noopener">Open a results issue (template pre-filled)</a>
       </p>
     </section>
 
     <section>
       <div class="section-title">How long does NoiseModelling take?</div>
       <p class="start-text">
-        The table below shows the compute time of the latest release (${esc(relVersion)}), measured on a
-        GitHub Actions runner (4 CPUs). Times depend on your machine and on the parameters, so use them as an
-        order of magnitude.
+        Compute time of the latest release (${esc(relVersion)}), measured on a GitHub Actions runner
+        (4 CPUs). Times depend on your machine and on the parameters, so use them as an order of magnitude.
       </p>
-      <table class="start-table">
+      <div class="table-scroll"><table class="start-table">
         <thead>
-          <tr>
-            <th align="left">Dataset</th><th align="left">Version</th><th align="left">Compute time</th>
-            <th align="left">Time per receiver</th><th align="left">Rays</th>
-          </tr>
+          <tr><th align="left">Dataset</th><th align="left">Version</th><th align="left">Compute time</th>
+              <th align="left">Time per receiver</th><th align="left">Rays</th></tr>
         </thead>
         <tbody>${timeRows || '<tr><td colspan="5">No data yet.</td></tr>'}</tbody>
-      </table>
-      <div class="start-hint">
-        The parameters used by the benchmark are listed in the “Method &amp; reproducible data” section below.
-      </div>
+      </table></div>
     </section>
 
     <section>
       <div class="section-title">Troubleshooting</div>
       <ul class="start-list">
-        <li><b>“java: command not found”</b> — Java is not installed or not on your PATH. Reopen your terminal
-            after installing it.</li>
-        <li><b>“Unsupported class file major version”</b> — you are using an older Java. Install Java 25 or later
-            for the latest release.</li>
-        <li><b>Out of memory</b> — give the Java virtual machine more memory by setting the
-            <code>JAVA_OPTS</code> environment variable, for example <code>JAVA_OPTS="-Xmx8g"</code>
-            (8 GB) before running ScriptRunner.</li>
-        <li><b>Where are the results?</b> — in <code>workspace/</code> (database and logs) and in
-            <code>output/RECEIVERS_LEVEL.geojson</code> (the receiver levels).</li>
+        <li><b>“java: command not found”</b> — Java is not installed or not on your PATH (Path B only).
+            Reopen your terminal after installing it.</li>
+        <li><b>“Unsupported class file major version”</b> — you are using an older Java. Install Java 25 or later.</li>
+        <li><b>Out of memory</b> — give the JVM more memory, e.g. <code>JAVA_OPTS="-Xmx8g"</code> (8 GB) before
+            running ScriptRunner.</li>
+        <li><b>Where are the results?</b> — in <code>output/RECEIVERS_LEVEL.geojson</code> (and
+            <code>workspace/</code> for the database and logs).</li>
         <li><b>Need more help?</b> — see the
             <a href="${nmDocs}" target="_blank" rel="noopener">NoiseModelling documentation</a>.</li>
       </ul>

@@ -267,6 +267,8 @@ static def exec(Connection connection, Map input) {
             mean: mean,
             time: timeString,
             timePerReceive: f.format(time),
+            java: System.getProperty("java.version"),
+            runner: "montagne-v6",
             nbRays : nbRays,
             nNan: nNan,
             silenceThreshold: silenceThreshold,

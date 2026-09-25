@@ -150,9 +150,43 @@
     .start-list b { color: var(--accent); }
 
     .start-hint {
-      font-family: var(--font-mono); font-size: .65rem; line-height: 1.7;
-      color: var(--text-muted); margin-top: .75rem; max-width: 92ch;
+      font-family: var(--font-mono); font-size: .72rem; line-height: 1.7;
+      color: #9aa6b8; margin-top: .75rem; max-width: 92ch;
     }
+
+    .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+    .start-warn {
+      display: inline-block; font-family: var(--font-mono); font-size: .55rem;
+      border: 1px solid var(--accent2); color: var(--accent2);
+      border-radius: 2px; padding: 0 .3rem; margin-left: .4rem; vertical-align: middle;
+      white-space: nowrap;
+    }
+
+    .start-path-card.active {
+      border-color: var(--accent);
+      box-shadow: inset 0 0 0 1px rgba(0,229,255,.25);
+    }
+
+    .start-paths {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+      gap: 1rem; max-width: 940px;
+    }
+    .start-path-card {
+      border: 1px solid var(--border); border-radius: 4px;
+      background: var(--surface); padding: 1rem 1.1rem;
+    }
+    .start-path-head {
+      font-family: var(--font-mono); font-size: .8rem;
+      color: var(--accent); margin-bottom: .2rem;
+    }
+    .start-path-sub {
+      font-family: var(--font-mono); font-size: .62rem;
+      color: var(--text-muted); margin-bottom: .6rem;
+    }
+    .start-path-card .start-steps { font-size: .8rem; margin-bottom: .8rem; }
+
+    .start-hints { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
 
     .start-table {
       border-collapse: collapse; width: 100%; max-width: 940px; font-size: .75rem;

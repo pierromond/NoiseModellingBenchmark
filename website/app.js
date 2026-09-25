@@ -2150,8 +2150,11 @@ NoiseModelling\\bin\\ScriptRunner.bat -w workspace -s compare_clisson.groovy`;
         </tbody>
       </table></div>
       <div class="start-hint">
+        You can also
+        <a href="#" onclick="document.getElementById('start-share').scrollIntoView({behavior:'smooth'});return false">share your results</a>
+        with the community, or download the reference above to compare it yourself with your own software.
         Then go to
-        <a href="#" onclick="document.getElementById('start-compare').scrollIntoView({behavior:'smooth'});return false">Step 3 — Compare the two files</a>.
+        <a href="#" onclick="document.getElementById('start-compare').scrollIntoView({behavior:'smooth'});return false">Step 4 — Compare the two files</a>.
       </div>
     </section>
 

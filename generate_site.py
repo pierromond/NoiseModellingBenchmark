@@ -29,6 +29,86 @@ def num(pattern, text, cast=float, default=None):
 NM_REPO = "Universite-Gustave-Eiffel/NoiseModelling"
 NM_DOCS = "https://noise-planet.org/noisemodelling.html"
 
+# Full NoiseModelling parameters, extracted from the simulation scripts so the
+# published list can never drift from what is actually executed.
+PARAM_LABELS = {
+    "tableBuilding"                    : "Buildings table",
+    "tableSources"                     : "Sources table",
+    "tableReceivers"                   : "Receivers table",
+    "tableDEM"                         : "Digital elevation model table",
+    "tableGroundAbs"                   : "Ground absorption table",
+    "confRaysName"                     : "Rays output table",
+    "confReflOrder"                    : "Reflection order",
+    "confMaxReflDist"                  : "Maximum reflection distance",
+    "confDiffVertical"                 : "Vertical diffraction",
+    "confMaxSrcDist"                   : "Maximum source distance",
+    "confDiffHorizontal"               : "Horizontal diffraction",
+    "confTemperature"                  : "Temperature",
+    "confExportSourceId"               : "Export source identifier",
+    "confMaxError"                     : "Maximum error",
+    "confFavorableOccurrencesDefault"  : "Favourable occurrence probabilities (16 wind directions)",
+    "confRecordProfile"                : "Record profiling",
+    "confFavorableOccurrencesDay"      : "Favourable occurrence probabilities (day)",
+}
+PARAM_ORDER = list(PARAM_LABELS.keys())
+PARAM_UNITS = {"confMaxSrcDist": "m", "confMaxReflDist": "m", "confTemperature": "°C"}
+
+
+def strip_block_comments(text):
+    return re.sub(r"/\*.*?\*/", "", text, flags=re.S)
+
+
+def extract_exec_params(text, marker="new Noise_level_from_source().exec(connection,"):
+    try:
+        start = text.index(marker)
+    except ValueError:
+        return {}
+    brace = text.index("[", start)
+    depth, end = 0, brace
+    for i in range(brace, len(text)):
+        if text[i] == "[":
+            depth += 1
+        elif text[i] == "]":
+            depth -= 1
+            if depth == 0:
+                end = i
+                break
+    block = text[brace:end + 1]
+    params = {}
+    for match in re.finditer(r'"([A-Za-z_][\w]*)"\s*:\s*(\'[^\']*\'|"[^"]*"|true|false|[-\d.]+)', block):
+        params[match.group(1)] = match.group(2).strip("'\"")
+    return params
+
+
+def extract_set_heights(text):
+    heights = []
+    for match in re.finditer(r"new Set_Height\(\)\.exec\(connection,\s*\[(.*?)\]\)", text, re.S):
+        block = match.group(1)
+        name = re.search(r'"tableName"\s*:\s*"([^"]+)"', block)
+        height = re.search(r'"height"\s*:\s*([-\d.]+)', block)
+        if name and height:
+            heights.append((name.group(1), height.group(1)))
+    return heights
+
+
+def build_param_list(script_path, height_labels=None):
+    if not script_path.exists():
+        return []
+    text = strip_block_comments(script_path.read_text())
+    params = extract_exec_params(text)
+    rows = []
+    for key in PARAM_ORDER:
+        if key not in params:
+            continue
+        value = params[key]
+        unit = PARAM_UNITS.get(key)
+        rows.append([PARAM_LABELS[key], f"{value} {unit}".strip() if unit else value])
+    if height_labels:
+        for table, height in extract_set_heights(text):
+            label = height_labels.get(table, f"Set_Height {table}")
+            rows.append([label, f"{height} m"])
+    return rows
+
 # Files needed by the "Compare your software" tutorial, per dataset.
 START_DATASETS = [
     {
@@ -39,6 +119,7 @@ START_DATASETS = [
         "kind"  : "Road-traffic noise map (line sources)",
         "speed" : "~15 min",
         "script": "nm_version/src/main/groovy/getting_started/compare_clisson.groovy",
+        "model_script": "nm_version/src/main/groovy/runscriptV6.0.groovy",
         "files" : ["BUILDINGS.geojson", "DEM.geojson", "GROUNDS.geojson",
                    "LW_ROADS.geojson", "RECEIVERS.geojson"],
     },
@@ -50,6 +131,11 @@ START_DATASETS = [
         "kind"  : "Single point source (a siren on a roof)",
         "speed" : "< 1 min",
         "script": "nm_version/src/main/groovy/getting_started/compare_montagne.groovy",
+        "model_script": "nm_version/src/main/groovy/montagne/montagneV6.groovy",
+        "height_labels": {
+            "LW_ROADS": "Source height (Set_Height)",
+            "RECEIVERS": "Receiver height (Set_Height)",
+        },
         "files" : ["BUILDINGS.geojson", "DEM.geojson", "GROUNDS.geojson",
                    "LW_ROADS.geojson", "RECEIVERS.geojson"],
     },
@@ -117,6 +203,7 @@ def write_start():
                 "name": os.path.basename(dataset["script"]),
                 "url" : raw_url(dataset["script"]),
             },
+            "params": build_param_list(ROOT / dataset["model_script"], dataset.get("height_labels")),
         })
     start = {
         "repo"    : repo_slug(),

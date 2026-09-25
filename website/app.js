@@ -10,6 +10,38 @@ let SETTINGS = {};
 let ALL_RESULTS = [];
 let histoRedraw = null;
 let boxplotRedraw = null;
+let pairRefresh = null;
+
+// ─────────────────────────────────────────────
+// THEME (dark by default, light alternative)
+// ─────────────────────────────────────────────
+function cssVar(name, fallback) {
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return value || fallback;
+}
+const C = cssVar;
+
+function redrawCharts() {
+  if (histoRedraw) histoRedraw();
+  if (boxplotRedraw) boxplotRedraw();
+  if (pairRefresh) pairRefresh();
+  const mp = document.getElementById('panel-montagne');
+  if (montagneChart && montagneData.length && mp && mp.classList.contains('active')) {
+    drawMontagneScatter(montagneEntry(montagneSelected));
+  }
+}
+
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  try { localStorage.setItem('nm-theme', theme); } catch (e) {}
+  const btn = document.getElementById('theme-toggle');
+  if (btn) btn.textContent = theme === 'light' ? 'Dark' : 'Light';
+}
+
+function toggleTheme() {
+  applyTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light');
+  redrawCharts();
+}
 
 // Color palette per version index
 const PALETTE = ['#00e5ff','#ff6b35','#7fff6b','#f7d716','#c77dff','#ff4081','#00e676','#ff9100','#40c4ff','#ea80fc','#b388ff','#1de9b6'];
@@ -219,8 +251,7 @@ function renderHeaderMeta(data) {
     Occurrences of favourable conditions: <b>${occurrences}</b><br>
     <br>
     *: <b>Please note that the definition of this setting has changed over the course of different versions.</b><br>
-    <span style="font-size:.62rem;opacity:.8">Settings published from <code>${SETTINGS.source || 'the simulation script'}</code></span><br>
-    <button class="map-btn" onclick="copyLink(this)" style="margin-top:.5rem">Copy link to this view</button>
+    <span style="font-size:.62rem;opacity:.8">Settings published from <code>${SETTINGS.source || 'the simulation script'}</code></span>
   `;
   clissonHeaderHtml = el.innerHTML;
 }
@@ -231,16 +262,13 @@ function renderMontagneHeaderMeta() {
   const el = document.getElementById('header-meta');
   if (!el) return;
   const n = montagneData.length;
-  const ref = montagneEntry(montagneSelected) || {};
+  const ref = montagneEntries()[0] || {};
   el.innerHTML = `
-    La Montagne — comparison to measurements<br>
-    Input: <b>La Montagne, France</b> (EPSG:2154)<br>
-    <b>${n}</b> version${n > 1 ? 's' : ''} calibrated per version<br>
-    Reference receiver: <b>#${ref.reference_receiver ?? '—'}</b>
-      (${fmt(ref.reference_distance, 1)} m from the source)<br>
-    Offset = measured − computed at that receiver<br>
-    <span style="font-size:.62rem;opacity:.8">Measured reference: <code>input/montagne/measure/RECEIVERS_LEVEL.geojson</code></span><br>
-    <button class="map-btn" onclick="copyLink(this)" style="margin-top:.5rem">Copy link to this view</button>
+    La Montagne — comparison to measurements.<br>
+    Input: <b>La Montagne, France</b> (EPSG:2154).<br>
+    <b>${n}</b> version${n > 1 ? 's' : ''} calibrated per version; reference receiver
+    <b>#${ref.reference_receiver ?? '—'}</b> (${fmt(ref.reference_distance, 1)} m from the source).<br>
+    Measured reference: <code>input/montagne/measure/RECEIVERS_LEVEL.geojson</code>.
   `;
 }
 
@@ -707,6 +735,7 @@ function setupPairSelector() {
         : '';
     }
   }
+  pairRefresh = refresh;
 
   selA.addEventListener('change', () => {
     if (selA.value === selB.value) {
@@ -796,17 +825,17 @@ function renderHistogram(data) {
           legend: {
             display: true,
             labels: {
-              color: '#6b7280',
+              color: C('--chart-text', '#6b7280'),
               font: { family: 'Space Mono', size: 11 },
               boxWidth: 14,
             }
           },
           tooltip: {
-            backgroundColor: '#12161f',
-            borderColor: '#252b3b',
+            backgroundColor: C('--chart-tooltip-bg', '#12161f'),
+            borderColor: C('--chart-grid', '#252b3b'),
             borderWidth: 1,
-            titleColor: '#00e5ff',
-            bodyColor: '#e8eaf0',
+            titleColor: C('--accent', '#00e5ff'),
+            bodyColor: C('--chart-fg', '#e8eaf0'),
             titleFont: { family: 'Space Mono' },
             bodyFont:  { family: 'Space Mono' },
             callbacks: {
@@ -820,16 +849,16 @@ function renderHistogram(data) {
         },
         scales: {
           x: {
-            ticks: { color: '#00e5ff', font: { family: 'Space Mono', size: 11 } },
-            grid:  { color: '#252b3b' },
-            title: { display: true, text: 'LAEQ band (dB)', color: '#00e5ff',
+            ticks: { color: C('--accent', '#00e5ff'), font: { family: 'Space Mono', size: 11 } },
+            grid:  { color: C('--chart-grid', '#252b3b') },
+            title: { display: true, text: 'LAEQ band (dB)', color: C('--accent', '#00e5ff'),
                      font: { family: 'Space Mono', size: 11 } },
           },
           y: {
-            ticks: { color: '#00e5ff', font: { family: 'Space Mono', size: 11 },
+            ticks: { color: C('--accent', '#00e5ff'), font: { family: 'Space Mono', size: 11 },
                      callback: v => v  },
-            grid:  { color: '#252b3b' },
-            title: { display: true, text: 'Receivers', color: '#00e5ff',
+            grid:  { color: C('--chart-grid', '#252b3b') },
+            title: { display: true, text: 'Receivers', color: C('--accent', '#00e5ff'),
                      font: { family: 'Space Mono', size: 11 } },
           }
         }
@@ -992,7 +1021,7 @@ async function renderBoxplot() {
     .attr('class', 'grid')
     .call(d3.axisLeft(y).tickSize(-W).tickFormat(''))
     .selectAll('line')
-    .attr('stroke', '#252b3b')
+    .attr('stroke', C('--chart-grid', '#252b3b'))
     .attr('stroke-width', 0.5);
   g.select('.grid .domain').remove();
 
@@ -1000,16 +1029,16 @@ async function renderBoxplot() {
     .attr('transform', `translate(0,${H})`)
     .call(d3.axisBottom(x))
     .selectAll('text')
-    .attr('fill', '#6b7280')
+    .attr('fill', C('--chart-text', '#6b7280'))
     .attr('font-family', 'Space Mono, monospace')
     .attr('font-size', '11px');
-  g.select('.domain').attr('stroke', '#252b3b');
-  g.selectAll('.tick line').attr('stroke', '#252b3b');
+  g.select('.domain').attr('stroke', C('--chart-grid', '#252b3b'));
+  g.selectAll('.tick line').attr('stroke', C('--chart-grid', '#252b3b'));
 
   g.append('g')
     .call(d3.axisLeft(y).ticks(8).tickFormat(d => d + ' dB'))
     .selectAll('text')
-    .attr('fill', '#00e5ff')
+    .attr('fill', C('--accent', '#00e5ff'))
     .attr('font-family', 'Space Mono, monospace')
     .attr('font-size', '11px');
 
@@ -1018,7 +1047,7 @@ async function renderBoxplot() {
     .attr('x', -H / 2)
     .attr('y', -48)
     .attr('text-anchor', 'middle')
-    .attr('fill', '#00e5ff')
+    .attr('fill', C('--accent', '#00e5ff'))
     .attr('font-family', 'Space Mono, monospace')
     .attr('font-size', '11px')
     .text('LAEQ,D (dB)');
@@ -1028,7 +1057,7 @@ async function renderBoxplot() {
     .attr('x', W / 2)
     .attr('y', H + 42)
     .attr('text-anchor', 'middle')
-    .attr('fill', '#6b7280')
+    .attr('fill', C('--chart-text', '#6b7280'))
     .attr('font-family', 'Space Mono, monospace')
     .attr('font-size', '11px')
     .text('Versions');
@@ -1044,25 +1073,25 @@ async function renderBoxplot() {
     g.append('line')
       .attr('x1', cx).attr('x2', cx)
       .attr('y1', y(s.min)).attr('y2', y(s.q1))
-      .attr('stroke', '#e8eaf0').attr('stroke-width', 1.5);
+      .attr('stroke', C('--chart-fg', '#e8eaf0')).attr('stroke-width', 1.5);
 
     // (Q3 → max)
     g.append('line')
       .attr('x1', cx).attr('x2', cx)
       .attr('y1', y(s.q3)).attr('y2', y(s.max))
-      .attr('stroke', '#e8eaf0').attr('stroke-width', 1.5);
+      .attr('stroke', C('--chart-fg', '#e8eaf0')).attr('stroke-width', 1.5);
 
 
     g.append('line')
       .attr('x1', cx - capW).attr('x2', cx + capW)
       .attr('y1', y(s.min)).attr('y2', y(s.min))
-      .attr('stroke', '#e8eaf0').attr('stroke-width', 1.5);
+      .attr('stroke', C('--chart-fg', '#e8eaf0')).attr('stroke-width', 1.5);
 
 
     g.append('line')
       .attr('x1', cx - capW).attr('x2', cx + capW)
       .attr('y1', y(s.max)).attr('y2', y(s.max))
-      .attr('stroke', '#e8eaf0').attr('stroke-width', 1.5);
+      .attr('stroke', C('--chart-fg', '#e8eaf0')).attr('stroke-width', 1.5);
 
     // B(Q1 → Q3)
     g.append('rect')
@@ -1071,7 +1100,7 @@ async function renderBoxplot() {
       .attr('width', boxW)
       .attr('height', y(s.q1) - y(s.q3))
       .attr('fill', 'rgba(0,229,255,0.15)')
-      .attr('stroke', '#00e5ff')
+      .attr('stroke', C('--accent', '#00e5ff'))
       .attr('stroke-width', 2);
 
 
@@ -1097,7 +1126,7 @@ async function renderBoxplot() {
     .attr('transform', `translate(${margin.left + W / 2 - 120}, 8)`);
 
   [
-    { color: '#00e5ff', fill: 'rgba(0,229,255,0.15)', label: 'IQR (Q1–Q3)', rect: true },
+    { color: C('--accent', '#00e5ff'), fill: 'rgba(0,229,255,0.15)', label: 'IQR (Q1–Q3)', rect: true },
     { color: '#ff6b35', label: 'Median', rect: true },
     { color: 'rgba(255,107,53,0.5)', label: 'Outliers', rect: false },
   ].forEach((item, i) => {
@@ -1115,7 +1144,7 @@ async function renderBoxplot() {
     }
     legend.append('text')
       .attr('x', lx + 24).attr('y', 11)
-      .attr('fill', '#6b7280')
+      .attr('fill', C('--chart-text', '#6b7280'))
       .attr('font-family', 'Space Mono, monospace')
       .attr('font-size', '10px')
       .text(item.label);
@@ -1183,17 +1212,17 @@ function drawScatterForPair(vA, vB, c){
       plugins: {
         legend: {
           labels: {
-            color: '#6b7280',
+            color: C('--chart-text', '#6b7280'),
             font: { family: 'Space Mono', size: 11 },
             filter: item => item.datasetIndex === 0,
           }
         },
         tooltip: {
-          backgroundColor: '#12161f',
-          borderColor: '#252b3b',
+          backgroundColor: C('--chart-tooltip-bg', '#12161f'),
+          borderColor: C('--chart-grid', '#252b3b'),
           borderWidth: 1,
-          titleColor: '#00e5ff',
-          bodyColor: '#e8eaf0',
+          titleColor: C('--accent', '#00e5ff'),
+          bodyColor: C('--chart-fg', '#e8eaf0'),
           titleFont: { family: 'Space Mono' },
           bodyFont:  { family: 'Space Mono' },
           callbacks: {
@@ -1210,20 +1239,20 @@ function drawScatterForPair(vA, vB, c){
         x: {
           type: 'linear',
           min: minV, max: maxV,
-          ticks: { color: '#6b7280', font: { family: 'Space Mono', size: 11 },
+          ticks: { color: C('--chart-text', '#6b7280'), font: { family: 'Space Mono', size: 11 },
             callback: v => v + ' dB' },
-          grid: { color: '#252b3b' },
+          grid: { color: C('--chart-grid', '#252b3b') },
           title: { display: true, text: `${vA} LAeq,D (dB)`,
-            color: '#6b7280', font: { family: 'Space Mono', size: 11 } },
+            color: C('--chart-text', '#6b7280'), font: { family: 'Space Mono', size: 11 } },
         },
         y: {
           type: 'linear',
           min: minV, max: maxV,
-          ticks: { color: '#00e5ff', font: { family: 'Space Mono', size: 11 },
+          ticks: { color: C('--accent', '#00e5ff'), font: { family: 'Space Mono', size: 11 },
             callback: v => v + ' dB' },
-          grid: { color: '#252b3b' },
+          grid: { color: C('--chart-grid', '#252b3b') },
           title: { display: true, text: `${vB} LAeq,D (dB)`,
-            color: '#00e5ff', font: { family: 'Space Mono', size: 11 } },
+            color: C('--accent', '#00e5ff'), font: { family: 'Space Mono', size: 11 } },
         }
       }
     }
@@ -1337,7 +1366,7 @@ function drawDensityForPair(vA, vB, c) {
         {
           label: 'Density',
           data: allPoints,
-          borderColor: '#00e5ff',
+          borderColor: C('--accent', '#00e5ff'),
           backgroundColor: 'transparent',
           fill: false,
           pointRadius: 0,
@@ -1354,17 +1383,17 @@ function drawDensityForPair(vA, vB, c) {
       plugins: {
         legend: {
           labels: {
-            color: '#6b7280',
+            color: C('--chart-text', '#6b7280'),
             font: { family: 'Space Mono', size: 11 },
             filter: item => item.datasetIndex !== 2,
           }
         },
         tooltip: {
-          backgroundColor: '#12161f',
-          borderColor: '#252b3b',
+          backgroundColor: C('--chart-tooltip-bg', '#12161f'),
+          borderColor: C('--chart-grid', '#252b3b'),
           borderWidth: 1,
-          titleColor: '#00e5ff',
-          bodyColor: '#e8eaf0',
+          titleColor: C('--accent', '#00e5ff'),
+          bodyColor: C('--chart-fg', '#e8eaf0'),
           titleFont: { family: 'Space Mono' },
           bodyFont:  { family: 'Space Mono' },
           callbacks: {
@@ -1382,7 +1411,7 @@ function drawDensityForPair(vA, vB, c) {
               borderDash: [4, 4],
               label: {
                 display: true,
-                color: '#6b7280',
+                color: C('--chart-text', '#6b7280'),
                 font: { family: 'Space Mono', size: 10 },
                 position: 'start',
               }
@@ -1394,11 +1423,11 @@ function drawDensityForPair(vA, vB, c) {
         x: {
           type: 'linear',
           ticks: {
-            color: '#6b7280',
+            color: C('--chart-text', '#6b7280'),
             font: { family: 'Space Mono', size: 11 },
             callback: v => (v >= 0 ? '+' : '') + fmt(v) + ' dB'
           },
-          grid: { color: '#252b3b' },
+          grid: { color: C('--chart-grid', '#252b3b') },
           title: {
             display: true,
             text: `Δ LAEQ (dB)  =  ${vB} − ${vA}`,
@@ -1407,13 +1436,13 @@ function drawDensityForPair(vA, vB, c) {
           },
         },
         y: {
-          ticks: { color: '#00e5ff', font: { family: 'Space Mono', size: 11 },
+          ticks: { color: C('--accent', '#00e5ff'), font: { family: 'Space Mono', size: 11 },
                    callback: v => v  },
-          grid: { color: '#252b3b' },
+          grid: { color: C('--chart-grid', '#252b3b') },
           title: {
             display: true,
             text: 'Relative density',
-            color: '#00e5ff',
+            color: C('--accent', '#00e5ff'),
             font: { family: 'Space Mono', size: 11 }
           },
         }
@@ -1535,12 +1564,21 @@ function setupDiffMapButton() {
 // LA MONTAGNE — COMPARAISON A LA MESURE
 // ─────────────────────────────────────────────
 let montagneChart = null;
+let montagneData = [];
 
-function drawMontagneScatter(entry) {
+function modelColor(index) {
+  const light = document.documentElement.dataset.theme === 'light';
+  const lightPalette = ['#0e6b6b', '#b45309', '#15803d', '#b91c1c', '#6d28d9', '#0369a1', '#a16207', '#4d7c0f', '#9d174d'];
+  const palette = light ? lightPalette : PALETTE;
+  return palette[index % palette.length];
+}
+
+function drawMontagneScatter(entries) {
   const nodata = document.getElementById('montagne-nodata');
   const canvas = document.getElementById('montagne-scatter-chart');
+  entries = (entries || []).filter(e => e && e.scatter && e.scatter.length);
 
-  if (!entry || !entry.scatter || !entry.scatter.length) {
+  if (!entries.length) {
     nodata.style.display = 'block';
     canvas.style.display = 'none';
     if (montagneChart) { montagneChart.destroy(); montagneChart = null; }
@@ -1549,110 +1587,102 @@ function drawMontagneScatter(entry) {
   nodata.style.display = 'none';
   canvas.style.display = 'block';
 
-  const points = entry.scatter.map(([measured, computed]) => ({ x: measured, y: computed }));
-  const allVals = points.flatMap(p => [p.x, p.y]);
+  const allVals = entries.flatMap(e => e.scatter.flatMap(([m, c]) => [m, c]));
   const minV = Math.floor(Math.min(...allVals) / 5) * 5;
   const maxV = Math.ceil(Math.max(...allVals) / 5) * 5;
   const diagLine = [{ x: minV, y: minV }, { x: maxV, y: maxV }];
+  const font = { family: C('--chart-font', 'Space Mono, monospace'), size: 12 };
 
   if (montagneChart) montagneChart.destroy();
 
+  const datasets = entries.map((entry, i) => {
+    const color = modelColor(i);
+    return {
+      type: 'scatter',
+      label: `${entry.version} (n=${entry.n_compared})`,
+      data: entry.scatter.map(([m, c]) => ({ x: m, y: c })),
+      backgroundColor: color,
+      borderColor: color,
+      pointRadius: 4,
+      pointHoverRadius: 7,
+      order: 2,
+    };
+  });
+  datasets.push({
+    type: 'line',
+    label: 'y = x',
+    data: diagLine,
+    borderColor: C('--chart-diagonal', 'rgba(255,255,255,.55)'),
+    borderWidth: 2,
+    borderDash: [6, 4],
+    pointRadius: 0,
+    fill: false,
+    order: 1,
+  });
+
+  const multi = entries.length > 1;
   const ctx = canvas.getContext('2d');
   montagneChart = new Chart(ctx, {
-    data: {
-      datasets: [
-        {
-          type: 'scatter',
-          label: `Receivers (n=${entry.n_compared})`,
-          data: points,
-          backgroundColor: 'rgba(0,229,255,0.35)',
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          order: 2,
-        },
-        {
-          type: 'line',
-          label: 'y = x',
-          data: diagLine,
-          borderColor: 'rgba(255,255,255,0.5)',
-          borderWidth: 1.5,
-          borderDash: [6, 4],
-          pointRadius: 0,
-          fill: false,
-          order: 1,
-        }
-      ]
-    },
+    data: { datasets },
     options: {
       responsive: true,
       animation: false,
       plugins: {
-        legend: {
-          labels: {
-            color: '#6b7280',
-            font: { family: 'Space Mono', size: 11 },
-            filter: item => item.datasetIndex === 0,
-          }
-        },
+        legend: { labels: { color: C('--chart-text', '#6b7280'), font } },
         tooltip: {
-          backgroundColor: '#12161f',
-          borderColor: '#252b3b',
+          backgroundColor: C('--chart-tooltip-bg', '#12161f'),
+          borderColor: C('--chart-grid', '#252b3b'),
           borderWidth: 1,
-          titleColor: '#00e5ff',
-          bodyColor: '#e8eaf0',
-          titleFont: { family: 'Space Mono' },
-          bodyFont:  { family: 'Space Mono' },
+          titleColor: C('--accent', '#00e5ff'),
+          bodyColor: C('--chart-fg', '#e8eaf0'),
           callbacks: {
             title: () => '',
-            label: ctx => {
-              if (ctx.datasetIndex !== 0) return null;
-              const { x, y } = ctx.parsed;
-              return ` measured ${x} dB → ${entry.version} ${y} dB (Δ=${(y - x).toFixed(2)} dB)`;
+            label: item => {
+              if (item.dataset.type !== 'scatter') return null;
+              const { x, y } = item.parsed;
+              return ` ${item.dataset.label}: measured ${x} dB -> ${y} dB (delta=${(y - x).toFixed(2)} dB)`;
             }
           }
         }
       },
       scales: {
-        x: {
-          type: 'linear',
-          min: minV, max: maxV,
-          ticks: { color: '#6b7280', font: { family: 'Space Mono', size: 11 },
-            callback: v => v + ' dB' },
-          grid: { color: '#252b3b' },
-          title: { display: true, text: 'Measured LAeq,D (dB)',
-            color: '#6b7280', font: { family: 'Space Mono', size: 11 } },
-        },
-        y: {
-          type: 'linear',
-          min: minV, max: maxV,
-          ticks: { color: '#00e5ff', font: { family: 'Space Mono', size: 11 },
-            callback: v => v + ' dB' },
-          grid: { color: '#252b3b' },
-          title: { display: true, text: `${entry.version} corrected LAeq,D (dB)`,
-            color: '#00e5ff', font: { family: 'Space Mono', size: 11 } },
-        }
+        x: { type: 'linear', min: minV, max: maxV,
+          ticks: { color: C('--chart-text', '#6b7280'), font, callback: v => v + ' dB' },
+          grid: { color: C('--chart-grid', '#252b3b') },
+          title: { display: true, text: 'Measured LAeq,D (dB)', color: C('--chart-text', '#6b7280'), font } },
+        y: { type: 'linear', min: minV, max: maxV,
+          ticks: { color: C('--chart-text', '#6b7280'), font, callback: v => v + ' dB' },
+          grid: { color: C('--chart-grid', '#252b3b') },
+          title: { display: true, text: multi ? 'Calibrated LAeq,D (dB)' : `${entries[0].version} calibrated LAeq,D (dB)`,
+            color: C('--chart-text', '#6b7280'), font } }
       }
     }
   });
 }
 
-let montagneData = [];
-let montagneSelected = null;
+let montagneSelected = [];
 
 function montagneEntry(version) {
-  return montagneData.find(d => d.version === version) || montagneData[0] || null;
+  return montagneData.find(d => d.version === version) || null;
+}
+
+function montagneEntries() {
+  const list = montagneSelected.map(v => montagneEntry(v)).filter(Boolean);
+  return list.length ? list : montagneData.slice(0, 1);
 }
 
 function updateMontagneNote() {
   const note = document.getElementById('montagne-note');
   if (!note) return;
-  const e = montagneEntry(montagneSelected) || {};
+  const entries = montagneEntries();
+  const ref = entries[0] || {};
+  const offsets = entries.map(e => `${e.version}: <b>${fmt(e.offset)} dB</b>`).join(' &middot; ');
   note.innerHTML =
-    `Reference receiver <b>#${e.reference_receiver}</b> (closest to the source, ${fmt(e.reference_distance, 1)} m): ` +
-    `offset = measured − computed = <b>${fmt(e.offset)} dB</b>. ` +
+    `Reference receiver <b>#${ref.reference_receiver}</b> (closest to the source, ${fmt(ref.reference_distance, 1)} m). ` +
+    `Offset = measured &minus; computed at that receiver: ${offsets}. ` +
     `Errors are computed after applying this offset to every receiver (zero at the reference by construction).` +
-    `<br>Download: <a href="data/montagne/measure_comparison.json" download>measure_comparison.json</a> · ` +
-    `<a href="data/montagne/comparisons.json" download>comparisons.json</a> · ` +
+    `<br>Download: <a href="data/montagne/measure_comparison.json" download>measure_comparison.json</a> &middot; ` +
+    `<a href="data/montagne/comparisons.json" download>comparisons.json</a> &middot; ` +
     `<a href="data/montagne/results.json" download>results.json</a>`;
 }
 
@@ -1692,24 +1722,30 @@ function renderMontagne(data) {
   }
 
   montagneData = data;
-  montagneSelected = data[0].version;
+  montagneSelected = [data[0].version];
 
   const ctrl = document.getElementById('montagne-controls');
   const tableEl = document.getElementById('montagne-table');
 
-  ctrl.innerHTML = data.map((row, i) =>
-    `<button class="map-btn${i === 0 ? ' active' : ''}" data-version="${row.version}" aria-pressed="${i === 0}">
-      ${row.version}
-    </button>`
-  ).join('');
+  ctrl.innerHTML = data.map(row => {
+    const on = montagneSelected.includes(row.version);
+    return `<button class="map-btn${on ? ' active' : ''}" data-version="${row.version}" aria-pressed="${on}">${row.version}</button>`;
+  }).join('') + `<span class="start-hint" style="margin-left:.4rem">select one or more models</span>`;
 
   ctrl.querySelectorAll('.map-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      ctrl.querySelectorAll('.map-btn').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-pressed', 'false'); });
-      btn.classList.add('active');
-      btn.setAttribute('aria-pressed', 'true');
-      montagneSelected = btn.dataset.version;
-      drawMontagneScatter(montagneEntry(montagneSelected));
+      const v = btn.dataset.version;
+      if (montagneSelected.includes(v)) {
+        if (montagneSelected.length === 1) return;
+        montagneSelected = montagneSelected.filter(x => x !== v);
+      } else {
+        montagneSelected = [...montagneSelected, v]
+          .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+      }
+      const on = montagneSelected.includes(v);
+      btn.classList.toggle('active', on);
+      btn.setAttribute('aria-pressed', on);
+      drawMontagneScatter(montagneEntries());
       updateMontagneNote();
     });
   });
@@ -1742,7 +1778,7 @@ function renderMontagne(data) {
   // Le canvas n'a une taille que lorsque l'onglet est visible.
   if (panel.classList.contains('active')) {
     renderMontagneHeaderMeta();
-    drawMontagneScatter(montagneEntry(montagneSelected));
+    drawMontagneScatter(montagneEntries());
   }
 }
 
@@ -1754,25 +1790,23 @@ async function initMontagne() {
 }
 
 function switchDataset(name) {
-  document.querySelectorAll('.dataset-tab').forEach(t =>
-    t.classList.toggle('active', t.dataset.dataset === name));
+  document.querySelectorAll('.dataset-tab').forEach(t => {
+    const on = t.dataset.dataset === name;
+    t.classList.toggle('active', on);
+    t.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
   document.querySelectorAll('.dataset-panel').forEach(p =>
     p.classList.toggle('active', p.id === `panel-${name}`));
 
-  if (name === 'montagne') {
+  const meta = document.getElementById('header-meta');
+  if (name === 'start') {
+    if (meta) meta.style.display = 'none';
+  } else if (name === 'montagne') {
+    if (meta) meta.style.display = '';
     renderMontagneHeaderMeta();
-    if (montagneData.length) drawMontagneScatter(montagneEntry(montagneSelected));
-  } else if (name === 'start') {
-    const el = document.getElementById('header-meta');
-    if (el) {
-      el.innerHTML =
-        `Get started<br>Run NoiseModelling on the benchmark datasets<br>` +
-        `and compare your own software<br>` +
-        `<button class="map-btn" onclick="copyLink(this)" style="margin-top:.5rem">Copy link to this view</button>`;
-    }
+    if (montagneData.length) drawMontagneScatter(montagneEntries());
   } else {
-    const el = document.getElementById('header-meta');
-    if (el && clissonHeaderHtml) el.innerHTML = clissonHeaderHtml;
+    if (meta) { meta.style.display = ''; if (clissonHeaderHtml) meta.innerHTML = clissonHeaderHtml; }
   }
   syncState({ dataset: name });
 }
@@ -1803,18 +1837,19 @@ function normNumber(s) {
   return t;
 }
 
-function startShowPath(which) {
+function startShowPath(which, scroll) {
   const a = document.getElementById('start-path-a');
   const b = document.getElementById('start-path-b');
   if (!a || !b) return;
   a.style.display = (which === 'b') ? 'none' : '';
   b.style.display = (which === 'a') ? 'none' : '';
   document.querySelectorAll('.start-path-card').forEach(card => {
-    const cardPath = card.dataset.path;
-    card.classList.toggle('active', which !== 'both' && cardPath === which);
+    card.classList.toggle('active', which !== 'both' && card.dataset.path === which);
   });
-  const data = document.getElementById('start-data');
-  if (data) data.scrollIntoView({ behavior: 'smooth' });
+  if (scroll !== false) {
+    const data = document.getElementById('start-data');
+    if (data) data.scrollIntoView({ behavior: 'smooth' });
+  }
 }
 
 function copyPre(btn) {
@@ -1934,8 +1969,8 @@ NoiseModelling\\bin\\ScriptRunner.bat -w workspace -s compare_clisson.groovy`;
   const refMachine = 'GitHub Actions ubuntu-latest — 4 vCPU, 16 GB RAM, SSD';
   const refMs = r => r.timePerReceive ? `${normNumber(r.timePerReceive)} ms` : '—';
   const refRays = r => (r.nbRays === undefined || r.nbRays === null) ? '—' : Number(r.nbRays).toLocaleString();
-  const refJava = r => r.java
-    || (String(r.version || '').startsWith('v6') ? 'Java 25' : (r.version ? 'Java 11' : '—'));
+  const refJava = r => r.java ? `Java ${r.java}`
+    : (String(r.version || '').startsWith('v6') ? 'Java 25' : (r.version ? 'Java 11' : '—'));
   const referenceTable = `
       <div class="table-scroll"><table class="start-table" style="margin-bottom:1.25rem">
         <thead>
@@ -1944,21 +1979,36 @@ NoiseModelling\\bin\\ScriptRunner.bat -w workspace -s compare_clisson.groovy`;
         <tbody>
           <tr><td>Software</td><td>NoiseModelling ${esc(relVersion)}</td><td>NoiseModelling ${esc(relVersion)}</td></tr>
           <tr><td>Java</td><td>${esc(refJava(relClisson))}</td><td>${esc(refJava(relMontagne))}</td></tr>
-          <tr><td>Computation date</td><td colspan="2">${esc(refDate)} (last benchmark run)</td></tr>
+          <tr><td>Date</td><td colspan="2">${esc(refDate)} (last benchmark run)</td></tr>
           <tr><td>Compute time</td><td>${esc(relClisson.time || '—')}</td><td>${esc(relMontagne.time || '—')}</td></tr>
-          <tr><td>Time per receiver</td><td>${esc(refMs(relClisson))}</td><td>${esc(refMs(relMontagne))}</td></tr>
+          <tr><td>Time / receiver</td><td>${esc(refMs(relClisson))}</td><td>${esc(refMs(relMontagne))}</td></tr>
           <tr><td>Rays</td><td>${esc(refRays(relClisson))}</td><td>${esc(refRays(relMontagne))}</td></tr>
           <tr><td>Machine</td><td colspan="2">${esc(refMachine)}</td></tr>
           <tr><td>Threads</td><td colspan="2">all available CPU cores</td></tr>
           <tr><td>GPU</td><td colspan="2">none</td></tr>
           <tr><td>Parameters</td>
-              <td>reflection order 1, max source distance 300 m, max error 0.1, 25% favourable occurrences</td>
-              <td>reflection order 2, max source distance 10 km, max reflection distance 500 m, 24 °C, favourable wind rose</td></tr>
+              <td>reflection order 1, max source distance 300 m, max error 0.1, 25% favourable occurrences —
+                  <a href="#" onclick="document.getElementById('start-params').scrollIntoView({behavior:'smooth'});return false">full list</a></td>
+              <td>reflection order 2, max source distance 10 km, max reflection distance 500 m, 24 °C —
+                  <a href="#" onclick="document.getElementById('start-params').scrollIntoView({behavior:'smooth'});return false">full list</a></td></tr>
           <tr><td>Output</td>
               <td><a class="dl-btn" href="data/${esc(relVersion)}/RECEIVERS_LEVEL.geojson" download>RECEIVERS_LEVEL.geojson</a></td>
               <td><a class="dl-btn" href="data/montagne/${esc(relVersion)}/RECEIVERS_LEVEL.geojson" download>RECEIVERS_LEVEL.geojson</a></td></tr>
         </tbody>
       </table></div>`;
+
+  const paramTables = datasets.map(ds => `
+    <div class="start-filegroup">
+      <div class="start-filegroup-title">${esc(ds.label)} — ${(ds.params || []).length} parameters</div>
+      <div class="table-scroll">
+        <table class="start-table">
+          <thead><tr><th align="left">Parameter</th><th align="left">Value</th></tr></thead>
+          <tbody>
+            ${(ds.params || []).map(row => `<tr><td>${esc(row[0])}</td><td><code>${esc(row[1])}</code></td></tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`).join('');
 
   const shareTemplate = [
     'dataset: ""                # Clisson | La Montagne',
@@ -1995,22 +2045,18 @@ NoiseModelling\\bin\\ScriptRunner.bat -w workspace -s compare_clisson.groovy`;
 
   el.innerHTML = `
     <section>
-      <div class="section-title">Compare your software with NoiseModelling</div>
+      <div class="section-title" role="heading" aria-level="2">Compare your software with NoiseModelling</div>
       <div class="start-intro">
         <p>
           <b>Bring your own noise model.</b> Run it on the same dataset as NoiseModelling, then compare the
           sound levels at the receivers. Two ways to get the NoiseModelling reference — pick the one that
           suits you.
         </p>
-        <p>
-          Everything is open: the input data, the simulation scripts and the reference results are published
-          in this repository. You only need Java if you choose to run NoiseModelling yourself.
-        </p>
       </div>
     </section>
 
     <section>
-      <div class="section-title">Choose your path</div>
+      <div class="section-title" role="heading" aria-level="2">Choose your path</div>
       <div class="start-paths">
         <div class="start-path-card" data-path="a">
           <div class="start-path-head">Path A — Compare only <span class="start-tag">recommended</span></div>
@@ -2021,7 +2067,7 @@ NoiseModelling\\bin\\ScriptRunner.bat -w workspace -s compare_clisson.groovy`;
             <li>Download the published NoiseModelling reference output.</li>
             <li>Compare the two files.</li>
           </ol>
-          <button class="dl-btn" onclick="startShowPath('a')">Start Path A</button>
+          <button class="start-btn" onclick="startShowPath('a')">Start Path A</button>
         </div>
         <div class="start-path-card" data-path="b">
           <div class="start-path-head">Path B — Compare and run NoiseModelling</div>
@@ -2033,7 +2079,7 @@ NoiseModelling\\bin\\ScriptRunner.bat -w workspace -s compare_clisson.groovy`;
             <li>Run the NoiseModelling script.</li>
             <li>Compare the two files.</li>
           </ol>
-          <button class="dl-btn" onclick="startShowPath('b')">Start Path B</button>
+          <button class="start-btn" onclick="startShowPath('b')">Start Path B</button>
         </div>
       </div>
       <div class="start-hint" style="margin-top:.6rem">
@@ -2043,7 +2089,7 @@ NoiseModelling\\bin\\ScriptRunner.bat -w workspace -s compare_clisson.groovy`;
     </section>
 
     <section id="start-data">
-      <div class="section-title">Step 1 (both paths) — Download the data</div>
+      <div class="section-title" role="heading" aria-level="2">Step 1 — Download the data</div>
       <p class="start-text">
         Download the files of the dataset you want to use and place them in a folder named after the dataset
         (<code>clisson/</code> or <code>montagne/</code>). These files are stored with Git LFS; the links below
@@ -2067,7 +2113,7 @@ NoiseModelling\\bin\\ScriptRunner.bat -w workspace -s compare_clisson.groovy`;
     </section>
 
     <section id="start-you">
-      <div class="section-title">Step 2 (both paths) — Run your own software</div>
+      <div class="section-title" role="heading" aria-level="2">Step 2 — Run your own software</div>
       <p class="start-text">
         Run your model on the dataset. The comparison works at the receiver level, so your software must
         produce <b>one sound level per receiver</b>. Export a GeoJSON <code>FeatureCollection</code> with one
@@ -2087,7 +2133,10 @@ NoiseModelling\\bin\\ScriptRunner.bat -w workspace -s compare_clisson.groovy`;
     </section>
 
     <section id="start-path-a">
-      <div class="section-title">Path A — Download the NoiseModelling reference</div>
+      <div class="section-title" role="heading" aria-level="2">Path A — Download the NoiseModelling reference</div>
+      <div class="start-pathbar">Following <b>Path A</b>.
+        <a href="#" onclick="startShowPath('b');return false">Show Path B instead</a> ·
+        <a href="#" onclick="startShowPath('both');return false">Show both</a></div>
       <p class="start-text">
         The benchmark already publishes the NoiseModelling output for each dataset. Download the
         <code>RECEIVERS_LEVEL.geojson</code> of the latest release (${esc(relVersion)}) — no installation, no
@@ -2107,7 +2156,10 @@ NoiseModelling\\bin\\ScriptRunner.bat -w workspace -s compare_clisson.groovy`;
     </section>
 
     <section id="start-path-b">
-      <div class="section-title">Path B — Run NoiseModelling yourself</div>
+      <div class="section-title" role="heading" aria-level="2">Path B — Run NoiseModelling yourself</div>
+      <div class="start-pathbar">Following <b>Path B</b>.
+        <a href="#" onclick="startShowPath('a');return false">Show Path A instead</a> ·
+        <a href="#" onclick="startShowPath('both');return false">Show both</a></div>
 
       <p class="start-text">
         <b>B.1 — Install Java.</b> The portable <code>NoiseModelling_*.zip</code> does <b>not</b> include Java.
@@ -2142,7 +2194,7 @@ NoiseModelling\\bin\\ScriptRunner.bat -w workspace -s compare_clisson.groovy`;
     </section>
 
     <section id="start-compare">
-      <div class="section-title">Step 3 (both paths) — Compare the two files</div>
+      <div class="section-title" role="heading" aria-level="2">Step 4 — Compare the two files</div>
       <p class="start-text">
         Join your output with the NoiseModelling reference on <code>IDRECEIVER</code> and compare the
         <code>LAEQ</code> values. Two rules matter for a fair comparison:
@@ -2157,7 +2209,7 @@ NoiseModelling\\bin\\ScriptRunner.bat -w workspace -s compare_clisson.groovy`;
     </section>
 
     <section id="start-share">
-      <div class="section-title">Share your results with the community</div>
+      <div class="section-title" role="heading" aria-level="2">Share your results with the community</div>
       <p class="start-text">
         Comparing independent implementations is how the community finds bugs and improves the models.
         If you would like to share your run, copy the template below into an
@@ -2176,7 +2228,7 @@ NoiseModelling\\bin\\ScriptRunner.bat -w workspace -s compare_clisson.groovy`;
     </section>
 
     <section>
-      <div class="section-title">How long does NoiseModelling take?</div>
+      <div class="section-title" role="heading" aria-level="2">How long does NoiseModelling take?</div>
       <p class="start-text">
         Compute time of the latest release (${esc(relVersion)}), measured on a GitHub Actions runner
         (4 CPUs). Times depend on your machine and on the parameters, so use them as an order of magnitude.
@@ -2190,8 +2242,22 @@ NoiseModelling\\bin\\ScriptRunner.bat -w workspace -s compare_clisson.groovy`;
       </table></div>
     </section>
 
+    <section id="start-params">
+      <div class="section-title" role="heading" aria-level="2">NoiseModelling parameters — full list (for replication)</div>
+      <p class="start-text">
+        These are the exact parameters used to produce the reference output. They are read directly from the
+        simulation scripts, so this list always matches what was actually run. The source emission levels and
+        the receiver positions come from the dataset files.
+      </p>
+      ${paramTables}
+      <div class="start-hint">
+        <b>La Montagne source:</b> a siren with an emission level of 124.5 dB at 500 Hz, placed 12.4 m above
+        ground (1 m above the building roof); receivers at 1.5 m.
+      </div>
+    </section>
+
     <section>
-      <div class="section-title">Troubleshooting</div>
+      <div class="section-title" role="heading" aria-level="2">Troubleshooting</div>
       <ul class="start-list">
         <li><b>“java: command not found”</b> — Java is not installed or not on your PATH (Path B only).
             Reopen your terminal after installing it.</li>
@@ -2205,6 +2271,7 @@ NoiseModelling\\bin\\ScriptRunner.bat -w workspace -s compare_clisson.groovy`;
       </ul>
     </section>
   `;
+  startShowPath('a', false);
 }
 
 async function initStart() {
@@ -2269,6 +2336,12 @@ async function applyState(data, snapshot) {
 }
 
 async function init() {
+  let savedTheme = 'light';
+  try { savedTheme = localStorage.getItem('nm-theme') || 'light'; } catch (e) {}
+  const urlTheme = new URLSearchParams(location.search).get('theme');
+  if (urlTheme === 'light' || urlTheme === 'dark') savedTheme = urlTheme;
+  applyTheme(savedTheme);
+
   const initialState = readState();
   const data = await loadJson(RESULTS_URL, []);
   if (!data.length) console.warn('No results published yet.');

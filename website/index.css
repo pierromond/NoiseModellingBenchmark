@@ -10,6 +10,11 @@
       --text-muted: #6b7280;
       --font-mono: 'Space Mono', monospace;
       --font-body: 'DM Sans', sans-serif;
+      --chart-grid: #252b3b;
+      --chart-text: #6b7280;
+      --chart-fg: #e8eaf0;
+      --chart-tooltip-bg: #12161f;
+      --chart-diagonal: rgba(255,255,255,.55);
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -36,12 +41,11 @@
       z-index: 0;
     }
 
-    /* ── HEADER ── */
+    /* ── HEADER (title only) ── */
     header {
       position: relative;
       z-index: 1;
-      padding: 3rem 2rem 2rem;
-      border-bottom: 1px solid var(--border);
+      padding: 2.5rem 2rem 1.4rem;
       display: flex;
       align-items: flex-end;
       justify-content: space-between;
@@ -70,24 +74,79 @@
     h1 span { color: var(--accent); }
 
     .header-meta {
+      position: relative;
+      z-index: 1;
       font-family: var(--font-mono);
-      font-size: .72rem;
+      font-size: .74rem;
       color: var(--text-muted);
-      text-align: right;
-      line-height: 1.8;
+      text-align: left;
+      line-height: 1.9;
+      padding: 1.25rem 2rem 0;
+      max-width: 110ch;
     }
 
     .header-meta b { color: var(--text); }
+
+    /* ── TABS ROW (tabs + theme toggle) ── */
+    .tabs-row {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding-right: 1.5rem;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .theme-toggle {
+      flex-shrink: 0;
+      font-family: var(--font-mono);
+      font-size: .62rem;
+      padding: .3rem .7rem .3rem .55rem;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      background: var(--surface);
+      color: var(--text-muted);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+      white-space: nowrap;
+    }
+    .theme-toggle:hover { color: var(--accent); border-color: var(--accent); }
+
+    .tool-btn {
+      flex-shrink: 0;
+      font-family: var(--font-mono);
+      font-size: .62rem;
+      padding: .3rem .7rem;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      background: var(--surface);
+      color: var(--text-muted);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .tool-btn:hover { color: var(--accent); border-color: var(--accent); }
+    .theme-toggle::before {
+      content: "";
+      width: 12px; height: 12px;
+      background: currentColor;
+      -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z'/></svg>") center / contain no-repeat;
+              mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z'/></svg>") center / contain no-repeat;
+    }
 
     /* ── DATASET TABS ── */
     .dataset-tabs {
       position: relative;
       z-index: 1;
+      flex: 1;
       display: flex;
       gap: 0;
       padding: 0 2rem;
-      background: var(--bg);
-      border-bottom: 1px solid var(--border);
+      background: transparent;
+      overflow-x: auto;
     }
 
     .dataset-tab {
@@ -103,6 +162,7 @@
       cursor: pointer;
       transition: color .15s, border-color .15s;
       margin-bottom: -1px;
+      white-space: nowrap;
     }
 
     .dataset-tab:hover { color: var(--text); }
@@ -188,6 +248,13 @@
 
     .start-hints { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
 
+    .start-pathbar {
+      font-family: var(--font-mono); font-size: .68rem; color: var(--text-muted);
+      margin: .3rem 0 1.1rem; padding: .45rem .75rem;
+      border-left: 2px solid var(--accent); background: rgba(0,229,255,.05);
+    }
+    .start-pathbar b { color: var(--text); }
+
     .start-table {
       border-collapse: collapse; width: 100%; max-width: 940px; font-size: .75rem;
     }
@@ -223,6 +290,14 @@
       transition: background .15s, color .15s;
     }
     .dl-btn:hover { background: var(--accent); color: var(--bg); }
+
+    .start-btn {
+      display: inline-block; font-family: var(--font-mono); font-size: .62rem;
+      color: var(--accent); border: 1px solid var(--accent); border-radius: 2px;
+      padding: .1rem .5rem; background: transparent; cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+    .start-btn:hover { background: var(--accent); color: var(--bg); }
 
     .code-block {
       border: 1px solid var(--border); border-radius: 3px;

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -11,12 +11,13 @@
   <meta property="og:description" content="Per-version results and pairwise comparisons of NoiseModelling on the Clisson dataset." />
   <meta name="twitter:card" content="summary" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
   <link rel="stylesheet" href="index.css" />
+  <link rel="stylesheet" href="index-alt.css" />
 </head>
 <body>
 
@@ -24,30 +25,38 @@
   <div class="logo-block">
     <h1>Noise<span>Modelling</span><br>Benchmark</h1>
   </div>
-  <div class="header-meta" id="header-meta">
-    Loading results…
-  </div>
 </header>
 
-<div class="dataset-tabs">
-  <button class="dataset-tab active" data-dataset="clisson" onclick="switchDataset('clisson')">
-    Clisson <span class="dataset-badge">reference</span>
-  </button>
-  <button class="dataset-tab" data-dataset="montagne" onclick="switchDataset('montagne')">
-    La Montagne <span class="dataset-badge">measure</span>
-  </button>
-  <button class="dataset-tab" data-dataset="start" onclick="switchDataset('start')">
-    Get started <span class="dataset-badge">tutorial</span>
-  </button>
+<div class="tabs-row">
+  <div class="dataset-tabs" role="tablist" aria-label="Datasets">
+    <button class="dataset-tab" role="tab" aria-selected="false" data-dataset="start" onclick="switchDataset('start')">
+      Compare with your preferred software! <span class="dataset-badge">start here</span>
+    </button>
+    <button class="dataset-tab active" role="tab" aria-selected="true" data-dataset="clisson" onclick="switchDataset('clisson')">
+      Clisson <span class="dataset-badge">reference</span>
+    </button>
+    <button class="dataset-tab" role="tab" aria-selected="false" data-dataset="montagne" onclick="switchDataset('montagne')">
+      La Montagne <span class="dataset-badge">measure</span>
+    </button>
+  </div>
+  <div class="tabs-actions">
+    <button class="tool-btn" onclick="copyLink(this)" title="Copy a link to the current view">Copy link</button>
+    <button id="theme-toggle" class="theme-toggle" onclick="toggleTheme()"
+            aria-label="Switch between light and dark theme" aria-pressed="false" title="Switch theme">Dark</button>
+  </div>
 </div>
 
 <main>
+
+  <div class="header-meta" id="header-meta">
+    Loading…
+  </div>
 
   <div class="dataset-panel active" id="panel-clisson">
 
   <!-- ── KPI CARDS ── -->
   <section>
-    <div class="section-title">Results per version</div>
+    <div class="section-title" role="heading" aria-level="2">Results per version</div>
     <div class="cards-grid" id="cards-grid">
       <div class="empty">Loading…</div>
     </div>
@@ -56,7 +65,7 @@
 
   <!-- ── HISTOGRAM ── -->
   <section>
-    <div class="section-title">LAEQ distribution — receivers per noise band</div>
+    <div class="section-title" role="heading" aria-level="2">LAEQ distribution — receivers per noise band</div>
     <div class="chart-wrap">
       <div class="map-controls" id="histo-controls"></div>
       <div id="histo-nodata" style="display:none;padding:2rem;text-align:center;font-family:'Space Mono',monospace;font-size:.8rem;color:var(--text-muted)">
@@ -70,7 +79,7 @@
 
   <!-- ── BOXPLOT ── -->
   <section>
-    <div class="section-title">LAEQ distribution per version — boxplot</div>
+    <div class="section-title" role="heading" aria-level="2">LAEQ distribution per version — boxplot</div>
     <div class="chart-wrap">
       <canvas id="boxplot-chart" role="img" aria-label="Distribution of receiver levels per version" style="width:100%;min-height:420px"></canvas>
       <div id="boxplot-nodata" style="display:none;padding:2rem;text-align:center;font-family:'Space Mono',monospace;font-size:.8rem;color:var(--text-muted)">
@@ -82,7 +91,7 @@
 
   <!-- ── VERSION PAIR SELECTOR ── -->
   <section>
-    <div class="section-title">Version comparison</div>
+    <div class="section-title" role="heading" aria-level="2">Version comparison</div>
     <div class="pair-selector">
       <div class="pair-field">
         <label for="select-vA">Version A</label>
@@ -102,7 +111,7 @@
 
   <!-- ── MAP ── -->
   <section>
-    <div class="section-title">Noise map — Clisson</div>
+    <div class="section-title" role="heading" aria-level="2">Noise map — Clisson</div>
     <div class="map-layout">
 
       <!-- Versions -->
@@ -171,7 +180,7 @@
 
   <!-- ── SCATTER PLOT── -->
   <section>
-    <div class="section-title">Receiver-by-receiver scatter plot</div>
+    <div class="section-title" role="heading" aria-level="2">Receiver-by-receiver scatter plot</div>
     <div class="chart-wrap">
       <div class="map-controls" id="scatter-controls"></div>
       <canvas id="scatter-chart" role="img" aria-label="Scatter plot of the two compared versions" style="width:100%;min-height:420px"></canvas>
@@ -184,7 +193,7 @@
 
   <!-- ── DENSITY ── -->
   <section>
-    <div class="section-title">Delta LAEQ density — distribution of differences per receiver</div>
+    <div class="section-title" role="heading" aria-level="2">Delta LAEQ density — distribution of differences per receiver</div>
     <div class="chart-wrap">
       <canvas id="density-chart" role="img" aria-label="Density of signed level differences for the compared pair" style="width:100%;min-height:320px"></canvas>
       <div id="density-nodata" style="display:none;padding:2rem;text-align:center;font-family:'Space Mono',monospace;font-size:.8rem;color:var(--text-muted)">
@@ -195,7 +204,7 @@
 
 
     <section id="method">
-      <div class="section-title">Method &amp; reproducible data</div>
+      <div class="section-title" role="heading" aria-level="2">Method &amp; reproducible data</div>
       <div id="method-body" style="font-family:var(--font-mono);font-size:.7rem;color:var(--text-muted);line-height:1.9"></div>
     </section>
 
@@ -204,12 +213,12 @@
   <div class="dataset-panel" id="panel-montagne">
 
     <section>
-      <div class="section-title">La Montagne — results per version</div>
+      <div class="section-title" role="heading" aria-level="2">La Montagne — results per version</div>
       <div id="montagne-versions" style="font-family:var(--font-mono);font-size:.7rem;color:var(--text-muted);line-height:1.9"></div>
     </section>
 
     <section>
-      <div class="section-title">La Montagne — computed (calibrated) vs measured</div>
+      <div class="section-title" role="heading" aria-level="2">La Montagne — computed (calibrated) vs measured</div>
       <div class="chart-wrap">
         <div class="map-controls" id="montagne-controls"></div>
         <canvas id="montagne-scatter-chart" role="img" aria-label="Computed (calibrated) vs measured levels per receiver" style="width:100%;min-height:420px"></canvas>

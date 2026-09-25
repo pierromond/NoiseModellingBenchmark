@@ -26,6 +26,109 @@ def num(pattern, text, cast=float, default=None):
     return cast(match.group(1)) if match else default
 
 
+NM_REPO = "Universite-Gustave-Eiffel/NoiseModelling"
+NM_DOCS = "https://noise-planet.org/noisemodelling.html"
+
+# Files needed by the "Compare your software" tutorial, per dataset.
+START_DATASETS = [
+    {
+        "id"    : "clisson",
+        "label" : "Clisson",
+        "folder": "clisson",
+        "dir"   : ROOT / "input/clisson/clisson",
+        "kind"  : "Road-traffic noise map (line sources)",
+        "speed" : "~15 min",
+        "script": "nm_version/src/main/groovy/getting_started/compare_clisson.groovy",
+        "files" : ["BUILDINGS.geojson", "DEM.geojson", "GROUNDS.geojson",
+                   "LW_ROADS.geojson", "RECEIVERS.geojson"],
+    },
+    {
+        "id"    : "montagne",
+        "label" : "La Montagne",
+        "folder": "montagne",
+        "dir"   : ROOT / "input/montagne",
+        "kind"  : "Single point source (a siren on a roof)",
+        "speed" : "< 1 min",
+        "script": "nm_version/src/main/groovy/getting_started/compare_montagne.groovy",
+        "files" : ["BUILDINGS.geojson", "DEM.geojson", "GROUNDS.geojson",
+                   "LW_ROADS.geojson", "RECEIVERS.geojson"],
+    },
+]
+
+
+def repo_slug():
+    return os.environ.get("GITHUB_REPOSITORY", "")
+
+
+def ref_name():
+    return os.environ.get("GITHUB_REF_NAME", "")
+
+
+def media_url(path):
+    repo, ref = repo_slug(), ref_name()
+    return f"https://media.githubusercontent.com/media/{repo}/{ref}/{path}" if repo and ref else ""
+
+
+def raw_url(path):
+    repo, ref = repo_slug(), ref_name()
+    return f"https://raw.githubusercontent.com/{repo}/{ref}/{path}" if repo and ref else ""
+
+
+def version_key(version):
+    match = re.match(r"v?(\d+)(?:\.(\d+))?(?:\.(\d+))?", version)
+    if not match:
+        return (0, 0, 0)
+    return tuple(int(g) if g else 0 for g in match.groups())
+
+
+def latest_release():
+    versions_file = ROOT / "versions.json"
+    if not versions_file.exists():
+        return None, None
+    releases = {k: v for k, v in json.loads(versions_file.read_text()).items()
+                if v and "SNAPSHOT" not in k}
+    if not releases:
+        return None, None
+    version = max(releases, key=version_key)
+    return version, releases[version]
+
+
+def write_start():
+    release_version, release_url = latest_release()
+    datasets = []
+    for dataset in START_DATASETS:
+        files = []
+        for name in dataset["files"]:
+            path = dataset["dir"] / name
+            if path.exists():
+                files.append({
+                    "name": name,
+                    "size": path.stat().st_size,
+                    "url" : media_url(str(path.relative_to(ROOT))),
+                })
+        datasets.append({
+            "id"    : dataset["id"],
+            "label" : dataset["label"],
+            "folder": dataset["folder"],
+            "kind"  : dataset["kind"],
+            "speed" : dataset["speed"],
+            "files" : files,
+            "script": {
+                "name": os.path.basename(dataset["script"]),
+                "url" : raw_url(dataset["script"]),
+            },
+        })
+    start = {
+        "repo"    : repo_slug(),
+        "ref"     : ref_name(),
+        "nmRepo"  : NM_REPO,
+        "nmDocs"  : NM_DOCS,
+        "release" : {"version": release_version, "url": release_url},
+        "datasets": datasets,
+    }
+    (DATA_DIR / "start.json").write_text(json.dumps(start, indent=2) + "\n")
+
+
 def write_settings():
     if not SCRIPT.exists():
         return
@@ -92,6 +195,7 @@ def main():
 
     render()
     write_settings()
+    write_start()
     write_build()
     subprocess.run([sys.executable, str(ROOT / "compare_versions.py")], check=False)
 

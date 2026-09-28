@@ -197,6 +197,16 @@ copy_geojson() {
         fi
     done
 
+    # Couches cartographiques communes : identiques pour toutes les versions
+    # (pas d'iso-contours pour La Montagne, et pas le DEM de 219 Mo).
+    mkdir -p "$DATA_DIR/layers"
+    for layer in BUILDINGS.geojson GROUNDS.geojson LW_ROADS.geojson RECEIVERS.geojson; do
+        local src="$INPUT_DIR/montagne/$layer"
+        if [ -f "$src" ]; then
+            cp "$src" "$DATA_DIR/layers/$layer"
+        fi
+    done
+
     # Référence mesurée (petite, pas le DEM de 219 Mo) publiée pour le site.
     local measure_src="$INPUT_DIR/montagne/measure/RECEIVERS_LEVEL.geojson"
     if [ -f "$measure_src" ]; then

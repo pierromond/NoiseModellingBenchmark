@@ -454,10 +454,9 @@ const activeLayers = {};
 
 function initMap() {
   map = L.map('map', { zoomControl: true }).setView([47.086, -1.27], 13);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=cb1_2ski_1_676978ffa428a6a1dd5d0e17', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
-    subdomains: 'abcd',
-    maxZoom: 19
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+    attribution: '&copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
+    maxZoom: 16
   }).addTo(map);
 }
 
@@ -1747,6 +1746,7 @@ function renderMontagne(data) {
       btn.setAttribute('aria-pressed', on);
       drawMontagneScatter(montagneEntries());
       updateMontagneNote();
+      if (montagneMap) updateMontagneReceivers(montagneEntries()[0]);
     });
   });
 
@@ -1775,11 +1775,124 @@ function renderMontagne(data) {
     </table>`;
 
   updateMontagneNote();
-  // Le canvas n'a une taille que lorsque l'onglet est visible.
+  // Le canvas et la carte n'ont une taille que lorsque l'onglet est visible.
   if (panel.classList.contains('active')) {
     renderMontagneHeaderMeta();
     drawMontagneScatter(montagneEntries());
+    initMontagneMap().then(refreshMontagneMap);
   }
+}
+
+// ─────────────────────────────────────────────
+// LA MONTAGNE — MAP (no iso-contours, receivers coloured by error)
+// ─────────────────────────────────────────────
+let montagneMap = null;
+let montagneMapLayers = {};
+let montagneErrorLayer = null;
+
+const MONTAGNE_MAP_LAYERS = [
+  { id: 'BUILDINGS', label: 'Buildings', file: 'layers/BUILDINGS.geojson',
+    color: '#546e7a', weight: 0.7, fill: true, fillOpacity: 0.22, on: true },
+  { id: 'GROUNDS', label: 'Grounds', file: 'layers/GROUNDS.geojson',
+    color: '#8d8d8d', weight: 0.6, fill: true, fillOpacity: 0.1, on: false },
+  { id: 'LW_ROADS', label: 'Source (siren)', file: 'layers/LW_ROADS.geojson',
+    point: true, color: '#e0245e', on: true },
+];
+
+function montagneErrorColor(e) {
+  if (e <= -6) return '#2166ac';
+  if (e <= -3) return '#4393c3';
+  if (e <= -1) return '#92c5de';
+  if (e < 1)   return '#f0f0f0';
+  if (e < 3)   return '#f4a582';
+  if (e < 6)   return '#d6604d';
+  return '#b2182b';
+}
+
+async function initMontagneMap() {
+  const el = document.getElementById('montagne-map');
+  if (!el || montagneMap) return;
+
+  montagneMap = L.map(el, { zoomControl: true });
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+    attribution: '&copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
+    maxZoom: 16,
+  }).addTo(montagneMap);
+
+  const bounds = L.latLngBounds([]);
+  for (const cfg of MONTAGNE_MAP_LAYERS) {
+    try {
+      const res = await fetch('data/montagne/' + cfg.file);
+      if (!res.ok) continue;
+      const gj = reprojectGeojson(await res.json());
+      const layer = cfg.point
+        ? L.geoJSON(gj, { pointToLayer: (f, ll) => L.circleMarker(ll, {
+            radius: 9, color: cfg.color, weight: 2, fillColor: cfg.color, fillOpacity: 1 }) })
+        : L.geoJSON(gj, { style: () => ({
+            color: cfg.color, weight: cfg.weight, fill: !!cfg.fill, fillOpacity: cfg.fillOpacity || 0.15 }) });
+      layer.bindTooltip(cfg.label, { sticky: true });
+      montagneMapLayers[cfg.id] = layer;
+      if (cfg.on) layer.addTo(montagneMap);
+      if (layer.getBounds && layer.getBounds().isValid()) bounds.extend(layer.getBounds());
+    } catch (e) { /* layer unavailable */ }
+  }
+
+  montagneErrorLayer = L.layerGroup().addTo(montagneMap);
+  montagneMapLayers['RECEIVERS'] = montagneErrorLayer;
+
+  if (bounds.isValid()) montagneMap.fitBounds(bounds, { padding: [24, 24] });
+  else montagneMap.setView([47.0, -1.0], 13);
+
+  renderMontagneMapLayers();
+}
+
+function renderMontagneMapLayers() {
+  const ctrl = document.getElementById('montagne-map-layers');
+  if (!ctrl || !montagneMap) return;
+  const items = MONTAGNE_MAP_LAYERS.map(cfg => ({ id: cfg.id, label: cfg.label, color: cfg.color }));
+  items.push({ id: 'RECEIVERS', label: 'Receivers (Δ)', color: '#333' });
+  ctrl.innerHTML = items.map(cfg => {
+    const layer = montagneMapLayers[cfg.id];
+    const on = layer && montagneMap.hasLayer(layer);
+    return `<button class="map-btn layer-btn${on ? ' active' : ''}" data-layer="${cfg.id}" aria-pressed="${on}">
+      <span class="layer-dot" style="background:${cfg.color}"></span>${cfg.label}</button>`;
+  }).join('');
+  ctrl.querySelectorAll('.map-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const layer = montagneMapLayers[btn.dataset.layer];
+      if (!layer) return;
+      const on = montagneMap.hasLayer(layer);
+      if (on) montagneMap.removeLayer(layer); else layer.addTo(montagneMap);
+      btn.classList.toggle('active', !on);
+      btn.setAttribute('aria-pressed', String(!on));
+    });
+  });
+}
+
+function updateMontagneReceivers(entry) {
+  const legend = document.getElementById('montagne-map-legend');
+  if (!montagneErrorLayer) return;
+  montagneErrorLayer.clearLayers();
+  if (!entry || !entry.receivers || !entry.receivers.length) {
+    if (legend) legend.style.display = 'none';
+    return;
+  }
+  entry.receivers.forEach(([id, x, y, measured, corrected, error]) => {
+    const [lng, lat] = proj4(LAMBERT93, 'WGS84', [x, y]);
+    L.circleMarker([lat, lng], {
+      radius: 8, color: '#222', weight: 1,
+      fillColor: montagneErrorColor(error), fillOpacity: 1,
+    })
+      .bindTooltip(`#${id} — measured ${measured} dB · calibrated ${corrected} dB · Δ ${error >= 0 ? '+' : ''}${error} dB`, { direction: 'top' })
+      .addTo(montagneErrorLayer);
+  });
+  if (legend) legend.style.display = '';
+}
+
+function refreshMontagneMap() {
+  if (!montagneMap) return;
+  montagneMap.invalidateSize();
+  updateMontagneReceivers(montagneEntries()[0]);
 }
 
 async function initMontagne() {
@@ -1805,6 +1918,8 @@ function switchDataset(name) {
     if (meta) meta.style.display = '';
     renderMontagneHeaderMeta();
     if (montagneData.length) drawMontagneScatter(montagneEntries());
+    if (montagneMap) refreshMontagneMap();
+    else initMontagneMap().then(refreshMontagneMap);
   } else {
     if (meta) { meta.style.display = ''; if (clissonHeaderHtml) meta.innerHTML = clissonHeaderHtml; }
   }

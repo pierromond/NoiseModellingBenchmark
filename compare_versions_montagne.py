@@ -217,6 +217,17 @@ def compare_to_measure(version: str, computed: dict, measured: dict,
 
     scatter = [[round(measured[k]["laeq"], 2), round(corrected[k], 2)] for k in common]
 
+    receivers = []
+    for k in common:
+        coords = measured[k].get("coords") or computed[k].get("coords")
+        if coords:
+            receivers.append([
+                k, coords[0], coords[1],
+                round(measured[k]["laeq"], 2),
+                round(corrected[k], 2),
+                round(corrected[k] - measured[k]["laeq"], 2),
+            ])
+
     return {
         "version"            : version,
         "reference_receiver" : ref_key,
@@ -229,6 +240,7 @@ def compare_to_measure(version: str, computed: dict, measured: dict,
         "rmse"               : round(rmse, 4),
         "max_abs_error"      : round(max_abs, 4),
         "scatter"            : scatter,
+        "receivers"          : receivers,
     }
 
 

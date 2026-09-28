@@ -27,7 +27,7 @@ function redrawCharts() {
   if (pairRefresh) pairRefresh();
   const mp = document.getElementById('panel-montagne');
   if (montagneChart && montagneData.length && mp && mp.classList.contains('active')) {
-    drawMontagneScatter(montagneEntry(montagneSelected));
+    drawMontagneScatter(montagneEntries());
   }
 }
 
@@ -121,8 +121,15 @@ function readState() {
   try { return new URLSearchParams(localStorage.getItem(STATE_KEY) || ''); } catch (e) { return new URLSearchParams(); }
 }
 
+const CLISSON_STATE_KEYS = ['version', 'layers', 'a', 'b'];
+const MONTAGNE_STATE_KEYS = ['m_models', 'm_layers'];
+
 function syncState(patch) {
   const cur = new URLSearchParams(location.hash.replace(/^#/, ''));
+  const ds = patch.dataset || cur.get('dataset') || 'clisson';
+  // Keep the URL scoped to the active dataset only.
+  if (ds !== 'clisson') CLISSON_STATE_KEYS.forEach(k => cur.delete(k));
+  if (ds !== 'montagne') MONTAGNE_STATE_KEYS.forEach(k => cur.delete(k));
   Object.entries(patch).forEach(([key, value]) => {
     if (value === null || value === undefined || value === '') cur.delete(key);
     else cur.set(key, value);
@@ -1564,6 +1571,7 @@ function setupDiffMapButton() {
 // ─────────────────────────────────────────────
 let montagneChart = null;
 let montagneData = [];
+let pendingMontagne = null;
 
 function modelColor(index) {
   const light = document.documentElement.dataset.theme === 'light';
@@ -1747,6 +1755,7 @@ function renderMontagne(data) {
       drawMontagneScatter(montagneEntries());
       updateMontagneNote();
       if (montagneMap) updateMontagneReceivers(montagneEntries()[0]);
+      syncState({ dataset: 'montagne', m_models: montagneSelected.join(',') });
     });
   });
 
@@ -1865,8 +1874,14 @@ function renderMontagneMapLayers() {
       if (on) montagneMap.removeLayer(layer); else layer.addTo(montagneMap);
       btn.classList.toggle('active', !on);
       btn.setAttribute('aria-pressed', String(!on));
+      syncState({ dataset: 'montagne', m_layers: montagneMapLayerIds().join(',') });
     });
   });
+}
+
+function montagneMapLayerIds() {
+  if (!montagneMap) return [];
+  return Object.keys(montagneMapLayers).filter(id => montagneMap.hasLayer(montagneMapLayers[id]));
 }
 
 function updateMontagneReceivers(entry) {
@@ -1895,11 +1910,41 @@ function refreshMontagneMap() {
   updateMontagneReceivers(montagneEntries()[0]);
 }
 
+// Restore the La Montagne view (selected models + map layers) from the URL state.
+function applyMontagneState(st) {
+  if (!st || !montagneData.length) return;
+  const models = (st.models || []).filter(v => montagneData.some(d => d.version === v));
+  if (models.length) montagneSelected = models;
+
+  const ctrl = document.getElementById('montagne-controls');
+  if (ctrl) {
+    ctrl.querySelectorAll('.map-btn').forEach(btn => {
+      const on = montagneSelected.includes(btn.dataset.version);
+      btn.classList.toggle('active', on);
+      btn.setAttribute('aria-pressed', on);
+    });
+  }
+  drawMontagneScatter(montagneEntries());
+  updateMontagneNote();
+
+  if (montagneMap && (st.layers || []).length) {
+    Object.entries(montagneMapLayers).forEach(([id, layer]) => {
+      const want = st.layers.includes(id);
+      const on = montagneMap.hasLayer(layer);
+      if (want && !on) layer.addTo(montagneMap);
+      if (!want && on) montagneMap.removeLayer(layer);
+    });
+    renderMontagneMapLayers();
+    updateMontagneReceivers(montagneEntries()[0]);
+  }
+}
+
 async function initMontagne() {
   const results = await loadJson('data/montagne/results.json', []);
   renderMontagneVersions(results);
   const data = await loadJson('data/montagne/measure_comparison.json', []);
   renderMontagne(data);
+  if (pendingMontagne) applyMontagneState(pendingMontagne);
 }
 
 function switchDataset(name) {
@@ -2428,6 +2473,21 @@ async function loadJson(url, fallback) {
 
 async function applyState(data, snapshot) {
   const st = snapshot || readState();
+  const ds = st.get('dataset') || 'clisson';
+
+  if (ds === 'montagne') {
+    pendingMontagne = {
+      models: (st.get('m_models') || '').split(',').filter(Boolean),
+      layers: (st.get('m_layers') || '').split(',').filter(Boolean),
+    };
+    switchDataset('montagne');
+    return;
+  }
+  if (ds === 'start') {
+    switchDataset('start');
+    return;
+  }
+
   const wanted = st.get('version');
   if (wanted && data.some(row => row.version === wanted)) {
     const btn = document.querySelector(`#map-version-controls [data-version="${wanted}"]`);
@@ -2448,9 +2508,6 @@ async function applyState(data, snapshot) {
     if (b && [...selB.options].some(o => o.value === b)) selB.value = b;
     if (selA.value !== selB.value) selA.dispatchEvent(new Event('change'));
   }
-
-  const ds = st.get('dataset');
-  if (ds === 'montagne' || ds === 'start') switchDataset(ds);
 }
 
 async function init() {
@@ -2490,8 +2547,9 @@ window.addEventListener('resize', debounce(() => {
   if (boxplotRedraw) boxplotRedraw();
   const mp = document.getElementById('panel-montagne');
   if (montagneChart && montagneData.length && mp && mp.classList.contains('active')) {
-    drawMontagneScatter(montagneEntry(montagneSelected));
+    drawMontagneScatter(montagneEntries());
   }
+  if (montagneMap && mp && mp.classList.contains('active')) montagneMap.invalidateSize();
 }, 250));
 
 init();

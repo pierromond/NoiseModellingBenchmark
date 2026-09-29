@@ -10,6 +10,7 @@ NM_VERSIONS["v4.0.5"]="https://github.com/Universite-Gustave-Eiffel/NoiseModelli
 NM_VERSIONS["v5.0.0"]="https://github.com/Universite-Gustave-Eiffel/NoiseModelling/releases/download/v5.0.0/NoiseModelling_without_gui.zip"
 NM_VERSIONS["v5.0.1"]="https://github.com/Universite-Gustave-Eiffel/NoiseModelling/releases/download/v5.0.1/NoiseModelling_without_gui-5.0.1.zip"
 NM_VERSIONS["v6.0.0"]="https://github.com/Universite-Gustave-Eiffel/NoiseModelling/releases/download/v6.0.0/NoiseModelling_6.0.0.zip"
+NM_VERSIONS["v6.0.1"]="https://repo1.maven.org/maven2/org/noise-planet/noisemodelling-scripts/6.0.1/noisemodelling-scripts-6.0.1.zip"
 
 GROOVY_SCRIPT="nm_version/src/main/groovy/montagne/montagneV5.groovy"
 GROOVY_SCRIPT_v6="nm_version/src/main/groovy/montagne/montagneV6.groovy"

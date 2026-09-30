@@ -1,16 +1,22 @@
 #!/usr/bin/env bash
 #set -euo pipefail
 
-declare -A NM_VERSIONS
-NM_VERSIONS["v4.0.0"]="https://github.com/Universite-Gustave-Eiffel/NoiseModelling/releases/download/v4.0.0/NoiseModelling_4.0.0_without_gui.zip"
-NM_VERSIONS["v4.0.1"]="https://github.com/Universite-Gustave-Eiffel/NoiseModelling/releases/download/v4.0.1/NoiseModelling_4.0.1_without_gui.zip"
-NM_VERSIONS["v4.0.2"]="https://github.com/Universite-Gustave-Eiffel/NoiseModelling/releases/download/v4.0.2/NoiseModelling_without_gui.zip"
-NM_VERSIONS["v4.0.4"]="https://github.com/Universite-Gustave-Eiffel/NoiseModelling/releases/download/v4.0.4/NoiseModelling_without_gui.zip"
-NM_VERSIONS["v4.0.5"]="https://github.com/Universite-Gustave-Eiffel/NoiseModelling/releases/download/v4.0.5/NoiseModelling_without_gui.zip"
-NM_VERSIONS["v5.0.0"]="https://github.com/Universite-Gustave-Eiffel/NoiseModelling/releases/download/v5.0.0/NoiseModelling_without_gui.zip"
-NM_VERSIONS["v5.0.1"]="https://github.com/Universite-Gustave-Eiffel/NoiseModelling/releases/download/v5.0.1/NoiseModelling_without_gui-5.0.1.zip"
-NM_VERSIONS["v6.0.0"]="https://github.com/Universite-Gustave-Eiffel/NoiseModelling/releases/download/v6.0.0/NoiseModelling_6.0.0.zip"
-NM_VERSIONS["v6.0.1"]="https://repo1.maven.org/maven2/org/noise-planet/noisemodelling-scripts/6.0.1/noisemodelling-scripts-6.0.1.zip"
+list_versions() {
+    python3 - <<'PY'
+import json
+with open("versions.json") as f:
+    for version in sorted(json.load(f)):
+        print(version)
+PY
+}
+
+nm_url() {
+    python3 - "$1" <<'PY'
+import json, sys
+with open("versions.json") as f:
+    print(json.load(f).get(sys.argv[1], ""))
+PY
+}
 
 GROOVY_SCRIPT="nm_version/src/main/groovy/montagne/montagneV5.groovy"
 GROOVY_SCRIPT_v6="nm_version/src/main/groovy/montagne/montagneV6.groovy"
@@ -222,19 +228,20 @@ run_one_version() {
     local nm_dir="$INPUT_DIR/NoiseModelling_without_gui_${version}"
 
     if [ -d "$nm_dir" ]; then
-        echo " NM déjà présent : $nm_dir — skip download.:"
-        ls $nm_dir
-
-    elif [ -n "${NM_VERSIONS[$version]+x}" ]; then
-        download_nm_version "$version" "${NM_VERSIONS[$version]}" || {
-            echo "Echec download pour $version"
-            exit 1
-        }
-
+        echo " NM déjà présent : $nm_dir — skip download."
+        ls "$nm_dir"
     else
-        echo "Version inconnue et aucun dossier ni URL disponible : $version"
-        echo "Dossier cherché : $nm_dir"
-        exit 1
+        local url
+        url="$(nm_url "$version")"
+        if [ -z "$url" ]; then
+            echo "Aucune URL pour $version dans versions.json"
+            echo "Dossier attendu (binaire fourni par artifact) : $nm_dir"
+            return 1
+        fi
+        download_nm_version "$version" "$url" || {
+            echo "Echec download pour $version"
+            return 1
+        }
     fi
 
     download_montagne
@@ -242,7 +249,7 @@ run_one_version() {
     echo "Lancement simulation $version..."
     run_simulation "$version" || {
         echo "Echec simulation pour $version"
-        exit 1
+        return 1
     }
 }
 
@@ -257,8 +264,14 @@ run_aggregate_only() {
 run_all_sequential() {
     download_montagne
     local failed_versions=()
-    for version in "${!NM_VERSIONS[@]}"; do
-        download_nm_version "$version" "${NM_VERSIONS[$version]}" || {
+    local version url
+    while read -r version; do
+        url="$(nm_url "$version")"
+        if [ -z "$url" ]; then
+            echo "Pas d'URL pour $version — ignoré (binaire fourni par artifact uniquement)."
+            continue
+        fi
+        download_nm_version "$version" "$url" || {
             failed_versions+=("$version")
             continue
         }
@@ -267,7 +280,12 @@ run_all_sequential() {
             failed_versions+=("$version")
             continue
         }
-    done
+    done < <(list_versions)
+
+    if [ ${#failed_versions[@]} -gt 0 ]; then
+        echo "Versions en échec : ${failed_versions[*]}"
+    fi
+
     run_aggregate_only
 }
 

@@ -393,8 +393,15 @@ jobs:
             path: output/v${{ needs.check-new-version.outputs.target_version }}
             key: result-${{ env.JAVA_TAG }}-v${{ needs.check-new-version.outputs.target_version }}-${{ needs.check-new-version.outputs.artifact_name }}-${{ hashFiles('benchmark_run_clisson.sh', 'versions.json', 'nm_version/src/main/groovy/runscript*.groovy', 'nm_version/src/main/groovy/v*.groovy', 'input/clisson/**') }}
 
+        - name: Restore La Montagne result for target version
+          id: result_montagne
+          uses: actions/cache/restore@v4
+          with:
+            path: output/montagne/v${{ needs.check-new-version.outputs.target_version }}
+            key: result-montagne-${{ env.JAVA_TAG }}-v${{ needs.check-new-version.outputs.target_version }}-${{ needs.check-new-version.outputs.artifact_name }}-${{ hashFiles('benchmark_run_montagne.sh', 'versions.json', 'nm_version/src/main/groovy/**', 'input/montagne/**') }}
+
         - name: Restore NM binary for target version
-          if: steps.result.outputs.cache-hit != 'true'
+          if: steps.result.outputs.cache-hit != 'true' || steps.result_montagne.outputs.cache-hit != 'true'
           uses: actions/download-artifact@v4
           with:
             name: nm-binary-${{ needs.check-new-version.outputs.target_version }}
@@ -414,13 +421,6 @@ jobs:
           with:
             path: output/v${{ needs.check-new-version.outputs.target_version }}
             key: result-${{ env.JAVA_TAG }}-v${{ needs.check-new-version.outputs.target_version }}-${{ needs.check-new-version.outputs.artifact_name }}-${{ hashFiles('benchmark_run_clisson.sh', 'versions.json', 'nm_version/src/main/groovy/runscript*.groovy', 'nm_version/src/main/groovy/v*.groovy', 'input/clisson/**') }}
-
-        - name: Restore La Montagne result for target version
-          id: result_montagne
-          uses: actions/cache/restore@v4
-          with:
-            path: output/montagne/v${{ needs.check-new-version.outputs.target_version }}
-            key: result-montagne-${{ env.JAVA_TAG }}-v${{ needs.check-new-version.outputs.target_version }}-${{ needs.check-new-version.outputs.artifact_name }}-${{ hashFiles('benchmark_run_montagne.sh', 'versions.json', 'nm_version/src/main/groovy/**', 'input/montagne/**') }}
 
         - name: Run La Montagne benchmark for target version
           id: run_montagne

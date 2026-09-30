@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "build.schema.json",
+  "title": "build.json",
+  "description": "Build metadata (timestamp, CI environment, version sources).",
+  "type": "object",
+  "required": ["builtAt", "repo", "ref", "sha", "runId", "versionSources"],
+  "properties": {
+    "builtAt": {"type": "string"},
+    "repo": {"type": "string"},
+    "ref": {"type": "string"},
+    "sha": {"type": "string"},
+    "runId": {"type": "string"},
+    "versionSources": {"type": "object", "additionalProperties": {"type": "string"}}
+  },
+  "additionalProperties": true
+}

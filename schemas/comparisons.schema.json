@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "comparisons.schema.json",
+  "title": "comparisons.json",
+  "description": "Pairwise comparison of two versions on the same dataset.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["version_a", "version_b", "n_common", "n_valid", "n_nan_a", "n_nan_b",
+                 "n_only_a", "n_only_b", "silence_threshold",
+                 "max_delta", "mean_delta", "std_delta", "rmse",
+                 "scatter", "deltas_signed", "diff_map"],
+    "properties": {
+      "version_a": {"type": "string"},
+      "version_b": {"type": "string"},
+      "n_common": {"type": "integer"},
+      "n_valid": {"type": "integer"},
+      "n_nan_a": {"type": "integer"},
+      "n_nan_b": {"type": "integer"},
+      "n_only_a": {"type": "integer"},
+      "n_only_b": {"type": "integer"},
+      "silence_threshold": {"type": "number"},
+      "max_payload_points": {"type": "integer"},
+      "max_delta": {"type": "number"},
+      "mean_delta": {"type": "number"},
+      "std_delta": {"type": "number"},
+      "rmse": {"type": "number"},
+      "scatter": {"type": "array", "items": {"type": "array", "items": {"type": "number"}}},
+      "deltas_signed": {"type": "array", "items": {"type": "number"}},
+      "diff_map": {"type": "array", "items": {"type": "array", "items": {"type": "number"}}}
+    },
+    "additionalProperties": true
+  }
+}

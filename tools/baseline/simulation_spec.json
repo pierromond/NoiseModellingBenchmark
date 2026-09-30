@@ -1,0 +1,307 @@
+{
+  "nm_version/src/main/groovy/montagne/montagneV5.groovy": {
+    "v4.0.0": {
+      "exec": {
+        "confDiffHorizontal": "true",
+        "confDiffVertical": "true",
+        "confExportSourceId": "false",
+        "confFavorableOccurrencesDay": "0.5, 0.5, 0.75, 1.0, 0.75, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.0, 0.25, 0.5, 0.5, 0.5",
+        "confMaxError": "0",
+        "confMaxReflDist": "500",
+        "confMaxSrcDist": "10000",
+        "confRaysName": "RAYS",
+        "confReflOrder": "2",
+        "confSkipLden": "true",
+        "confSkipLevening": "true",
+        "confSkipLnight": "true",
+        "confTemperature": "24",
+        "tableBuilding": "BUILDINGS",
+        "tableDEM": "DEM",
+        "tableGroundAbs": "GROUNDS",
+        "tableReceivers": "RECEIVERS",
+        "tableSources": "LW_ROADS_LW"
+      },
+      "script": "nm_version/src/main/groovy/v400Noise_level_from_source.groovy",
+      "set_height": []
+    },
+    "v4.0.1": {
+      "exec": {
+        "confDiffHorizontal": "true",
+        "confDiffVertical": "true",
+        "confExportSourceId": "false",
+        "confFavorableOccurrencesDay": "0.5, 0.5, 0.75, 1.0, 0.75, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.0, 0.25, 0.5, 0.5, 0.5",
+        "confMaxError": "0",
+        "confMaxReflDist": "500",
+        "confMaxSrcDist": "10000",
+        "confRaysName": "RAYS",
+        "confReflOrder": "2",
+        "confSkipLden": "true",
+        "confSkipLevening": "true",
+        "confSkipLnight": "true",
+        "confTemperature": "24",
+        "tableBuilding": "BUILDINGS",
+        "tableDEM": "DEM",
+        "tableGroundAbs": "GROUNDS",
+        "tableReceivers": "RECEIVERS",
+        "tableSources": "LW_ROADS_LW"
+      },
+      "script": "nm_version/src/main/groovy/v401Noise_level_from_source.groovy",
+      "set_height": []
+    },
+    "v4.0.2": {
+      "exec": {
+        "confDiffHorizontal": "true",
+        "confDiffVertical": "true",
+        "confExportSourceId": "false",
+        "confFavorableOccurrencesDay": "0.5, 0.5, 0.75, 1.0, 0.75, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.0, 0.25, 0.5, 0.5, 0.5",
+        "confMaxError": "0",
+        "confMaxReflDist": "500",
+        "confMaxSrcDist": "10000",
+        "confRaysName": "RAYS",
+        "confReflOrder": "2",
+        "confSkipLden": "true",
+        "confSkipLevening": "true",
+        "confSkipLnight": "true",
+        "confTemperature": "24",
+        "tableBuilding": "BUILDINGS",
+        "tableDEM": "DEM",
+        "tableGroundAbs": "GROUNDS",
+        "tableReceivers": "RECEIVERS",
+        "tableSources": "LW_ROADS_LW"
+      },
+      "script": "nm_version/src/main/groovy/v402Noise_level_from_source.groovy",
+      "set_height": []
+    },
+    "v4.0.4": {
+      "exec": {
+        "confDiffHorizontal": "true",
+        "confDiffVertical": "true",
+        "confExportSourceId": "false",
+        "confFavorableOccurrencesDay": "0.5, 0.5, 0.75, 1.0, 0.75, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.0, 0.25, 0.5, 0.5, 0.5",
+        "confMaxError": "0",
+        "confMaxReflDist": "500",
+        "confMaxSrcDist": "10000",
+        "confRaysName": "RAYS",
+        "confReflOrder": "2",
+        "confSkipLden": "true",
+        "confSkipLevening": "true",
+        "confSkipLnight": "true",
+        "confTemperature": "24",
+        "tableBuilding": "BUILDINGS",
+        "tableDEM": "DEM",
+        "tableGroundAbs": "GROUNDS",
+        "tableReceivers": "RECEIVERS",
+        "tableSources": "LW_ROADS_LW"
+      },
+      "script": "nm_version/src/main/groovy/v404Noise_level_from_source.groovy",
+      "set_height": []
+    },
+    "v4.0.5": {
+      "exec": {
+        "confDiffHorizontal": "true",
+        "confDiffVertical": "true",
+        "confExportSourceId": "false",
+        "confFavorableOccurrencesDay": "0.5, 0.5, 0.75, 1.0, 0.75, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.0, 0.25, 0.5, 0.5, 0.5",
+        "confMaxError": "0",
+        "confMaxReflDist": "500",
+        "confMaxSrcDist": "10000",
+        "confRaysName": "RAYS",
+        "confReflOrder": "2",
+        "confSkipLden": "true",
+        "confSkipLevening": "true",
+        "confSkipLnight": "true",
+        "confTemperature": "24",
+        "tableBuilding": "BUILDINGS",
+        "tableDEM": "DEM",
+        "tableGroundAbs": "GROUNDS",
+        "tableReceivers": "RECEIVERS",
+        "tableSources": "LW_ROADS_LW"
+      },
+      "script": "nm_version/src/main/groovy/v405Noise_level_from_source.groovy",
+      "set_height": []
+    },
+    "v5.0.0": {
+      "exec": {
+        "confDiffHorizontal": "true",
+        "confDiffVertical": "true",
+        "confExportSourceId": "false",
+        "confFavorableOccurrencesDefault": "0.5, 0.5, 0.75, 1.0, 0.75, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.0, 0.25, 0.5, 0.5, 0.5",
+        "confMaxError": "0",
+        "confMaxReflDist": "500",
+        "confMaxSrcDist": "10000",
+        "confRaysName": "RAYS",
+        "confReflOrder": "2",
+        "confSkipLden": "true",
+        "confSkipLevening": "true",
+        "confSkipLnight": "true",
+        "confTemperature": "24",
+        "tableBuilding": "BUILDINGS",
+        "tableDEM": "DEM",
+        "tableGroundAbs": "GROUNDS",
+        "tableReceivers": "RECEIVERS",
+        "tableSources": "LW_ROADS"
+      },
+      "script": "nm_version/src/main/groovy/v500Noise_level_from_source.groovy",
+      "set_height": [
+        {
+          "height": "12.4",
+          "tableName": "LW_ROADS"
+        },
+        {
+          "height": "1.5",
+          "tableName": "RECEIVERS"
+        }
+      ]
+    },
+    "v5.0.1": {
+      "exec": {
+        "confDiffHorizontal": "true",
+        "confDiffVertical": "true",
+        "confExportSourceId": "false",
+        "confFavorableOccurrencesDefault": "0.5, 0.5, 0.75, 1.0, 0.75, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.0, 0.25, 0.5, 0.5, 0.5",
+        "confMaxError": "0",
+        "confMaxReflDist": "500",
+        "confMaxSrcDist": "10000",
+        "confRaysName": "RAYS",
+        "confReflOrder": "2",
+        "confSkipLden": "true",
+        "confSkipLevening": "true",
+        "confSkipLnight": "true",
+        "confTemperature": "24",
+        "tableBuilding": "BUILDINGS",
+        "tableDEM": "DEM",
+        "tableGroundAbs": "GROUNDS",
+        "tableReceivers": "RECEIVERS",
+        "tableSources": "LW_ROADS"
+      },
+      "script": "nm_version/src/main/groovy/v501Noise_level_from_source.groovy",
+      "set_height": [
+        {
+          "height": "12.4",
+          "tableName": "LW_ROADS"
+        },
+        {
+          "height": "1.5",
+          "tableName": "RECEIVERS"
+        }
+      ]
+    }
+  },
+  "nm_version/src/main/groovy/montagne/montagneV6.groovy": {},
+  "nm_version/src/main/groovy/runscriptV5.0.groovy": {
+    "v4.0.0": {
+      "exec": {
+        "confDiffHorizontal": "true",
+        "confFavorableOccurrencesDay": "0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25",
+        "confMaxError": "0.1",
+        "confMaxSrcDist": "300",
+        "confReflOrder": "1",
+        "tableBuilding": "BUILDINGS",
+        "tableDEM": "DEM",
+        "tableGroundAbs": "GROUNDS",
+        "tableReceivers": "RECEIVERS",
+        "tableSources": "LW_ROADS_LW"
+      },
+      "script": "nm_version/src/main/groovy/v400Noise_level_from_source.groovy",
+      "set_height": []
+    },
+    "v4.0.1": {
+      "exec": {
+        "confDiffHorizontal": "true",
+        "confFavorableOccurrencesDay": "0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25",
+        "confMaxError": "0.1",
+        "confMaxSrcDist": "300",
+        "confReflOrder": "1",
+        "tableBuilding": "BUILDINGS",
+        "tableDEM": "DEM",
+        "tableGroundAbs": "GROUNDS",
+        "tableReceivers": "RECEIVERS",
+        "tableSources": "LW_ROADS_LW"
+      },
+      "script": "nm_version/src/main/groovy/v401Noise_level_from_source.groovy",
+      "set_height": []
+    },
+    "v4.0.2": {
+      "exec": {
+        "confDiffHorizontal": "true",
+        "confFavorableOccurrencesDay": "0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25",
+        "confMaxError": "0.1",
+        "confMaxSrcDist": "300",
+        "confReflOrder": "1",
+        "tableBuilding": "BUILDINGS",
+        "tableDEM": "DEM",
+        "tableGroundAbs": "GROUNDS",
+        "tableReceivers": "RECEIVERS",
+        "tableSources": "LW_ROADS_LW"
+      },
+      "script": "nm_version/src/main/groovy/v402Noise_level_from_source.groovy",
+      "set_height": []
+    },
+    "v4.0.4": {
+      "exec": {
+        "confDiffHorizontal": "true",
+        "confFavorableOccurrencesDay": "0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25",
+        "confMaxError": "0.1",
+        "confMaxSrcDist": "300",
+        "confReflOrder": "1",
+        "tableBuilding": "BUILDINGS",
+        "tableDEM": "DEM",
+        "tableGroundAbs": "GROUNDS",
+        "tableReceivers": "RECEIVERS",
+        "tableSources": "LW_ROADS_LW"
+      },
+      "script": "nm_version/src/main/groovy/v404Noise_level_from_source.groovy",
+      "set_height": []
+    },
+    "v4.0.5": {
+      "exec": {
+        "confDiffHorizontal": "true",
+        "confFavorableOccurrencesDay": "0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25",
+        "confMaxError": "0.1",
+        "confMaxSrcDist": "300",
+        "confReflOrder": "1",
+        "tableBuilding": "BUILDINGS",
+        "tableDEM": "DEM",
+        "tableGroundAbs": "GROUNDS",
+        "tableReceivers": "RECEIVERS",
+        "tableSources": "LW_ROADS_LW"
+      },
+      "script": "nm_version/src/main/groovy/v405Noise_level_from_source.groovy",
+      "set_height": []
+    },
+    "v5.0.0": {
+      "exec": {
+        "confDiffHorizontal": "true",
+        "confFavorableOccurrencesDefault": "0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25",
+        "confMaxError": "0.1",
+        "confMaxSrcDist": "300",
+        "confRaysName": "RAYS",
+        "confReflOrder": "1",
+        "tableBuilding": "BUILDINGS",
+        "tableDEM": "DEM",
+        "tableGroundAbs": "GROUNDS",
+        "tableReceivers": "RECEIVERS",
+        "tableSources": "LW_ROADS"
+      },
+      "script": "nm_version/src/main/groovy/v500Noise_level_from_source.groovy",
+      "set_height": []
+    },
+    "v5.0.1": {
+      "exec": {
+        "confDiffHorizontal": "true",
+        "confFavorableOccurrencesDefault": "0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25",
+        "confMaxError": "0.1",
+        "confMaxSrcDist": "300",
+        "confReflOrder": "1",
+        "tableBuilding": "BUILDINGS",
+        "tableDEM": "DEM",
+        "tableGroundAbs": "GROUNDS",
+        "tableReceivers": "RECEIVERS",
+        "tableSources": "LW_ROADS"
+      },
+      "script": "nm_version/src/main/groovy/v501Noise_level_from_source.groovy",
+      "set_height": []
+    }
+  },
+  "nm_version/src/main/groovy/runscriptV6.0.groovy": {}
+}

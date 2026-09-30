@@ -20,16 +20,10 @@
 
 
 import groovy.sql.Sql
-import org.h2gis.api.ProgressVisitor
 import org.noise_planet.noisemodelling.wps.Acoustic_Tools.Create_Isosurface
-import org.noise_planet.noisemodelling.wps.Geometric_Tools.Change_SRID
-import org.noise_planet.noisemodelling.wps.NoiseModelling.Noise_level_from_source
 import org.noise_planet.noisemodelling.wps.NoiseModelling.Road_Emission_from_Traffic
 import org.noise_planet.noisemodelling.wps.Receivers.Delaunay_Grid
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import org.noise_planet.noisemodelling.wps.Import_and_Export.Export_Table
-import org.noise_planet.noisemodelling.wps.Import_and_Export.Import_Asc_File
 import org.noise_planet.noisemodelling.wps.Import_and_Export.Import_File
 import org.h2gis.utilities.JDBCUtilities
 
@@ -42,7 +36,6 @@ import java.util.concurrent.TimeUnit
 import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
 
-import java.util.concurrent.atomic.AtomicBoolean
 
 title = 'NoiseModelling benchmark simulation'
 description = 'NoiseModelling benchmark simulation'
@@ -81,8 +74,17 @@ static def exec(Connection connection, Map input) {
     def redoCompute = true
     def sql = new Sql(connection)
 
+    def bench = new GroovyClassLoader()
+            .parseClass(new File("nm_version/src/main/groovy/lib/NoiseBench.groovy"))
+            .newInstance()
+
+    def config = new JsonSlurper().parse(new File("config/benchmark.json"))
+    def simConfig = config.simulations.clisson
+    def versionConfig = simConfig.versions[version]
+    double silenceThreshold = config.constants.silenceThreshold as double
+    def bins = config.constants.histogramBins as List
+
     if (version.startsWith("v4")){
-            long maxUsedMemory = 0
             if (!JDBCUtilities.tableExists(connection, "BUILDINGS")) {
                 new Import_File().exec(connection,
                         ["pathFile" : "input/clisson/clisson/BUILDINGS.geojson",
@@ -158,212 +160,16 @@ static def exec(Connection connection, Map input) {
 
             if(redoCompute) {
                 long startCompute = System.currentTimeMillis()
-                if(version=="v4.0.0") {
-
-                    def scriptFile = new File("nm_version/src/main/groovy/v400Noise_level_from_source.groovy")
-                            .getAbsoluteFile()
-
-                    if (!scriptFile.exists()) {
-                        throw new FileNotFoundException("Fichier introuvable : ${scriptFile.absolutePath}")
-                    }
-
-                    def customClass = new GroovyClassLoader().parseClass(scriptFile)
-                    def customScript = customClass.newInstance()
-
-
-
-                    customScript.exec(connection,
-                            ["tableBuilding"                   : "BUILDINGS",
-                             "tableSources"                    : "LW_ROADS_LW",
-                             "tableReceivers"                  : "RECEIVERS",
-                             "tableDEM"                        : "DEM",
-                             "tableGroundAbs"                  : "GROUNDS",
-                             "confReflOrder"                   : 1,
-                             "confMaxSrcDist"                  : 300,
-                             "confDiffHorizontal"              : true,
-                             "confMaxError"                    : 0.1,
-                             "confFavorableOccurrencesDay"     : '0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25'])
-
-                    def csvFile = new File("$outputFolder/profile.csv")
-                    if (csvFile.exists()) {
-                        def lines = csvFile.readLines()
-                        if (lines.size() >= 1) {
-                            def headers = lines[0].split(',')
-                            def raysIdx = headers.findIndexOf { it.trim() in ['receiver_median_rays', 'receiver_median_profiles_count'] }
-                            if (raysIdx >= 0) {
-                                def lastLine = lines[lines.size() - 1].split(',')
-                                if (lastLine.size() > raysIdx) {
-                                    nbRays = lastLine[raysIdx].trim().toDouble()
-                                }
-                            }
-                        }
-                    }
+                if (versionConfig == null) {
+                    throw new IllegalArgumentException("Version non supportee par runscriptV5.0.groovy : ${version}. Ajouter un script dedie dans nm_version/src/main/groovy/ puis un branchement ici.")
                 }
-                if(version=="v4.0.1") {
-
-                    def scriptFile = new File("nm_version/src/main/groovy/v401Noise_level_from_source.groovy")
-                            .getAbsoluteFile()
-
-                    if (!scriptFile.exists()) {
-                        throw new FileNotFoundException("Fichier introuvable : ${scriptFile.absolutePath}")
-                    }
-
-                    def customClass = new GroovyClassLoader().parseClass(scriptFile)
-                    def customScript = customClass.newInstance()
-
-
-
-                    customScript.exec(connection,
-                            ["tableBuilding"                   : "BUILDINGS",
-                             "tableSources"                    : "LW_ROADS_LW",
-                             "tableReceivers"                  : "RECEIVERS",
-                             "tableDEM"                        : "DEM",
-                             "tableGroundAbs"                  : "GROUNDS",
-                             "confReflOrder"                   : 1,
-                             "confMaxSrcDist"                  : 300,
-                             "confDiffHorizontal"              : true,
-                             "confMaxError"                    : 0.1,
-                             "confFavorableOccurrencesDay"     : '0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25'])
-                    def csvFile = new File("$outputFolder/profile.csv")
-                    if (csvFile.exists()) {
-                        def lines = csvFile.readLines()
-                        if (lines.size() >= 1) {
-                            def headers = lines[0].split(',')
-                            def raysIdx = headers.findIndexOf { it.trim() in ['receiver_median_rays', 'receiver_median_profiles_count'] }
-                            if (raysIdx >= 0) {
-                                def lastLine = lines[lines.size() - 1].split(',')
-                                if (lastLine.size() > raysIdx) {
-                                    nbRays = lastLine[raysIdx].trim().toDouble()
-                                }
-                            }
-                        }
-                    }
+                def params = simConfig.paramSets[versionConfig.paramSet].exec
+                def customScript = bench.loadScript(versionConfig.script)
+                customScript.exec(connection, params)
+                nbRays = bench.readNbRays(new File("$outputFolder/profile.csv"), null)
+                if (versionConfig.countRaysInDb) {
+                    nbRays = sql.firstRow("SELECT COUNT(*) FROM RAYS")[0] as Integer
                 }
-                if(version=="v4.0.2") {
-
-                    def scriptFile = new File("nm_version/src/main/groovy/v402Noise_level_from_source.groovy")
-                            .getAbsoluteFile()
-
-                    if (!scriptFile.exists()) {
-                        throw new FileNotFoundException("Fichier introuvable : ${scriptFile.absolutePath}")
-                    }
-
-                    def customClass = new GroovyClassLoader().parseClass(scriptFile)
-                    def customScript = customClass.newInstance()
-
-
-
-                    customScript.exec(connection,
-                            ["tableBuilding"                   : "BUILDINGS",
-                             "tableSources"                    : "LW_ROADS_LW",
-                             "tableReceivers"                  : "RECEIVERS",
-                             "tableDEM"                        : "DEM",
-                             "tableGroundAbs"                  : "GROUNDS",
-                             "confReflOrder"                   : 1,
-                             "confMaxSrcDist"                  : 300,
-                             "confDiffHorizontal"              : true,
-                             "confMaxError"                    : 0.1,
-                             "confFavorableOccurrencesDay"     : '0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25'])
-                    def csvFile = new File("$outputFolder/profile.csv")
-                    if (csvFile.exists()) {
-                        def lines = csvFile.readLines()
-                        if (lines.size() >= 1) {
-                            def headers = lines[0].split(',')
-                            def raysIdx = headers.findIndexOf { it.trim() in ['receiver_median_rays', 'receiver_median_profiles_count'] }
-                            if (raysIdx >= 0) {
-                                def lastLine = lines[lines.size() - 1].split(',')
-                                if (lastLine.size() > raysIdx) {
-                                    nbRays = lastLine[raysIdx].trim().toDouble()
-                                }
-                            }
-                        }
-                    }
-                }
-                if(version=="v4.0.4") {
-
-                    def scriptFile = new File("nm_version/src/main/groovy/v404Noise_level_from_source.groovy")
-                            .getAbsoluteFile()
-
-                    if (!scriptFile.exists()) {
-                        throw new FileNotFoundException("Fichier introuvable : ${scriptFile.absolutePath}")
-                    }
-
-                    def customClass = new GroovyClassLoader().parseClass(scriptFile)
-                    def customScript = customClass.newInstance()
-
-
-
-                    customScript.exec(connection,
-                            ["tableBuilding"                   : "BUILDINGS",
-                             "tableSources"                    : "LW_ROADS_LW",
-                             "tableReceivers"                  : "RECEIVERS",
-                             "tableDEM"                        : "DEM",
-                             "tableGroundAbs"                  : "GROUNDS",
-                             "confReflOrder"                   : 1,
-                             "confMaxSrcDist"                  : 300,
-                             "confDiffHorizontal"              : true,
-                             "confMaxError"                    : 0.1,
-                             "confFavorableOccurrencesDay"     : '0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25'])
-
-                    def csvFile = new File("$outputFolder/profile.csv")
-                    if (csvFile.exists()) {
-                        def lines = csvFile.readLines()
-                        if (lines.size() >= 1) {
-                            def headers = lines[0].split(',')
-                            def raysIdx = headers.findIndexOf { it.trim() in ['receiver_median_rays', 'receiver_median_profiles_count'] }
-                            if (raysIdx >= 0) {
-                                def lastLine = lines[lines.size() - 1].split(',')
-                                if (lastLine.size() > raysIdx) {
-                                    nbRays = lastLine[raysIdx].trim().toDouble()
-                                }
-                            }
-                        }
-                    }
-                }
-                if(version=="v4.0.5") {
-
-                    def scriptFile = new File("nm_version/src/main/groovy/v405Noise_level_from_source.groovy")
-                            .getAbsoluteFile()
-
-                    if (!scriptFile.exists()) {
-                        throw new FileNotFoundException("Fichier introuvable : ${scriptFile.absolutePath}")
-                    }
-
-                    def customClass = new GroovyClassLoader().parseClass(scriptFile)
-                    def customScript = customClass.newInstance()
-
-
-
-                    customScript.exec(connection,
-                            ["tableBuilding"                   : "BUILDINGS",
-                             "tableSources"                    : "LW_ROADS_LW",
-                             "tableReceivers"                  : "RECEIVERS",
-                             "tableDEM"                        : "DEM",
-                             "tableGroundAbs"                  : "GROUNDS",
-                             "confReflOrder"                   : 1,
-                             "confMaxSrcDist"                  : 300,
-                             "confDiffHorizontal"              : true,
-                             "confMaxError"                    : 0.1,
-                             "confFavorableOccurrencesDay"     : '0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25'])
-
-                    def csvFile = new File("$outputFolder/profile.csv")
-                    if (csvFile.exists()) {
-                        def lines = csvFile.readLines()
-                        if (lines.size() >= 1) {
-                            def headers = lines[0].split(',')
-                            def raysIdx = headers.findIndexOf { it.trim() in ['receiver_median_rays', 'receiver_median_profiles_count'] }
-                            if (raysIdx >= 0) {
-                                def lastLine = lines[lines.size() - 1].split(',')
-                                if (lastLine.size() > raysIdx) {
-                                    nbRays = lastLine[raysIdx].trim().toDouble()
-                                }
-                            }
-                        }
-                    }
-                }
-
-
-
                 elapsed = System.currentTimeMillis() - startCompute
             }
 
@@ -407,70 +213,28 @@ static def exec(Connection connection, Map input) {
 
             println("Compuation of $cpt receivers in $timeString ( ${time} milliseconds per receiver")
 
-            def geojsonFile = new File("$outputFolder/RECEIVERS_LEVEL.geojson")
-
-            def json = new JsonSlurper().parse(geojsonFile)
-
-            def values = []
-            int nNan = 0
-            double silenceThreshold = -89.0
-
-            json.features.each { f ->
-                def val = f.properties?.LAEQ
-                if (val != null) {
-                    double laeq = Double.valueOf(val as double)
-                    if (laeq <= silenceThreshold) {
-                        nNan++
-                    } else {
-                        values.add(laeq)
-                    }
-                }
-            }
-
-            def mean = values ? (values.sum() / values.size()) : 0.0
-
-
-
-
-            def bins = ["<35", "35-40", "40-45", "45-50", "50-55", "55-60", "60-65", "65-70", "70-75", "75-80", ">80", "NaN"]
-            def histogram = bins.collectEntries { [it, 0] }
-            histogram["NaN"] = nNan
-
-            values.each { v ->
-                if      (v < 35)  histogram["<35"]++
-                else if (v < 40)  histogram["35-40"]++
-                else if (v < 45)  histogram["40-45"]++
-                else if (v < 50)  histogram["45-50"]++
-                else if (v < 55)  histogram["50-55"]++
-                else if (v < 60)  histogram["55-60"]++
-                else if (v < 65)  histogram["60-65"]++
-                else if (v < 70)  histogram["65-70"]++
-                else if (v < 75)  histogram["70-75"]++
-                else if (v < 80)  histogram["75-80"]++
-                else              histogram[">80"]++
-            }
+            def stats = bench.computeLevelStats(new File("$outputFolder/RECEIVERS_LEVEL.geojson"), false, silenceThreshold, bins)
 
             DecimalFormat f = new DecimalFormat()
             f.setMaximumFractionDigits(2)
 
             def result = [
-                    mean: mean,
+                    mean: stats.mean,
                     time: timeString,
                     timePerReceive: f.format(time),
                     nbRays : nbRays,
                     timePerRays: timerays,
                     java: System.getProperty("java.version"),
                     runner: "v4-custom",
-                    nNan: nNan,
+                    nNan: stats.nNan,
                     silenceThreshold: silenceThreshold,
-                    histogram: histogram
+                    histogram: stats.histogram
             ]
                 def outFile = new File("$outputFolder/stats_${version}.json")
                 outFile.text = JsonOutput.prettyPrint(JsonOutput.toJson(result))
 
     }
     else{
-            long maxUsedMemory = 0
             if (!JDBCUtilities.tableExists(connection, "BUILDINGS")) {
                 new Import_File().exec(connection,
                         ["pathFile" : "input/clisson/clisson/BUILDINGS.geojson",
@@ -568,90 +332,18 @@ static def exec(Connection connection, Map input) {
             long elapsed = 0
             int nbRays = 0
 
-            if(redoCompute) {                long startCompute = System.currentTimeMillis()
+            if(redoCompute) {
+                long startCompute = System.currentTimeMillis()
 
-                if (!(version in ["v5.0.0", "v5.0.1"])) {
+                if (versionConfig == null) {
                     throw new IllegalArgumentException("Version non supportee par runscriptV5.0.groovy : ${version}. Ajouter un script dedie dans nm_version/src/main/groovy/ puis un branchement ici.")
                 }
-
-                if(version=="v5.0.0") {
-
-                    def scriptFile = new File("nm_version/src/main/groovy/v500Noise_level_from_source.groovy")
-                            .getAbsoluteFile()
-
-                    if (!scriptFile.exists()) {
-                        throw new FileNotFoundException("Fichier introuvable : ${scriptFile.absolutePath}")
-                    }
-
-                    def customClass = new GroovyClassLoader().parseClass(scriptFile)
-                    def customScript = customClass.newInstance()
-
-                    customScript.exec(connection,
-                            ["tableBuilding"                   : "BUILDINGS",
-                             "tableSources"                    : "LW_ROADS",
-                             "tableReceivers"                  : "RECEIVERS",
-                             "tableDEM"                        : "DEM",
-                             "tableGroundAbs"                  : "GROUNDS",
-                             "confRaysName"                    : "RAYS",
-                             "confReflOrder"                   : 1,
-                             "confMaxSrcDist"                  : 300,
-                             "confDiffHorizontal"              : true,
-                             "confMaxError"                    : 0.1,
-                             "confFavorableOccurrencesDefault": '0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25'])
-
-                    def csvFile = new File("$outputFolder/profile.csv")
-                    if (csvFile.exists()) {
-                        def lines = csvFile.readLines()
-                        if (lines.size() >=1) {
-                            def headers = lines[0].split(',')
-                            def raysIdx = headers.findIndexOf { it.trim() in ['receiver_median_rays', 'receiver_median_profiles_count'] }
-                            if (raysIdx >= 0) {
-                                def lastLine = lines[lines.size() - 1].split(',')
-                                if (lastLine.size() > raysIdx) {
-                                    nbRays = lastLine[raysIdx].trim().toDouble()
-                                }
-                            }
-                        }
-                    }
-                }
-                if(version=="v5.0.1"){
-                    def scriptFile = new File("nm_version/src/main/groovy/v501Noise_level_from_source.groovy")
-                            .getAbsoluteFile()
-
-                    if (!scriptFile.exists()) {
-                        throw new FileNotFoundException("Fichier introuvable : ${scriptFile.absolutePath}")
-                    }
-
-                    def customClass = new GroovyClassLoader().parseClass(scriptFile)
-                    def customScript = customClass.newInstance()
-
-                    customScript.exec(connection,
-                            ["tableBuilding"                   : "BUILDINGS",
-                             "tableSources"                    : "LW_ROADS",
-                             "tableReceivers"                  : "RECEIVERS",
-                             "tableDEM"                        : "DEM",
-                             "tableGroundAbs"                  : "GROUNDS",
-                             "confReflOrder"                   : 1,
-                             "confMaxSrcDist"                  : 300,
-                             "confDiffHorizontal"              : true,
-                             "confMaxError"                    : 0.1,
-                             "confFavorableOccurrencesDefault": '0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25'])
-
-                    def csvFile = new File("$outputFolder/profile.csv")
-                    if (csvFile.exists()) {
-                        def lines = csvFile.readLines()
-                        if (lines.size() >= 1) {
-                            def headers = lines[0].split(',')
-                            def raysIdx = headers.findIndexOf { it.trim() in ['receiver_median_rays', 'receiver_median_profiles_count'] }
-                            if (raysIdx >= 0) {
-                                def lastLine = lines[lines.size() - 1].split(',')
-                                if (lastLine.size() > raysIdx) {
-                                    nbRays = lastLine[raysIdx].trim().toDouble()
-                                }
-                            }
-                        }
-                    }
-
+                def params = simConfig.paramSets[versionConfig.paramSet].exec
+                def customScript = bench.loadScript(versionConfig.script)
+                customScript.exec(connection, params)
+                nbRays = bench.readNbRays(new File("$outputFolder/profile.csv"), null)
+                if (versionConfig.countRaysInDb) {
+                    nbRays = sql.firstRow("SELECT COUNT(*) FROM RAYS")[0] as Integer
                 }
 
                 elapsed = System.currentTimeMillis() - startCompute
@@ -698,62 +390,22 @@ static def exec(Connection connection, Map input) {
 
             println("Compuation of $cpt receivers in $timeString ( ${time} milliseconds per receiver")
 
-            def geojsonFile = new File("$outputFolder/RECEIVERS_LEVEL.geojson")
+            def stats = bench.computeLevelStats(new File("$outputFolder/RECEIVERS_LEVEL.geojson"), true, silenceThreshold, bins)
 
-            def json = new JsonSlurper().parse(geojsonFile)
-
-            def values = []
-            int nNan = 0
-            double silenceThreshold = -89.0
-
-            json.features.each { f ->
-                def val = f.properties?.LAEQ
-                def period = f.properties?.PERIOD
-                if (val != null && period=="D") {
-                    double laeq = Double.valueOf(val as double)
-                    if (laeq <= silenceThreshold) {
-                        nNan++
-                    } else {
-                        values.add(laeq)
-                    }
-                }
-            }
-
-            def mean = values ? (values.sum() / values.size()) : 0.0
-
-
-            def bins = ["<35", "35-40", "40-45", "45-50", "50-55", "55-60", "60-65", "65-70", "70-75", "75-80", ">80", "NaN"]
-            def histogram = bins.collectEntries { [it, 0] }
-            histogram["NaN"] = nNan
-
-            values.each { v ->
-                if      (v < 35)  histogram["<35"]++
-                else if (v < 40)  histogram["35-40"]++
-                else if (v < 45)  histogram["40-45"]++
-                else if (v < 50)  histogram["45-50"]++
-                else if (v < 55)  histogram["50-55"]++
-                else if (v < 60)  histogram["55-60"]++
-                else if (v < 65)  histogram["60-65"]++
-                else if (v < 70)  histogram["65-70"]++
-                else if (v < 75)  histogram["70-75"]++
-                else if (v < 80)  histogram["75-80"]++
-                else              histogram[">80"]++
-            }
             DecimalFormat f = new DecimalFormat()
             f.setMaximumFractionDigits(2)
 
-
             def result = [
-                    mean: mean,
+                    mean: stats.mean,
                     time: timeString,
                     timePerReceive: f.format(time),
                     nbRays : nbRays,
                     timePerRays: timerays,
                     java: System.getProperty("java.version"),
                     runner: "v5-custom",
-                    nNan: nNan,
+                    nNan: stats.nNan,
                     silenceThreshold: silenceThreshold,
-                    histogram: histogram
+                    histogram: stats.histogram
             ]
 
             def outFile = new File("$outputFolder/stats_${version}.json")

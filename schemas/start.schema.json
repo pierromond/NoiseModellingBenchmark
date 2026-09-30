@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "start.schema.json",
+  "title": "start.json",
+  "description": "Data for the \"Get started\" tutorial tab (datasets, scripts, parameters).",
+  "type": "object",
+  "required": ["repo", "ref", "nmRepo", "nmDocs", "release", "datasets"],
+  "properties": {
+    "repo": {"type": "string"},
+    "ref": {"type": "string"},
+    "nmRepo": {"type": "string"},
+    "nmDocs": {"type": "string"},
+    "release": {
+      "type": "object",
+      "properties": {
+        "version": {"type": ["string", "null"]},
+        "url": {"type": ["string", "null"]}
+      }
+    },
+    "datasets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "label", "folder", "kind", "speed", "files", "script", "params"],
+        "properties": {
+          "id": {"type": "string"},
+          "label": {"type": "string"},
+          "folder": {"type": "string"},
+          "kind": {"type": "string"},
+          "speed": {"type": "string"},
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {"type": "string"},
+                "size": {"type": "integer"},
+                "url": {"type": "string"}
+              }
+            }
+          },
+          "script": {
+            "type": "object",
+            "properties": {
+              "name": {"type": "string"},
+              "url": {"type": "string"}
+            }
+          },
+          "params": {
+            "type": "array",
+            "items": {"type": "array", "items": {"type": "string"}}
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}

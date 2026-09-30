@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "measure_comparison.schema.json",
+  "title": "measure_comparison.json",
+  "description": "Comparison of each version to the measured La Montagne levels (calibrated per version).",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["version", "reference_receiver", "offset", "n_measured", "n_compared",
+                 "mean_error", "std_error", "rmse", "max_abs_error", "scatter"],
+    "properties": {
+      "version": {"type": "string"},
+      "reference_receiver": {"type": ["string", "integer", "null"]},
+      "reference_distance": {"type": ["number", "null"]},
+      "offset": {"type": "number"},
+      "n_measured": {"type": "integer"},
+      "n_compared": {"type": "integer"},
+      "mean_error": {"type": "number"},
+      "std_error": {"type": "number"},
+      "rmse": {"type": "number"},
+      "max_abs_error": {"type": "number"},
+      "scatter": {"type": "array", "items": {"type": "array", "items": {"type": "number"}}},
+      "receivers": {"type": "array", "items": {"type": "array"}}
+    },
+    "additionalProperties": true
+  }
+}

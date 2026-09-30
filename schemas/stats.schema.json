@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "stats.schema.json",
+  "title": "stats_<version>.json",
+  "description": "Per-version summary written by the Groovy simulation scripts.",
+  "type": "object",
+  "required": ["mean", "time", "timePerReceive", "nbRays", "timePerRays", "nNan", "silenceThreshold", "histogram"],
+  "properties": {
+    "mean": {"type": "number"},
+    "time": {"type": "string"},
+    "timePerReceive": {"type": "string"},
+    "nbRays": {"type": "number"},
+    "timePerRays": {"type": "number"},
+    "nNan": {"type": "integer"},
+    "silenceThreshold": {"type": "number"},
+    "histogram": {"type": "object", "additionalProperties": {"type": "integer"}},
+    "java": {"type": "string"},
+    "runner": {"type": "string"},
+    "version": {"type": "string"}
+  },
+  "additionalProperties": true
+}

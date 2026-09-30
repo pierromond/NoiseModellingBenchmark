@@ -41,7 +41,6 @@ import org.slf4j.LoggerFactory
 
 import java.sql.Connection
 import java.sql.SQLException
-import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
 import org.noise_planet.noisemodelling.pathfinder.utils.profiler.ProfilerThread
 import org.noise_planet.noisemodelling.pathfinder.utils.profiler.ReceiverStatsMetric

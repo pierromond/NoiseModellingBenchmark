@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "settings.schema.json",
+  "title": "settings.json",
+  "description": "Simulation parameters exposed on the website.",
+  "type": "object",
+  "required": ["dataset", "source", "reflOrder", "maxSrcDist", "maxError",
+               "diffHorizontal", "favorableOccurrence", "occurrencesPerDay", "tables"],
+  "properties": {
+    "dataset": {"type": "string"},
+    "source": {"type": "string"},
+    "reflOrder": {"type": ["integer", "null"]},
+    "maxSrcDist": {"type": ["integer", "null"]},
+    "maxError": {"type": ["number", "null"]},
+    "diffHorizontal": {"type": "boolean"},
+    "favorableOccurrence": {"type": ["number", "null"]},
+    "occurrencesPerDay": {"type": ["integer", "null"]},
+    "tables": {
+      "type": "object",
+      "properties": {
+        "building": {"type": ["string", "null"]},
+        "sources": {"type": ["string", "null"]},
+        "receivers": {"type": ["string", "null"]}
+      }
+    }
+  },
+  "additionalProperties": true
+}

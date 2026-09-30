@@ -20,12 +20,7 @@
 
 
 import groovy.sql.Sql
-import org.h2gis.api.ProgressVisitor
-import org.noise_planet.noisemodelling.scripts.NoiseModelling.Road_Emission_from_Traffic
 import org.noise_planet.noisemodelling.scripts.NoiseModelling.Noise_level_from_source
-import org.noise_planet.noisemodelling.scripts.Receivers.Delaunay_Grid
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import org.noise_planet.noisemodelling.scripts.Import_and_Export.Export_Table
 import org.noise_planet.noisemodelling.scripts.Geometric_Tools.Set_Height
 import org.noise_planet.noisemodelling.scripts.Import_and_Export.Import_File
@@ -41,7 +36,6 @@ import java.util.concurrent.TimeUnit
 import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
 
-import java.util.concurrent.atomic.AtomicBoolean
 
 title = 'NoiseModelling benchmark simulation'
 description = 'NoiseModelling benchmark simulation'
@@ -79,6 +73,14 @@ static def exec(Connection connection, Map input) {
     def redoRoadsEmission = false
     def redoCompute = true
     def sql = new Sql(connection)
+
+    def bench = new GroovyClassLoader()
+            .parseClass(new File("nm_version/src/main/groovy/lib/NoiseBench.groovy"))
+            .newInstance()
+
+    def config = new JsonSlurper().parse(new File("config/benchmark.json"))
+    double silenceThreshold = config.constants.silenceThreshold as double
+    def bins = config.constants.histogramBins as List
 
     if (!JDBCUtilities.tableExists(connection, "BUILDINGS")) {
         new Import_File().exec(connection,
@@ -121,66 +123,11 @@ static def exec(Connection connection, Map input) {
     if(redoCompute) {
 
         long startCompute = System.currentTimeMillis()
-        /*if(version == "v6.0.0"){
-
-            def scriptFile = new File("nm_version/src/main/groovy/v600Noise_level_from_source.groovy")
-                    .getAbsoluteFile()
-
-            if (!scriptFile.exists()) {
-                throw new FileNotFoundException("Fichier introuvable : ${scriptFile.absolutePath}")
+            config.models.montagne.setHeight.each { h ->
+                new Set_Height().exec(connection, ["tableName": h.tableName, "height": h.height])
             }
 
-            def customClass = new GroovyClassLoader().parseClass(scriptFile)
-            def customScript = customClass.newInstance()
-            customScript.exec(connection, [
-                    "tableBuilding" : "BUILDINGS",
-                    "tableSources"      : "LW_ROADS",
-                    "tableReceivers"    : "RECEIVERS",
-                    "tableDEM"          : "DEM",
-                    "tableGroundAbs"    : "GROUNDS",
-                    "confReflOrder"     : 2,
-                    "confMaxReflDist"     : 500,
-                    "confDiffVertical"     : true,
-                    "confMaxSrcDist"    : 300,
-                    "confDiffHorizontal": true,
-                    "confTemperature"                 : 24,
-                    "confExportSourceId"              : false,
-                    "confSkipLevening"                : true,
-                    "confSkipLnight"                  : true,
-                    "confSkipLden"                    : true,
-                    "confMaxError": 0,
-                    "confFavorableOccurrencesDefault":'0.5, 0.5, 0.75, 1.0, 0.75, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.0, 0.25, 0.5, 0.5, 0.5'
-            ])
-        }
-        else{*/
-            new Set_Height().exec(connection,
-                    ["tableName": "LW_ROADS",
-                     "height": 12.4])
-            new Set_Height().exec(connection,
-                    ["tableName": "RECEIVERS",
-                     "height": 1.5])
-
-            new Noise_level_from_source().exec(connection,
-                    ["tableBuilding"     : "BUILDINGS",
-                     "tableSources"      : "LW_ROADS",
-                     "tableReceivers"    : "RECEIVERS",
-                     "tableDEM"          : "DEM",
-                     "tableGroundAbs"    : "GROUNDS",
-                     "confRaysName"      : "RAYS",
-                     "confReflOrder"     : 2,
-                     "confMaxReflDist"     : 500,
-                     "confDiffVertical"     : true,
-                     "confMaxSrcDist"    : 10000,
-                     "confDiffHorizontal": true,
-                     "confTemperature"                 : 24,
-                     "confExportSourceId"              : false,
-                     "confSkipLevening"                : true,
-                     "confSkipLnight"                  : true,
-                     "confSkipLden"                    : true,
-                     "confMaxError": 0,
-                     "confFavorableOccurrencesDefault":'0.5, 0.5, 0.75, 1.0, 0.75, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.0, 0.25, 0.5, 0.5, 0.5'
-                    ])
-       // }
+            new Noise_level_from_source().exec(connection, config.models.montagne.exec)
 
         elapsed = System.currentTimeMillis() - startCompute
         sql.execute("DROP TABLE IF EXISTS RECEIVERS_LEVEL_D")
@@ -214,66 +161,23 @@ static def exec(Connection connection, Map input) {
 
     println("Compuation of $cpt receivers in $timeString ( ${time} milliseconds per receiver")
 
-    def geojsonFile = new File("$outputFolder/RECEIVERS_LEVEL.geojson")
-
-    def json = new JsonSlurper().parse(geojsonFile)
-
-    def values = []
-    int nNan = 0
-    double silenceThreshold = -89.0
-
-    json.features.each { f ->
-        def props = f.get("properties")
-        def val = props.get("LAEQ")
-        def period = props.get("PERIOD")
-        if (val != null && period=="D") {
-            double laeq = Double.valueOf(val as double)
-            if (laeq <= silenceThreshold) {
-                nNan++
-            } else {
-                values.add(laeq)
-            }
-        }
-    }
-
-    def mean = values ? (values.sum() / values.size()) : 0.0
-
-
-
-
-    def bins = ["<35", "35-40", "40-45", "45-50", "50-55", "55-60", "60-65", "65-70", "70-75", "75-80", ">80", "NaN"]
-    def histogram = bins.collectEntries { [it, 0] }
-    histogram["NaN"] = nNan
-
-    values.each { v ->
-        if      (v < 35)  histogram["<35"]++
-        else if (v < 40)  histogram["35-40"]++
-        else if (v < 45)  histogram["40-45"]++
-        else if (v < 50)  histogram["45-50"]++
-        else if (v < 55)  histogram["50-55"]++
-        else if (v < 60)  histogram["55-60"]++
-        else if (v < 65)  histogram["60-65"]++
-        else if (v < 70)  histogram["65-70"]++
-        else if (v < 75)  histogram["70-75"]++
-        else if (v < 80)  histogram["75-80"]++
-        else              histogram[">80"]++
-    }
+    def stats = bench.computeLevelStats(new File("$outputFolder/RECEIVERS_LEVEL.geojson"), true, silenceThreshold, bins)
 
     DecimalFormat f = new DecimalFormat()
     f.setMaximumFractionDigits(2)
 
 
     def result = [
-            mean: mean,
+            mean: stats.mean,
             time: timeString,
             timePerReceive: f.format(time),
             java: System.getProperty("java.version"),
             runner: "montagne-v6",
             nbRays : nbRays,
-            nNan: nNan,
+            nNan: stats.nNan,
             silenceThreshold: silenceThreshold,
             timePerRays: timeray,
-            histogram: histogram
+            histogram: stats.histogram
     ]
 
     def outFile = new File("$outputFolder/stats_${version}.json")

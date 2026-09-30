@@ -24,20 +24,20 @@ ROOT = Path(__file__).resolve().parent.parent
 BASELINE = Path(__file__).resolve().parent / "baseline" / "simulation_spec.json"
 
 SOURCES = [
-    "nm_version/src/main/groovy/montagne/montagneV5.groovy",
-    "nm_version/src/main/groovy/montagne/montagneV6.groovy",
-    "nm_version/src/main/groovy/runscriptV5.0.groovy",
-    "nm_version/src/main/groovy/runscriptV6.0.groovy",
+    "benchmark/simulations/montagne/montagneV5.groovy",
+    "benchmark/simulations/montagne/montagneV6.groovy",
+    "benchmark/simulations/runscriptV5.0.groovy",
+    "benchmark/simulations/runscriptV6.0.groovy",
 ]
 
 # Files whose dispatch is now driven by config/benchmark.json instead of inline
 # if-branches. For those, the contract is read from the config (which is itself
 # compared to the frozen baseline).
 CONFIG_FILES = {
-    "nm_version/src/main/groovy/montagne/montagneV5.groovy": "montagne",
-    "nm_version/src/main/groovy/runscriptV5.0.groovy": "clisson",
+    "benchmark/simulations/montagne/montagneV5.groovy": "montagne",
+    "benchmark/simulations/runscriptV5.0.groovy": "clisson",
 }
-CONFIG_PATH = ROOT / "config" / "benchmark.json"
+CONFIG_PATH = ROOT / "benchmark" / "config" / "benchmark.json"
 
 VER_RE = re.compile(r'version\s*==\s*"([^"]+)"')
 STRING_RE = re.compile(r'"(?:[^"\\]|\\.)*"|\'(?:[^\'\\]|\\.)*\'')

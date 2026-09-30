@@ -7,27 +7,27 @@ static website on GitHub Pages: <https://universite-gustave-eiffel.github.io/Noi
 
 | Path | What it does |
 |---|---|
-| `versions.json` | the list of versions to compare: `version -> release zip URL`. An **empty URL** marks the "head" version, taken from the NoiseModelling CI binary |
-| `config/benchmark.json` | **single source of truth**: datasets, Java mapping, silence threshold, histogram bins, per-version simulation parameters and the V6 reference models |
-| `benchmark_run_clisson.sh` | Clisson entry point — thin wrapper around `scripts/bench.sh --dataset clisson` |
-| `benchmark_run_montagne.sh` | La Montagne entry point — thin wrapper around `scripts/bench.sh --dataset montagne` |
-| `scripts/bench.sh` | the actual orchestration (download, run, aggregate), parameterised by `--dataset` |
-| `scripts/lib/common.sh` | shared bash helpers: versions, download, binary discovery |
-| `scripts/ci/` | CI helpers (`nm_versions.py`, `github_artifacts.py`) kept out of the workflow YAML |
-| `bench/config.py` | loads `config/benchmark.json` |
-| `bench/stats.py` | shared receiver parsing, LAEQ marking and silence threshold |
-| `bench/compare.py` | unified comparison logic for both datasets |
-| `compare_versions.py` | builds the Clisson pairwise comparisons (`comparisons.json`) — thin entry point over `bench/compare.py` |
-| `compare_versions_montagne.py` | builds the La Montagne comparisons — thin entry point over `bench/compare.py` |
-| `generate_site.py` | builds `website/index.html` from `website/template.html`, `config/benchmark.json` and the JSON files |
+| `benchmark/versions.json` | the list of versions to compare: `version -> release zip URL`. An **empty URL** marks the "head" version, taken from the NoiseModelling CI binary |
+| `benchmark/config/benchmark.json` | **single source of truth**: datasets, Java mapping, silence threshold, histogram bins, per-version simulation parameters and the V6 reference models |
+| `benchmark/drivers/benchmark_run_clisson.sh` | Clisson entry point — thin wrapper around `benchmark/scripts/bench.sh --dataset clisson` |
+| `benchmark/drivers/benchmark_run_montagne.sh` | La Montagne entry point — thin wrapper around `benchmark/scripts/bench.sh --dataset montagne` |
+| `benchmark/scripts/bench.sh` | the actual orchestration (download, run, aggregate), parameterised by `--dataset` |
+| `benchmark/scripts/lib/common.sh` | shared bash helpers: versions, download, binary discovery |
+| `benchmark/scripts/ci/` | CI helpers (`nm_versions.py`, `github_artifacts.py`) kept out of the workflow YAML |
+| `benchmark/python/bench/config.py` | loads `benchmark/config/benchmark.json` |
+| `benchmark/python/bench/stats.py` | shared receiver parsing, LAEQ marking and silence threshold |
+| `benchmark/python/bench/compare.py` | unified comparison logic for both datasets |
+| `benchmark/python/compare_versions.py` | builds the Clisson pairwise comparisons (`comparisons.json`) — thin entry point over `benchmark/python/bench/compare.py` |
+| `benchmark/python/compare_versions_montagne.py` | builds the La Montagne comparisons — thin entry point over `benchmark/python/bench/compare.py` |
+| `website/build.py` | builds `website/index.html` from `website/template.html`, `benchmark/config/benchmark.json` and the JSON files |
 | `website/template.html` | the page structure (HTML only) |
-| `website/js/` | the page JavaScript, split into ordered modules: `00-config`, `01-theme`, `02-helpers`, `03-cards`, `04-header`, `05-map`, `06-comparisons`, `07-histogram`, `08-boxplot`, `09-scatter`, `10-density`, `11-diffmap`, `12-montagne`, `13-montagne-map`, `14-start`, `15-sidebar`, `16-boot`. `js/00-constants.js` (histogram bins, silence threshold) is generated from `config/benchmark.json` |
+| `website/js/` | the page JavaScript, split into ordered modules: `00-config`, `01-theme`, `02-helpers`, `03-cards`, `04-header`, `05-map`, `06-comparisons`, `07-histogram`, `08-boxplot`, `09-scatter`, `10-density`, `11-diffmap`, `12-montagne`, `13-montagne-map`, `14-start`, `15-sidebar`, `16-boot`. `js/00-constants.js` (histogram bins, silence threshold) is generated from `benchmark/config/benchmark.json` |
 | `website/index.css` | all the page CSS (dark and light themes in one file) |
 | `website/data/` | **generated, not in git**: `results.json`, `comparisons.json`, `settings.json`, `build.json`, `start.json`, and one folder of map layers per version |
-| `nm_version/src/main/groovy/` | the simulation scripts launched by NoiseModelling: `runscriptV5.0.groovy`, `runscriptV6.0.groovy`, plus one script per version when the API changed |
-| `nm_version/src/main/groovy/lib/NoiseBench.groovy` | shared simulation helpers: script loading, profiler CSV, LAEQ statistics |
-| `input/clisson/` | the Clisson reference dataset (Git LFS) |
-| `input/montagne/` | the La Montagne dataset (Git LFS) and its measured reference `measure/RECEIVERS_LEVEL.geojson` |
+| `benchmark/simulations/` | the simulation scripts launched by NoiseModelling: `runscriptV5.0.groovy`, `runscriptV6.0.groovy`, plus one script per version when the API changed |
+| `benchmark/simulations/lib/NoiseBench.groovy` | shared simulation helpers: script loading, profiler CSV, LAEQ statistics |
+| `benchmark/input/clisson/` | the Clisson reference dataset (Git LFS) |
+| `benchmark/input/montagne/` | the La Montagne dataset (Git LFS) and its measured reference `measure/RECEIVERS_LEVEL.geojson` |
 | `schemas/` | JSON schemas of the generated artifacts, checked by `tools/validate_outputs.py` |
 | `tools/` | the characterization harness: `run_checks.sh`, `snapshot.py`, `check.py`, `sim_spec.py`, `check_groovy.py`, `test_noisebench.py` |
 | `docs/contracts.md` | the frozen compatibility contract (what must never change) |
@@ -36,29 +36,29 @@ static website on GitHub Pages: <https://universite-gustave-eiffel.github.io/Noi
 
 ## How it works
 
-1. `benchmark_run_clisson.sh --version v5.0.1` downloads that release, then NoiseModelling's ScriptRunner runs
-   `nm_version/src/main/groovy/runscriptV5.0.groovy` on `input/clisson/`; results land in `output/v5.0.1/`.
-   The script to load and its parameters come from `config/benchmark.json`, not from hard-coded branches.
-2. `benchmark_run_clisson.sh --aggregate-only` turns `output/*/` into `website/data/` and computes the comparisons.
-3. `benchmark_run_montagne.sh --version v5.0.1` runs `nm_version/src/main/groovy/montagne/montagneV5.groovy` on
-   `input/montagne/`; results land in `output/montagne/v5.0.1/`, and `--aggregate-only` builds
+1. `benchmark/drivers/benchmark_run_clisson.sh --version v5.0.1` downloads that release, then NoiseModelling's ScriptRunner runs
+   `benchmark/simulations/runscriptV5.0.groovy` on `benchmark/input/clisson/`; results land in `benchmark/output/v5.0.1/`.
+   The script to load and its parameters come from `benchmark/config/benchmark.json`, not from hard-coded branches.
+2. `benchmark/drivers/benchmark_run_clisson.sh --aggregate-only` turns `benchmark/output/*/` into `website/data/` and computes the comparisons.
+3. `benchmark/drivers/benchmark_run_montagne.sh --version v5.0.1` runs `benchmark/simulations/montagne/montagneV5.groovy` on
+   `benchmark/input/montagne/`; results land in `benchmark/output/montagne/v5.0.1/`, and `--aggregate-only` builds
    `website/data/montagne/` (including the comparison to the measured levels).
-4. The CI does 1–3 for every version of `versions.json`, then publishes `website/` on GitHub Pages.
+4. The CI does 1–3 for every version of `benchmark/versions.json`, then publishes `website/` on GitHub Pages.
 
-Both entry points are thin wrappers; the orchestration lives in `scripts/bench.sh`.
+Both entry points are thin wrappers; the orchestration lives in `benchmark/scripts/bench.sh`.
 
 ## Run it locally
 
 ```bash
-bash benchmark_run_clisson.sh --version v5.0.1   # one Clisson version
-bash benchmark_run_clisson.sh                    # every version of versions.json (skips the head)
-bash benchmark_run_clisson.sh --aggregate-only   # only rebuild the Clisson site data from output/
-bash benchmark_run_montagne.sh --version v5.0.1  # one La Montagne version
-bash benchmark_run_montagne.sh --aggregate-only  # only rebuild the La Montagne site data from output/montagne/
+bash benchmark/drivers/benchmark_run_clisson.sh --version v5.0.1   # one Clisson version
+bash benchmark/drivers/benchmark_run_clisson.sh                    # every version of benchmark/versions.json (skips the head)
+bash benchmark/drivers/benchmark_run_clisson.sh --aggregate-only   # only rebuild the Clisson site data from benchmark/output/
+bash benchmark/drivers/benchmark_run_montagne.sh --version v5.0.1  # one La Montagne version
+bash benchmark/drivers/benchmark_run_montagne.sh --aggregate-only  # only rebuild the La Montagne site data from benchmark/output/montagne/
 ```
 
-Needs Python 3, git-lfs (for `input/clisson/`) and Java 11 for v4/v5 or Java 25 for v6.
-The NoiseModelling binary is downloaded automatically from the release URL in `versions.json`.
+Needs Python 3, git-lfs (for `benchmark/input/clisson/`) and Java 11 for v4/v5 or Java 25 for v6.
+The NoiseModelling binary is downloaded automatically from the release URL in `benchmark/versions.json`.
 
 ## Tests and guardrails
 
@@ -94,11 +94,11 @@ The list of things that must never change is in `docs/contracts.md`.
 - A version runs with **Java 25** when its name starts with `v6`, with **Java 11** otherwise.
 - Levels ≤ **-89 dB** are treated as `NaN`: excluded from means, histograms and comparisons (they appear as a
   `NaN` column in the histogram).
-- The unreleased "head" version can be either an entry **without URL** in `versions.json` (built from a
+- The unreleased "head" version can be either an entry **without URL** in `benchmark/versions.json` (built from a
   NoiseModelling CI artifact; on a fork this needs the optional `GH_PAT` secret and depends on a non-expired
   artifact being found) or an entry pinned to a **Maven Central snapshot URL** (built deterministically by the
   normal matrix). `v6.0.2-SNAPSHOT` is pinned this way; a new unreleased version is auto-added without URL by the CI.
-- Do not modify `input/clisson/`: published results would no longer be comparable.
+- Do not modify `benchmark/input/clisson/`: published results would no longer be comparable.
 - For La Montagne, the comparison to the measurements is **calibrated per version**: `offset = measured − computed`
-  at the receiver closest to the source (`input/montagne/LW_ROADS.geojson`), so the error is zero there for every model.
-- Do not modify `input/montagne/` nor `input/montagne/measure/`: published results would no longer be comparable.
+  at the receiver closest to the source (`benchmark/input/montagne/LW_ROADS.geojson`), so the error is zero there for every model.
+- Do not modify `benchmark/input/montagne/` nor `benchmark/input/montagne/measure/`: published results would no longer be comparable.

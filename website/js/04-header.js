@@ -50,7 +50,7 @@ function renderMontagneHeaderMeta() {
     Input: <b>La Montagne, France</b> (EPSG:2154).<br>
     <b>${n}</b> version${n > 1 ? 's' : ''} calibrated per version; reference receiver
     <b>#${ref.reference_receiver ?? '—'}</b> (${fmt(ref.reference_distance, 1)} m from the source).<br>
-    Measured reference: <code>input/montagne/measure/RECEIVERS_LEVEL.geojson</code>.
+    Measured reference: <code>benchmark/input/montagne/measure/RECEIVERS_LEVEL.geojson</code>.
   `;
 }
 
@@ -128,7 +128,7 @@ function renderMethod(data) {
       ${st ? `(${st.minCompared.toLocaleString()} to ${st.maxCompared.toLocaleString()} per pair)` : ''};
       distributions and the diff map use a ${samplePoints.toLocaleString()}-point sample per pair.<br>
       <b>JVM</b> — Java 11 for v4.x/v5.x, Java 25 for v6.x.<br>
-      <b>Reproduce</b> — <a href="https://github.com/${repo}#readme" target="_blank" rel="noopener">benchmark_run_clisson.sh + versions.json</a>
+      <b>Reproduce</b> — <a href="https://github.com/${repo}#readme" target="_blank" rel="noopener">benchmark/drivers/benchmark_run_clisson.sh + benchmark/versions.json</a>
       · <a href="data/results.json" download>results.json</a>
       · <a href="data/comparisons.json" download>comparisons.json</a>
       · <a href="#" onclick="downloadCsv();return false">results.csv</a><br>

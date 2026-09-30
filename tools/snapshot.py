@@ -83,8 +83,8 @@ def collect_paths() -> list[Path]:
     index = ROOT / "website" / "index.html"
     if index.exists():
         paths.append(index)
-    paths.extend(ROOT.glob("output/*/stats_*.json"))
-    paths.extend(ROOT.glob("output/montagne/*/stats_*.json"))
+    paths.extend(ROOT.glob("benchmark/output/*/stats_*.json"))
+    paths.extend(ROOT.glob("benchmark/output/montagne/*/stats_*.json"))
     return sorted({p for p in paths})
 
 
@@ -97,7 +97,7 @@ def build_snapshot() -> dict[str, str]:
 
 
 def run_pipeline() -> None:
-    for script in ("benchmark_run_clisson.sh", "benchmark_run_montagne.sh"):
+    for script in ("benchmark/drivers/benchmark_run_clisson.sh", "benchmark/drivers/benchmark_run_montagne.sh"):
         proc = subprocess.run(
             ["bash", str(ROOT / script), "--aggregate-only"],
             cwd=ROOT,

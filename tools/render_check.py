@@ -26,6 +26,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import threading
 from pathlib import Path
 
@@ -66,7 +67,7 @@ def start_server() -> tuple[http.server.ThreadingHTTPServer, int]:
 def render(chrome: str, url: str) -> str:
     proc = subprocess.run(
         [chrome, "--headless=new", "--disable-gpu", "--no-sandbox",
-         "--user-data-dir=" + str(ROOT / ".chrome-profile"),
+         "--user-data-dir=" + tempfile.mkdtemp(prefix="render-chrome-"),
          "--dump-dom", "--virtual-time-budget=20000", url],
         capture_output=True, text=True,
     )
@@ -99,7 +100,7 @@ def build() -> dict:
     if chrome is None:
         raise RuntimeError("no chrome")
 
-    subprocess.run([sys.executable, "generate_site.py"], cwd=ROOT, check=False,
+    subprocess.run([sys.executable, "website/build.py"], cwd=ROOT, check=False,
                    capture_output=True)
     httpd, port = start_server()
     try:

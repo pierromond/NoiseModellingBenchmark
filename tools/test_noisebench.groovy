@@ -2,7 +2,7 @@
 // Run: groovy tools/test_noisebench.groovy
 import groovy.json.JsonOutput
 
-def benchClass = new GroovyClassLoader().parseClass(new File("nm_version/src/main/groovy/lib/NoiseBench.groovy"))
+def benchClass = new GroovyClassLoader().parseClass(new File("benchmark/simulations/lib/NoiseBench.groovy"))
 def bench = benchClass.newInstance()
 
 def failures = 0

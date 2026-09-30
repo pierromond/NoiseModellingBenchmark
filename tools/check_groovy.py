@@ -26,7 +26,7 @@ def main() -> int:
         print("[check_groovy] 'groovy' not found on PATH — skipping", file=sys.stderr)
         return 0
 
-    files = sorted((ROOT / "nm_version" / "src" / "main" / "groovy").rglob("*.groovy"))
+    files = sorted((ROOT / "benchmark" / "simulations").rglob("*.groovy"))
     if not files:
         print("[check_groovy] no Groovy scripts found", file=sys.stderr)
         return 1

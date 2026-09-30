@@ -1,0 +1,310 @@
+{
+  "constants": {
+    "silenceThreshold": -89.0,
+    "histogramBins": [
+      "<35",
+      "35-40",
+      "40-45",
+      "45-50",
+      "50-55",
+      "55-60",
+      "60-65",
+      "65-70",
+      "70-75",
+      "75-80",
+      ">80",
+      "NaN"
+    ]
+  },
+  "java": {
+    "v6": "25",
+    "default": "11"
+  },
+  "datasets": {
+    "clisson": {
+      "label": "Clisson",
+      "folder": "clisson",
+      "dir": "benchmark/input/clisson/clisson",
+      "kind": "Road-traffic noise map (line sources)",
+      "speed": "~15 min",
+      "tutorialScript": "benchmark/simulations/getting_started/compare_clisson.groovy",
+      "modelScript": "benchmark/simulations/runscriptV6.0.groovy",
+      "files": [
+        "BUILDINGS.geojson",
+        "DEM.geojson",
+        "GROUNDS.geojson",
+        "LW_ROADS.geojson",
+        "RECEIVERS.geojson"
+      ],
+      "layers": [
+        "BUILDINGS.geojson",
+        "RECEIVERS.geojson",
+        "ROADS.geojson",
+        "GROUNDS.geojson"
+      ]
+    },
+    "montagne": {
+      "label": "La Montagne",
+      "folder": "montagne",
+      "dir": "benchmark/input/montagne",
+      "kind": "Single point source (a siren on a roof)",
+      "speed": "< 1 min",
+      "tutorialScript": "benchmark/simulations/getting_started/compare_montagne.groovy",
+      "modelScript": "benchmark/simulations/montagne/montagneV6.groovy",
+      "heightLabels": {
+        "LW_ROADS": "Source height (Set_Height)",
+        "RECEIVERS": "Receiver height (Set_Height)"
+      },
+      "files": [
+        "BUILDINGS.geojson",
+        "DEM.geojson",
+        "GROUNDS.geojson",
+        "LW_ROADS.geojson",
+        "RECEIVERS.geojson"
+      ],
+      "layers": [
+        "BUILDINGS.geojson",
+        "GROUNDS.geojson",
+        "LW_ROADS.geojson",
+        "RECEIVERS.geojson"
+      ]
+    }
+  },
+  "models": {
+    "clisson": {
+      "exec": {
+        "tableBuilding": "BUILDINGS",
+        "tableSources": "LW_ROADS",
+        "tableReceivers": "RECEIVERS",
+        "tableDEM": "DEM",
+        "tableGroundAbs": "GROUNDS",
+        "confReflOrder": 1,
+        "confMaxSrcDist": 300,
+        "confDiffHorizontal": true,
+        "confMaxError": 0.1,
+        "confFavorableOccurrencesDefault": "0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25",
+        "confRecordProfile": true
+      },
+      "setHeight": []
+    },
+    "montagne": {
+      "exec": {
+        "tableBuilding": "BUILDINGS",
+        "tableSources": "LW_ROADS",
+        "tableReceivers": "RECEIVERS",
+        "tableDEM": "DEM",
+        "tableGroundAbs": "GROUNDS",
+        "confRaysName": "RAYS",
+        "confReflOrder": 2,
+        "confMaxReflDist": 500,
+        "confDiffVertical": true,
+        "confMaxSrcDist": 10000,
+        "confDiffHorizontal": true,
+        "confTemperature": 24,
+        "confExportSourceId": false,
+        "confSkipLevening": true,
+        "confSkipLnight": true,
+        "confSkipLden": true,
+        "confMaxError": 0,
+        "confFavorableOccurrencesDefault": "0.5, 0.5, 0.75, 1.0, 0.75, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.0, 0.25, 0.5, 0.5, 0.5"
+      },
+      "setHeight": [
+        {
+          "tableName": "LW_ROADS",
+          "height": 12.4
+        },
+        {
+          "tableName": "RECEIVERS",
+          "height": 1.5
+        }
+      ]
+    }
+  },
+  "simulations": {
+    "montagne": {
+      "paramSets": {
+        "v4": {
+          "exec": {
+            "confDiffHorizontal": true,
+            "confDiffVertical": true,
+            "confExportSourceId": false,
+            "confFavorableOccurrencesDay": "0.5, 0.5, 0.75, 1.0, 0.75, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.0, 0.25, 0.5, 0.5, 0.5",
+            "confMaxError": 0,
+            "confMaxReflDist": 500,
+            "confMaxSrcDist": 10000,
+            "confRaysName": "RAYS",
+            "confReflOrder": 2,
+            "confSkipLden": true,
+            "confSkipLevening": true,
+            "confSkipLnight": true,
+            "confTemperature": 24,
+            "tableBuilding": "BUILDINGS",
+            "tableDEM": "DEM",
+            "tableGroundAbs": "GROUNDS",
+            "tableReceivers": "RECEIVERS",
+            "tableSources": "LW_ROADS_LW"
+          },
+          "setHeight": []
+        },
+        "v5": {
+          "exec": {
+            "confDiffHorizontal": true,
+            "confDiffVertical": true,
+            "confExportSourceId": false,
+            "confFavorableOccurrencesDefault": "0.5, 0.5, 0.75, 1.0, 0.75, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.0, 0.25, 0.5, 0.5, 0.5",
+            "confMaxError": 0,
+            "confMaxReflDist": 500,
+            "confMaxSrcDist": 10000,
+            "confRaysName": "RAYS",
+            "confReflOrder": 2,
+            "confSkipLden": true,
+            "confSkipLevening": true,
+            "confSkipLnight": true,
+            "confTemperature": 24,
+            "tableBuilding": "BUILDINGS",
+            "tableDEM": "DEM",
+            "tableGroundAbs": "GROUNDS",
+            "tableReceivers": "RECEIVERS",
+            "tableSources": "LW_ROADS"
+          },
+          "setHeight": [
+            {
+              "height": 12.4,
+              "tableName": "LW_ROADS"
+            },
+            {
+              "height": 1.5,
+              "tableName": "RECEIVERS"
+            }
+          ]
+        }
+      },
+      "versions": {
+        "v4.0.0": {
+          "script": "benchmark/simulations/v400Noise_level_from_source.groovy",
+          "paramSet": "v4",
+          "countRaysInDb": false,
+          "profileFallback": true
+        },
+        "v4.0.1": {
+          "script": "benchmark/simulations/v401Noise_level_from_source.groovy",
+          "paramSet": "v4",
+          "countRaysInDb": false,
+          "profileFallback": true
+        },
+        "v4.0.2": {
+          "script": "benchmark/simulations/v402Noise_level_from_source.groovy",
+          "paramSet": "v4",
+          "countRaysInDb": true
+        },
+        "v4.0.4": {
+          "script": "benchmark/simulations/v404Noise_level_from_source.groovy",
+          "paramSet": "v4",
+          "countRaysInDb": true
+        },
+        "v4.0.5": {
+          "script": "benchmark/simulations/v405Noise_level_from_source.groovy",
+          "paramSet": "v4",
+          "countRaysInDb": true
+        },
+        "v5.0.0": {
+          "script": "benchmark/simulations/v500Noise_level_from_source.groovy",
+          "paramSet": "v5",
+          "countRaysInDb": true
+        },
+        "v5.0.1": {
+          "script": "benchmark/simulations/v501Noise_level_from_source.groovy",
+          "paramSet": "v5",
+          "countRaysInDb": true
+        }
+      }
+    },
+    "clisson": {
+      "paramSets": {
+        "v4": {
+          "exec": {
+            "confDiffHorizontal": true,
+            "confFavorableOccurrencesDay": "0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25",
+            "confMaxError": 0.1,
+            "confMaxSrcDist": 300,
+            "confReflOrder": 1,
+            "tableBuilding": "BUILDINGS",
+            "tableDEM": "DEM",
+            "tableGroundAbs": "GROUNDS",
+            "tableReceivers": "RECEIVERS",
+            "tableSources": "LW_ROADS_LW"
+          },
+          "setHeight": []
+        },
+        "v5.0.0": {
+          "exec": {
+            "confDiffHorizontal": true,
+            "confFavorableOccurrencesDefault": "0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25",
+            "confMaxError": 0.1,
+            "confMaxSrcDist": 300,
+            "confRaysName": "RAYS",
+            "confReflOrder": 1,
+            "tableBuilding": "BUILDINGS",
+            "tableDEM": "DEM",
+            "tableGroundAbs": "GROUNDS",
+            "tableReceivers": "RECEIVERS",
+            "tableSources": "LW_ROADS"
+          },
+          "setHeight": []
+        },
+        "v5.0.1": {
+          "exec": {
+            "confDiffHorizontal": true,
+            "confFavorableOccurrencesDefault": "0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25",
+            "confMaxError": 0.1,
+            "confMaxSrcDist": 300,
+            "confReflOrder": 1,
+            "tableBuilding": "BUILDINGS",
+            "tableDEM": "DEM",
+            "tableGroundAbs": "GROUNDS",
+            "tableReceivers": "RECEIVERS",
+            "tableSources": "LW_ROADS"
+          },
+          "setHeight": []
+        }
+      },
+      "versions": {
+        "v4.0.0": {
+          "script": "benchmark/simulations/v400Noise_level_from_source.groovy",
+          "paramSet": "v4",
+          "countRaysInDb": false
+        },
+        "v4.0.1": {
+          "script": "benchmark/simulations/v401Noise_level_from_source.groovy",
+          "paramSet": "v4",
+          "countRaysInDb": false
+        },
+        "v4.0.2": {
+          "script": "benchmark/simulations/v402Noise_level_from_source.groovy",
+          "paramSet": "v4",
+          "countRaysInDb": false
+        },
+        "v4.0.4": {
+          "script": "benchmark/simulations/v404Noise_level_from_source.groovy",
+          "paramSet": "v4",
+          "countRaysInDb": false
+        },
+        "v4.0.5": {
+          "script": "benchmark/simulations/v405Noise_level_from_source.groovy",
+          "paramSet": "v4",
+          "countRaysInDb": false
+        },
+        "v5.0.0": {
+          "script": "benchmark/simulations/v500Noise_level_from_source.groovy",
+          "paramSet": "v5.0.0",
+          "countRaysInDb": false
+        },
+        "v5.0.1": {
+          "script": "benchmark/simulations/v501Noise_level_from_source.groovy",
+          "paramSet": "v5.0.1",
+          "countRaysInDb": false
+        }
+      }
+    }
+  }
+}

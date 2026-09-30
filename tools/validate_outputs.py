@@ -36,7 +36,7 @@ def targets() -> list[tuple[Path, Path]]:
     out: list[tuple[Path, Path]] = []
     for rel, schema in STATIC_TARGETS:
         out.append((ROOT / rel, SCHEMAS / schema))
-    for pattern in ("output/*/stats_*.json", "output/montagne/*/stats_*.json"):
+    for pattern in ("benchmark/output/*/stats_*.json", "benchmark/output/montagne/*/stats_*.json"):
         for path in sorted(ROOT.glob(pattern)):
             out.append((path, SCHEMAS / "stats.schema.json"))
     return out
@@ -55,7 +55,7 @@ def main() -> int:
         return 0
 
     if not args.no_run:
-        for script in ("benchmark_run_clisson.sh", "benchmark_run_montagne.sh"):
+        for script in ("benchmark/drivers/benchmark_run_clisson.sh", "benchmark/drivers/benchmark_run_montagne.sh"):
             subprocess.run(["bash", str(ROOT / script), "--aggregate-only"], cwd=ROOT, check=False)
 
     checked = 0

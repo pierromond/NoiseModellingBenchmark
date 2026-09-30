@@ -5,24 +5,24 @@ doit la modifier : les garde-fous de `tools/` le vérifient.
 
 ## Points d'entrée
 
-- `bash benchmark_run_clisson.sh [--version <v> | --aggregate-only]`
-- `bash benchmark_run_montagne.sh [--version <v> | --aggregate-only]`
+- `bash benchmark/drivers/benchmark_run_clisson.sh [--version <v> | --aggregate-only]`
+- `bash benchmark/drivers/benchmark_run_montagne.sh [--version <v> | --aggregate-only]`
 - Variables d'environnement CI : `GITHUB_REPOSITORY`, `GITHUB_REF_NAME`,
   `GITHUB_SHA`, `GITHUB_RUN_ID`.
 - Java : `v6*` → Java 25, sinon Java 11.
 
 ## Entrées
 
-- `versions.json` : `version -> URL` ; une seule entrée avec URL vide = version
+- `benchmark/versions.json` : `version -> URL` ; une seule entrée avec URL vide = version
   « head » (binaire fourni par un artefact CI).
-- `config/benchmark.json` : source unique des paramètres, datasets et constantes.
-- `input/clisson/`, `input/montagne/` : datasets (ne pas modifier).
+- `benchmark/config/benchmark.json` : source unique des paramètres, datasets et constantes.
+- `benchmark/input/clisson/`, `benchmark/input/montagne/` : datasets (ne pas modifier).
 
 ## Arborescence produite
 
 ```
-output/<v>/{stats_<v>.json, RECEIVERS_LEVEL.geojson, ISO_CONTOUR.geojson, profile.csv, simulation.log}
-output/montagne/<v>/{stats_<v>.json, RECEIVERS_LEVEL.geojson, profile.csv, simulation.log}
+benchmark/output/<v>/{stats_<v>.json, RECEIVERS_LEVEL.geojson, ISO_CONTOUR.geojson, profile.csv, simulation.log}
+benchmark/output/montagne/<v>/{stats_<v>.json, RECEIVERS_LEVEL.geojson, profile.csv, simulation.log}
 website/data/{results.json, comparisons.json, settings.json, build.json, start.json, <v>/...}
 website/data/montagne/{results.json, comparisons.json, measure_comparison.json, layers/..., measure/..., <v>/...}
 website/index.html
@@ -32,7 +32,7 @@ website/index.html
 
 | Fichier | Schéma |
 |---|---|
-| `output/**/stats_*.json` | `schemas/stats.schema.json` |
+| `benchmark/output/**/stats_*.json` | `schemas/stats.schema.json` |
 | `website/data{/montagne}/results.json` | `schemas/results.schema.json` |
 | `website/data{/montagne}/comparisons.json` | `schemas/comparisons.schema.json` |
 | `website/data/montagne/measure_comparison.json` | `schemas/measure_comparison.schema.json` |

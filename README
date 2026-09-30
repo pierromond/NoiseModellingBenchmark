@@ -21,7 +21,7 @@ static website on GitHub Pages: <https://universite-gustave-eiffel.github.io/Noi
 | `compare_versions_montagne.py` | builds the La Montagne comparisons — thin entry point over `bench/compare.py` |
 | `generate_site.py` | builds `website/index.html` from `website/template.html`, `config/benchmark.json` and the JSON files |
 | `website/template.html` | the page structure (HTML only) |
-| `website/app.js` | all the page JavaScript |
+| `website/js/` | the page JavaScript, split into ordered modules: `00-config`, `01-theme`, `02-helpers`, `03-cards`, `04-header`, `05-map`, `06-comparisons`, `07-histogram`, `08-boxplot`, `09-scatter`, `10-density`, `11-diffmap`, `12-montagne`, `13-montagne-map`, `14-start`, `15-sidebar`, `16-boot`. `js/00-constants.js` (histogram bins, silence threshold) is generated from `config/benchmark.json` |
 | `website/index.css` | all the page CSS (dark and light themes in one file) |
 | `website/data/` | **generated, not in git**: `results.json`, `comparisons.json`, `settings.json`, `build.json`, `start.json`, and one folder of map layers per version |
 | `nm_version/src/main/groovy/` | the simulation scripts launched by NoiseModelling: `runscriptV5.0.groovy`, `runscriptV6.0.groovy`, plus one script per version when the API changed |
@@ -71,6 +71,8 @@ guard and must stay green:
 | `tools/sim_spec.py` | the simulation contract (script + parameters per version) against `tools/baseline/simulation_spec.json` |
 | `tools/check_groovy.py` | every Groovy script still parses |
 | `tools/test_noisebench.py` | the shared `lib/NoiseBench.groovy` helpers |
+| `tools/check_js.py` | every website JS module parses (`node --check`) |
+| `tools/render_check.py` | the rendered pages (Chrome headless) match `tools/baseline/render.json` |
 | `tools/validate_outputs.py` | the generated artifacts match `schemas/` |
 
 ```bash

@@ -11,7 +11,9 @@ python3 tools/sim_spec.py --check              || status=1
 python3 tools/check.py "$@"                     || status=1
 python3 tools/check_groovy.py                   || status=1
 python3 tools/test_noisebench.py                || status=1
+python3 tools/check_js.py                       || status=1
 python3 tools/validate_outputs.py --no-run      || status=1
+python3 tools/render_check.py                   || status=1
 
 if [ "$status" -eq 0 ]; then
     echo "[run_checks] ALL OK"

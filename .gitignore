@@ -18,3 +18,7 @@ input/NoiseModelling_without_gui_*.zip
 # Ignore Gradle build output directory
 build
 __pycache__/
+
+.chrome-profile/
+
+website/js/00-constants.js

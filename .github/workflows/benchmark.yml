@@ -913,6 +913,7 @@ jobs:
 
   deploy:
     needs: build-website
+    if: needs.build-website.result == 'success'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

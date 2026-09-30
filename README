@@ -51,8 +51,10 @@ The NoiseModelling binary is downloaded automatically from the release URL in `v
 - A version runs with **Java 25** when its name starts with `v6`, with **Java 11** otherwise.
 - Levels ≤ **-89 dB** are treated as `NaN`: excluded from means, histograms and comparisons (they appear as a
   `NaN` column in the histogram).
-- Keep **one single entry without URL** in `versions.json`: it is the "head" version, built by the
-  NoiseModelling CI (on a fork this needs the optional `GH_PAT` secret).
+- The unreleased "head" version can be either an entry **without URL** in `versions.json` (built from a
+  NoiseModelling CI artifact; on a fork this needs the optional `GH_PAT` secret and depends on a non-expired
+  artifact being found) or an entry pinned to a **Maven Central snapshot URL** (built deterministically by the
+  normal matrix). `v6.0.2-SNAPSHOT` is pinned this way; a new unreleased version is auto-added without URL by the CI.
 - Do not modify `input/clisson/`: published results would no longer be comparable.
 - For La Montagne, the comparison to the measurements is **calibrated per version**: `offset = measured − computed`
   at the receiver closest to the source (`input/montagne/LW_ROADS.geojson`), so the error is zero there for every model.

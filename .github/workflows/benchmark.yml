@@ -212,7 +212,7 @@ jobs:
           NM_VERSION="${{ steps.target.outputs.target_version }}"
           ARTIFACT_URL="${{ steps.artifact.outputs.artifact_url }}"
 
-          mkdir -p input
+          mkdir -p benchmark/input
 
           echo "Téléchargement de l'artifact..."
           curl -L \
@@ -398,7 +398,7 @@ jobs:
         - name: Show simulation log for target version ${{ needs.check-new-version.outputs.target_version }}
           if: always()
           run: |
-            find output -name simulation.log -exec sh -c 'echo ==== $1 ====; tail -100 "$1"' _ {} \;
+            find benchmark/output -name simulation.log -exec sh -c 'echo ==== $1 ====; tail -100 "$1"' _ {} \;
             
         - name: Upload output for ${{ needs.check-new-version.outputs.target_version }}
           if: always()
@@ -563,7 +563,7 @@ jobs:
         - name: Show simulation log
           if: always()
           run: |
-            find output -name simulation.log -exec sh -c 'echo ==== $1 ====; tail -100 "$1"' _ {} \;
+            find benchmark/output -name simulation.log -exec sh -c 'echo ==== $1 ====; tail -100 "$1"' _ {} \;
   
         - name: Upload output for ${{ matrix.version }}
           if: always()
@@ -730,7 +730,7 @@ jobs:
         - name: Show simulation log
           if: always()
           run: |
-            find output -name simulation.log -exec sh -c 'echo ==== $1 ====; tail -100 "$1"' _ {} \;
+            find benchmark/output -name simulation.log -exec sh -c 'echo ==== $1 ====; tail -100 "$1"' _ {} \;
 
         - name: Upload output for ${{ matrix.version }}
           if: always()

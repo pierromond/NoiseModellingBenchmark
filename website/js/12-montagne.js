@@ -132,7 +132,7 @@ function renderMontagneVersions(results) {
   const rows = results.map(r => `
     <tr>
       <td style="padding:.15rem .8rem .15rem 0">${r.version}</td>
-      <td style="padding:.15rem .8rem">${r.nbRays ?? '—'}</td>
+      <td style="padding:.15rem .8rem">${Number(r.nbRays) > 0 ? r.nbRays : 'n/a'}</td>
       <td style="padding:.15rem .8rem">${fmt(r.mean)}</td>
       <td style="padding:.15rem .8rem">${r.time || '—'}</td>
       <td style="padding:.15rem .8rem">${(r.nNan ?? 0).toLocaleString()}</td>

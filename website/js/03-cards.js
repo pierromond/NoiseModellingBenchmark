@@ -7,15 +7,16 @@ function renderCards(data) {
 
   grid.innerHTML = data.map((row, i) => {
     const color = PALETTE[i % PALETTE.length];
-    const raysRows = (row.nbRays && row.timePerRays) ? `
+    const hasRays = Number(row.nbRays) > 0;
+    const raysRows = `
           <div class="stat-row">
             <span class="stat-label">Rays number</span>
-            <span class="stat-value accent3">${row.nbRays}</span>
+            <span class="stat-value accent3">${hasRays ? row.nbRays : 'n/a'}</span>
           </div>
           <div class="stat-row">
             <span class="stat-label">Compute time Per Rays</span>
-            <span class="stat-value accent2">${fmt(row.timePerRays)} ms</span>
-          </div>` : '';
+            <span class="stat-value accent2">${hasRays ? fmt(row.timePerRays) + ' ms' : 'n/a'}</span>
+          </div>`;
     const silencedRow = row.nNan ? `
           <div class="stat-row">
             <span class="stat-label">Silenced receivers (≤ ${row.silenceThreshold ?? SILENCE_THRESHOLD} dB)</span>

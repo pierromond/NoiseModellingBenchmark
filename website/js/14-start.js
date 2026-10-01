@@ -70,7 +70,7 @@ function startTimeRows(label, rows, releaseVersion) {
   return list.map(r => {
     const isRelease = releaseVersion && r.version === releaseVersion;
     const perReceiver = r.timePerReceive ? `${normNumber(r.timePerReceive)} ms` : '—';
-    const rays = (r.nbRays !== undefined && r.nbRays !== null) ? Number(r.nbRays).toLocaleString() : '—';
+    const rays = Number(r.nbRays) > 0 ? Number(r.nbRays).toLocaleString() : 'n/a';
     return `<tr${isRelease ? ' class="start-highlight"' : ''}>
       <td>${esc(label)}</td>
       <td>${esc(r.version)}${isRelease ? ' <span class="start-tag">latest release</span>' : ''}</td>
@@ -155,7 +155,7 @@ NoiseModelling\\bin\\ScriptRunner.bat -w workspace -s compare_clisson.groovy`;
   const refDate = (typeof BUILD !== 'undefined' && BUILD.builtAt) ? BUILD.builtAt : '—';
   const refMachine = 'GitHub Actions ubuntu-latest — 4 vCPU, 16 GB RAM, SSD';
   const refMs = r => r.timePerReceive ? `${normNumber(r.timePerReceive)} ms` : '—';
-  const refRays = r => (r.nbRays === undefined || r.nbRays === null) ? '—' : Number(r.nbRays).toLocaleString();
+  const refRays = r => Number(r.nbRays) > 0 ? Number(r.nbRays).toLocaleString() : 'n/a';
   const refJava = r => r.java ? `Java ${r.java}`
     : (String(r.version || '').startsWith('v6') ? 'Java 25' : (r.version ? 'Java 11' : '—'));
   const referenceTable = `

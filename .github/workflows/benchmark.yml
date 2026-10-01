@@ -419,6 +419,7 @@ jobs:
             retention-days: 1
             
   benchmark:
+      name: benchmark (${{ matrix.version }})
       needs: versions
       runs-on: ubuntu-latest
       timeout-minutes: 300
@@ -586,6 +587,7 @@ jobs:
 
 
   benchmark_java25:
+      name: benchmark_java25 (${{ matrix.version }})
       needs: versions
       runs-on: ubuntu-latest
       timeout-minutes: 300

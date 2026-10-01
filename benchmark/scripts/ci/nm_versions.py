@@ -11,6 +11,7 @@ Subcommands:
 
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -25,8 +26,10 @@ def _load() -> dict:
 def cmd_matrix() -> None:
     d = _load()
     released = [v for v in sorted(d) if d[v]]
-    print("matrix11=" + json.dumps([v for v in released if not v.startswith("v6")]))
-    print("matrix25=" + json.dumps([v for v in released if v.startswith("v6")]))
+    def entry(v):
+        return {"version": v, "url": d[v], "bin": hashlib.sha256(d[v].encode()).hexdigest()[:12]}
+    print("matrix11=" + json.dumps([entry(v) for v in released if not v.startswith("v6")]))
+    print("matrix25=" + json.dumps([entry(v) for v in released if v.startswith("v6")]))
 
 
 def cmd_summary() -> None:

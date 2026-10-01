@@ -350,14 +350,14 @@ jobs:
           uses: actions/cache/restore@v4
           with:
             path: benchmark/output/v${{ needs.check-new-version.outputs.target_version }}
-            key: result-${{ env.JAVA_TAG }}-v${{ needs.check-new-version.outputs.target_version }}-${{ needs.check-new-version.outputs.artifact_name }}-${{ hashFiles('benchmark/drivers/benchmark_run_clisson.sh', 'benchmark/versions.json', 'benchmark/simulations/runscript*.groovy', 'benchmark/simulations/v*.groovy', 'benchmark/input/clisson/**') }}
+            key: result-${{ env.JAVA_TAG }}-v${{ needs.check-new-version.outputs.target_version }}-${{ needs.check-new-version.outputs.artifact_name }}-${{ hashFiles('benchmark/drivers/benchmark_run_clisson.sh', 'benchmark/simulations/runscript*.groovy', 'benchmark/simulations/v*.groovy', 'benchmark/input/clisson/**') }}
 
         - name: Restore La Montagne result for target version
           id: result_montagne
           uses: actions/cache/restore@v4
           with:
             path: benchmark/output/montagne/v${{ needs.check-new-version.outputs.target_version }}
-            key: result-montagne-${{ env.JAVA_TAG }}-v${{ needs.check-new-version.outputs.target_version }}-${{ needs.check-new-version.outputs.artifact_name }}-${{ hashFiles('benchmark/drivers/benchmark_run_montagne.sh', 'benchmark/versions.json', 'benchmark/simulations/**', 'benchmark/input/montagne/**') }}
+            key: result-montagne-${{ env.JAVA_TAG }}-v${{ needs.check-new-version.outputs.target_version }}-${{ needs.check-new-version.outputs.artifact_name }}-${{ hashFiles('benchmark/drivers/benchmark_run_montagne.sh', 'benchmark/simulations/**', 'benchmark/input/montagne/**') }}
 
         - name: Restore NM binary for target version
           if: steps.result.outputs.cache-hit != 'true' || steps.result_montagne.outputs.cache-hit != 'true'
@@ -379,7 +379,7 @@ jobs:
           uses: actions/cache/save@v4
           with:
             path: benchmark/output/v${{ needs.check-new-version.outputs.target_version }}
-            key: result-${{ env.JAVA_TAG }}-v${{ needs.check-new-version.outputs.target_version }}-${{ needs.check-new-version.outputs.artifact_name }}-${{ hashFiles('benchmark/drivers/benchmark_run_clisson.sh', 'benchmark/versions.json', 'benchmark/simulations/runscript*.groovy', 'benchmark/simulations/v*.groovy', 'benchmark/input/clisson/**') }}
+            key: result-${{ env.JAVA_TAG }}-v${{ needs.check-new-version.outputs.target_version }}-${{ needs.check-new-version.outputs.artifact_name }}-${{ hashFiles('benchmark/drivers/benchmark_run_clisson.sh', 'benchmark/simulations/runscript*.groovy', 'benchmark/simulations/v*.groovy', 'benchmark/input/clisson/**') }}
 
         - name: Run La Montagne benchmark for target version
           id: run_montagne
@@ -393,7 +393,7 @@ jobs:
           uses: actions/cache/save@v4
           with:
             path: benchmark/output/montagne/v${{ needs.check-new-version.outputs.target_version }}
-            key: result-montagne-${{ env.JAVA_TAG }}-v${{ needs.check-new-version.outputs.target_version }}-${{ needs.check-new-version.outputs.artifact_name }}-${{ hashFiles('benchmark/drivers/benchmark_run_montagne.sh', 'benchmark/versions.json', 'benchmark/simulations/**', 'benchmark/input/montagne/**') }}
+            key: result-montagne-${{ env.JAVA_TAG }}-v${{ needs.check-new-version.outputs.target_version }}-${{ needs.check-new-version.outputs.artifact_name }}-${{ hashFiles('benchmark/drivers/benchmark_run_montagne.sh', 'benchmark/simulations/**', 'benchmark/input/montagne/**') }}
 
         - name: Show simulation log for target version ${{ needs.check-new-version.outputs.target_version }}
           if: always()
@@ -427,7 +427,7 @@ jobs:
       strategy:
         fail-fast: false
         matrix:
-          version: ${{ fromJSON(needs.versions.outputs.matrix11) }}
+          include: ${{ fromJSON(needs.versions.outputs.matrix11) }}
       steps:
         - name: Free disk space
           uses: jlumbroso/free-disk-space@v1.3.1
@@ -512,14 +512,14 @@ jobs:
           uses: actions/cache@v4
           with:
             path: benchmark/input/NoiseModelling_without_gui_${{ matrix.version }}/
-            key: nm-binary-${{ matrix.version }}-${{ hashFiles('benchmark/versions.json') }}
+            key: nm-binary-${{ matrix.version }}-${{ matrix.bin }}
 
         - name: Restore result for ${{ matrix.version }}
           id: result
           uses: actions/cache/restore@v4
           with:
             path: benchmark/output/${{ matrix.version }}
-            key: result-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ hashFiles('benchmark/drivers/benchmark_run_clisson.sh', 'benchmark/versions.json', 'benchmark/simulations/runscript*.groovy', 'benchmark/simulations/v*.groovy', 'benchmark/input/clisson/**') }}
+            key: result-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ matrix.bin }}-${{ hashFiles('benchmark/drivers/benchmark_run_clisson.sh', 'benchmark/simulations/runscript*.groovy', 'benchmark/simulations/v*.groovy', 'benchmark/input/clisson/**') }}
   
         - name: Run benchmark for ${{ matrix.version }}
           id: run
@@ -533,14 +533,14 @@ jobs:
           uses: actions/cache/save@v4
           with:
             path: benchmark/output/${{ matrix.version }}
-            key: result-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ hashFiles('benchmark/drivers/benchmark_run_clisson.sh', 'benchmark/versions.json', 'benchmark/simulations/runscript*.groovy', 'benchmark/simulations/v*.groovy', 'benchmark/input/clisson/**') }}
+            key: result-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ matrix.bin }}-${{ hashFiles('benchmark/drivers/benchmark_run_clisson.sh', 'benchmark/simulations/runscript*.groovy', 'benchmark/simulations/v*.groovy', 'benchmark/input/clisson/**') }}
 
         - name: Restore La Montagne result for ${{ matrix.version }}
           id: result_montagne
           uses: actions/cache/restore@v4
           with:
             path: benchmark/output/montagne/${{ matrix.version }}
-            key: result-montagne-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ hashFiles('benchmark/drivers/benchmark_run_montagne.sh', 'benchmark/versions.json', 'benchmark/simulations/**', 'benchmark/input/montagne/**') }}
+            key: result-montagne-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ matrix.bin }}-${{ hashFiles('benchmark/drivers/benchmark_run_montagne.sh', 'benchmark/simulations/**', 'benchmark/input/montagne/**') }}
 
         - name: Run La Montagne benchmark for ${{ matrix.version }}
           id: run_montagne
@@ -554,7 +554,7 @@ jobs:
           uses: actions/cache/save@v4
           with:
             path: benchmark/output/montagne/${{ matrix.version }}
-            key: result-montagne-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ hashFiles('benchmark/drivers/benchmark_run_montagne.sh', 'benchmark/versions.json', 'benchmark/simulations/**', 'benchmark/input/montagne/**') }}
+            key: result-montagne-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ matrix.bin }}-${{ hashFiles('benchmark/drivers/benchmark_run_montagne.sh', 'benchmark/simulations/**', 'benchmark/input/montagne/**') }}
   
         - name: Check disk space after run
           if: always()
@@ -594,7 +594,7 @@ jobs:
       strategy:
         fail-fast: false
         matrix:
-          version: ${{ fromJSON(needs.versions.outputs.matrix25) }}
+          include: ${{ fromJSON(needs.versions.outputs.matrix25) }}
       steps:
         - name: Free disk space
           uses: jlumbroso/free-disk-space@v1.3.1
@@ -679,14 +679,14 @@ jobs:
           uses: actions/cache@v4
           with:
             path: benchmark/input/NoiseModelling_without_gui_${{ matrix.version }}/
-            key: nm-binary-${{ matrix.version }}-${{ hashFiles('benchmark/versions.json') }}
+            key: nm-binary-${{ matrix.version }}-${{ matrix.bin }}
 
         - name: Restore result for ${{ matrix.version }}
           id: result
           uses: actions/cache/restore@v4
           with:
             path: benchmark/output/${{ matrix.version }}
-            key: result-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ hashFiles('benchmark/drivers/benchmark_run_clisson.sh', 'benchmark/versions.json', 'benchmark/simulations/runscript*.groovy', 'benchmark/simulations/v*.groovy', 'benchmark/input/clisson/**') }}
+            key: result-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ matrix.bin }}-${{ hashFiles('benchmark/drivers/benchmark_run_clisson.sh', 'benchmark/simulations/runscript*.groovy', 'benchmark/simulations/v*.groovy', 'benchmark/input/clisson/**') }}
 
         - name: Run benchmark for ${{ matrix.version }}
           id: run
@@ -700,14 +700,14 @@ jobs:
           uses: actions/cache/save@v4
           with:
             path: benchmark/output/${{ matrix.version }}
-            key: result-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ hashFiles('benchmark/drivers/benchmark_run_clisson.sh', 'benchmark/versions.json', 'benchmark/simulations/runscript*.groovy', 'benchmark/simulations/v*.groovy', 'benchmark/input/clisson/**') }}
+            key: result-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ matrix.bin }}-${{ hashFiles('benchmark/drivers/benchmark_run_clisson.sh', 'benchmark/simulations/runscript*.groovy', 'benchmark/simulations/v*.groovy', 'benchmark/input/clisson/**') }}
 
         - name: Restore La Montagne result for ${{ matrix.version }}
           id: result_montagne
           uses: actions/cache/restore@v4
           with:
             path: benchmark/output/montagne/${{ matrix.version }}
-            key: result-montagne-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ hashFiles('benchmark/drivers/benchmark_run_montagne.sh', 'benchmark/versions.json', 'benchmark/simulations/**', 'benchmark/input/montagne/**') }}
+            key: result-montagne-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ matrix.bin }}-${{ hashFiles('benchmark/drivers/benchmark_run_montagne.sh', 'benchmark/simulations/**', 'benchmark/input/montagne/**') }}
 
         - name: Run La Montagne benchmark for ${{ matrix.version }}
           id: run_montagne
@@ -721,7 +721,7 @@ jobs:
           uses: actions/cache/save@v4
           with:
             path: benchmark/output/montagne/${{ matrix.version }}
-            key: result-montagne-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ hashFiles('benchmark/drivers/benchmark_run_montagne.sh', 'benchmark/versions.json', 'benchmark/simulations/**', 'benchmark/input/montagne/**') }}
+            key: result-montagne-${{ env.JAVA_TAG }}-${{ matrix.version }}-${{ matrix.bin }}-${{ hashFiles('benchmark/drivers/benchmark_run_montagne.sh', 'benchmark/simulations/**', 'benchmark/input/montagne/**') }}
 
         - name: Check disk space after run
           if: always()

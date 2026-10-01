@@ -55,11 +55,6 @@ def _walk(obj, key=None):
     return _normalise_scalar(obj, key)
 
 
-def normalise_json_bytes(path: Path) -> bytes:
-    data = json.loads(path.read_text(encoding="utf-8"))
-    return json.dumps(_walk(data), sort_keys=True, indent=2, ensure_ascii=False).encode("utf-8")
-
-
 def normalise_html_bytes(path: Path) -> bytes:
     text = path.read_text(encoding="utf-8")
     text = re.sub(r"<!-- built:.*?-->", "<!-- built -->", text, flags=re.S)
@@ -67,9 +62,19 @@ def normalise_html_bytes(path: Path) -> bytes:
     return text.encode("utf-8")
 
 
+def normalise_json_like(path: Path) -> bytes:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data = _walk(data)
+    features = data.get("features") if isinstance(data, dict) else None
+    if isinstance(features, list):
+        # The SQL export does not guarantee feature order; sort for stable hashes.
+        data["features"] = sorted(features, key=lambda f: json.dumps(f, sort_keys=True))
+    return json.dumps(data, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+
+
 def normalise(path: Path) -> bytes:
-    if path.suffix == ".json":
-        return normalise_json_bytes(path)
+    if path.suffix in (".json", ".geojson"):
+        return normalise_json_like(path)
     if path.suffix in (".html", ".htm"):
         return normalise_html_bytes(path)
     return path.read_bytes()

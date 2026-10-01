@@ -525,7 +525,8 @@ def exec(Connection connection, Map input, ProgressVisitor progress) {
     ProfilerThread profilerThread = null
     Thread profilerRunner = null
     if(recordProfile) {
-        profilerThread = new ProfilerThread(new File("benchmark/output/v6.0.0/profile.csv"))
+        def profilePath = input['confProfilePath'] ? (input['confProfilePath'] as String) : "benchmark/output/v6.0.0/profile.csv"
+        profilerThread = new ProfilerThread(new File(profilePath))
         profilerThread.addMetric(new JVMMemoryMetric())
         profilerThread.addMetric(new ReceiverStatsMetric())
         profilerThread.setWriteInterval(120)

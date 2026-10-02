@@ -56,9 +56,9 @@
         "RECEIVERS": "Receiver height (Set_Height)"
       },
       "files": [
-        "BUILDINGS.geojson",
+        "la_montagne_batiment.geojson",
         "DEM.geojson",
-        "GROUNDS.geojson",
+        "la_montagne_naturesol.geojson",
         "LW_ROADS.geojson",
         "RECEIVERS.geojson"
       ],

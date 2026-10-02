@@ -84,9 +84,11 @@ static def exec(Connection connection, Map input) {
 
     if (!JDBCUtilities.tableExists(connection, "BUILDINGS")) {
         new Import_File().exec(connection,
-                ["pathFile" : "benchmark/input/montagne/BUILDINGS.geojson",
+                ["pathFile" : "benchmark/input/montagne/la_montagne_batiment.geojson",
                  "inputSRID": "2154",
                  "tableName": "BUILDINGS"])
+        sql.execute("ALTER TABLE BUILDINGS ALTER COLUMN BAT_HAUT RENAME TO HEIGHT")
+        sql.execute("UPDATE BUILDINGS SET THE_GEOM = ST_Force2D(THE_GEOM)")
     }
 
     if (!JDBCUtilities.tableExists(connection, "DEM")) {
@@ -98,9 +100,11 @@ static def exec(Connection connection, Map input) {
 
     if (!JDBCUtilities.tableExists(connection, "GROUNDS")) {
         new Import_File().exec(connection,
-                ["pathFile" : "benchmark/input/montagne/GROUNDS.geojson",
+                ["pathFile" : "benchmark/input/montagne/la_montagne_naturesol.geojson",
                  "inputSRID": "2154",
                  "tableName": "GROUNDS"])
+        sql.execute("ALTER TABLE GROUNDS ALTER COLUMN NATSOL_CNO RENAME TO G")
+        sql.execute("UPDATE GROUNDS SET THE_GEOM = ST_Force2D(THE_GEOM)")
     }
 
     if (!JDBCUtilities.tableExists(connection, "LW_ROADS")) {

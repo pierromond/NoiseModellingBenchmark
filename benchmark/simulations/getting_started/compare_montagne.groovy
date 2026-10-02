@@ -10,9 +10,9 @@
  *   ScriptRunner -w workspace -s compare_montagne.groovy --datasetDir montagne
  *
  * Expected layout (relative to the working directory):
- *   montagne/BUILDINGS.geojson
+ *   montagne/la_montagne_batiment.geojson
  *   montagne/DEM.geojson
- *   montagne/GROUNDS.geojson
+ *   montagne/la_montagne_naturesol.geojson
  *   montagne/LW_ROADS.geojson
  *   montagne/RECEIVERS.geojson
  *
@@ -31,7 +31,7 @@ import java.sql.Connection
 
 title = 'Compare your software with NoiseModelling — La Montagne'
 description = '''Run NoiseModelling on the La Montagne benchmark dataset and export the sound levels at the receivers.
-Expected files in the dataset folder: BUILDINGS.geojson, DEM.geojson, GROUNDS.geojson, LW_ROADS.geojson, RECEIVERS.geojson.'''
+Expected files in the dataset folder: la_montagne_batiment.geojson, DEM.geojson, la_montagne_naturesol.geojson, LW_ROADS.geojson, RECEIVERS.geojson.'''
 
 inputs = [
         datasetDir: [
@@ -47,14 +47,20 @@ outputs = [result: [name: 'Result output string', title: 'Result output string',
 static def exec(Connection connection, Map input) {
     String datasetDir = (input != null && input["datasetDir"]) ? input["datasetDir"] as String : "montagne"
 
+    def sql = new groovy.sql.Sql(connection)
+
     if (!JDBCUtilities.tableExists(connection, "BUILDINGS")) {
-        new Import_File().exec(connection, ["pathFile": "$datasetDir/BUILDINGS.geojson", "inputSRID": 2154, "tableName": "BUILDINGS"])
+        new Import_File().exec(connection, ["pathFile": "$datasetDir/la_montagne_batiment.geojson", "inputSRID": 2154, "tableName": "BUILDINGS"])
+        sql.execute("ALTER TABLE BUILDINGS ALTER COLUMN BAT_HAUT RENAME TO HEIGHT")
+        sql.execute("UPDATE BUILDINGS SET THE_GEOM = ST_Force2D(THE_GEOM)")
     }
     if (!JDBCUtilities.tableExists(connection, "DEM")) {
         new Import_File().exec(connection, ["pathFile": "$datasetDir/DEM.geojson", "inputSRID": 2154, "tableName": "DEM"])
     }
     if (!JDBCUtilities.tableExists(connection, "GROUNDS")) {
-        new Import_File().exec(connection, ["pathFile": "$datasetDir/GROUNDS.geojson", "inputSRID": 2154, "tableName": "GROUNDS"])
+        new Import_File().exec(connection, ["pathFile": "$datasetDir/la_montagne_naturesol.geojson", "inputSRID": 2154, "tableName": "GROUNDS"])
+        sql.execute("ALTER TABLE GROUNDS ALTER COLUMN NATSOL_CNO RENAME TO G")
+        sql.execute("UPDATE GROUNDS SET THE_GEOM = ST_Force2D(THE_GEOM)")
     }
     if (!JDBCUtilities.tableExists(connection, "LW_ROADS")) {
         new Import_File().exec(connection, ["pathFile": "$datasetDir/LW_ROADS.geojson", "inputSRID": 2154, "tableName": "LW_ROADS"])

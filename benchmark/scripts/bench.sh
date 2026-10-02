@@ -233,11 +233,19 @@ copy_geojson_montagne() {
 
     # Couches cartographiques communes : identiques pour toutes les versions
     # (pas d'iso-contours pour La Montagne, et pas le DEM de 219 Mo).
+    # Les batiments et la nature du sol sont publies sous les noms historiques
+    # BUILDINGS.geojson / GROUNDS.geojson attendus par le site.
     mkdir -p "$DATA_DIR/layers"
-    for layer in BUILDINGS.geojson GROUNDS.geojson LW_ROADS.geojson RECEIVERS.geojson; do
-        local src="$INPUT_DIR/montagne/$layer"
+    declare -A MONTAGNE_LAYERS=(
+        ["la_montagne_batiment.geojson"]="BUILDINGS.geojson"
+        ["la_montagne_naturesol.geojson"]="GROUNDS.geojson"
+        ["LW_ROADS.geojson"]="LW_ROADS.geojson"
+        ["RECEIVERS.geojson"]="RECEIVERS.geojson"
+    )
+    for src_name in "${!MONTAGNE_LAYERS[@]}"; do
+        local src="$INPUT_DIR/montagne/$src_name"
         if [ -f "$src" ]; then
-            cp "$src" "$DATA_DIR/layers/$layer"
+            cp "$src" "$DATA_DIR/layers/${MONTAGNE_LAYERS[$src_name]}"
         fi
     done
 

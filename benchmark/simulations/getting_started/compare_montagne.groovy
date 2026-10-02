@@ -50,17 +50,19 @@ static def exec(Connection connection, Map input) {
     def sql = new groovy.sql.Sql(connection)
 
     if (!JDBCUtilities.tableExists(connection, "BUILDINGS")) {
-        new Import_File().exec(connection, ["pathFile": "$datasetDir/la_montagne_batiment.geojson", "inputSRID": 2154, "tableName": "BUILDINGS"])
-        sql.execute("ALTER TABLE BUILDINGS ALTER COLUMN BAT_HAUT RENAME TO HEIGHT")
-        sql.execute("UPDATE BUILDINGS SET THE_GEOM = ST_Force2D(THE_GEOM)")
+        new Import_File().exec(connection, ["pathFile": "$datasetDir/la_montagne_batiment.geojson", "inputSRID": 2154, "tableName": "BUILDINGS_RAW"])
+        sql.execute("CREATE TABLE BUILDINGS (THE_GEOM GEOMETRY(MULTIPOLYGON, 2154), HEIGHT DOUBLE)")
+        sql.execute("INSERT INTO BUILDINGS (THE_GEOM, HEIGHT) SELECT ST_Force2D(THE_GEOM), BAT_HAUT FROM BUILDINGS_RAW")
+        sql.execute("DROP TABLE BUILDINGS_RAW")
     }
     if (!JDBCUtilities.tableExists(connection, "DEM")) {
         new Import_File().exec(connection, ["pathFile": "$datasetDir/DEM.geojson", "inputSRID": 2154, "tableName": "DEM"])
     }
     if (!JDBCUtilities.tableExists(connection, "GROUNDS")) {
-        new Import_File().exec(connection, ["pathFile": "$datasetDir/la_montagne_naturesol.geojson", "inputSRID": 2154, "tableName": "GROUNDS"])
-        sql.execute("ALTER TABLE GROUNDS ALTER COLUMN NATSOL_CNO RENAME TO G")
-        sql.execute("UPDATE GROUNDS SET THE_GEOM = ST_Force2D(THE_GEOM)")
+        new Import_File().exec(connection, ["pathFile": "$datasetDir/la_montagne_naturesol.geojson", "inputSRID": 2154, "tableName": "GROUNDS_RAW"])
+        sql.execute("CREATE TABLE GROUNDS (THE_GEOM GEOMETRY(MULTIPOLYGON, 2154), G DOUBLE)")
+        sql.execute("INSERT INTO GROUNDS (THE_GEOM, G) SELECT ST_Force2D(THE_GEOM), NATSOL_CNO FROM GROUNDS_RAW")
+        sql.execute("DROP TABLE GROUNDS_RAW")
     }
     if (!JDBCUtilities.tableExists(connection, "LW_ROADS")) {
         new Import_File().exec(connection, ["pathFile": "$datasetDir/LW_ROADS.geojson", "inputSRID": 2154, "tableName": "LW_ROADS"])

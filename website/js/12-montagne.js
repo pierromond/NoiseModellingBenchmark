@@ -186,7 +186,7 @@ function renderMontagne(data) {
       btn.setAttribute('aria-pressed', on);
       drawMontagneScatter(montagneEntries());
       updateMontagneNote();
-      if (montagneMap) updateMontagneReceivers(montagneEntries()[0]);
+      if (montagneMap) updateMontagneReceivers(montagneMapEntry());
       syncState({ dataset: 'montagne', m_models: montagneSelected.join(',') });
     });
   });

@@ -613,6 +613,26 @@
       margin-bottom: .5rem;
     }
 
+    .sidebar-select {
+      font-family: var(--font-mono);
+      font-size: .72rem;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: .4rem .5rem;
+      border-radius: 2px;
+      cursor: pointer;
+      width: 100%;
+      margin-bottom: 1rem;
+      transition: border-color .15s;
+    }
+
+    .sidebar-select:hover,
+    .sidebar-select:focus {
+      border-color: var(--accent);
+      outline: none;
+    }
+
     .sidebar-btns {
       display: flex;
       flex-direction: column;
@@ -1096,6 +1116,7 @@ html[data-theme="light"] .table-wrap { border-color: var(--border); border-radiu
 html[data-theme="light"] th { color: var(--accent); }
 html[data-theme="light"] td { border-top-color: var(--border); }
 html[data-theme="light"] .pair-field select { background: #fff; border-color: var(--border); color: var(--text); border-radius: 2px; }
+html[data-theme="light"] .sidebar-select { background: #fff; border-color: var(--border); color: var(--text); border-radius: 2px; }
 html[data-theme="light"] .sidebar-toggle { background: #fff; border-color: var(--border); color: var(--accent); border-radius: 2px; font-family: var(--font-body); }
 html[data-theme="light"] .sidebar-toggle:hover { background: rgba(14,107,107,.06); }
 html[data-theme="light"] .legend-swatch { border-color: rgba(28,28,26,.18); }

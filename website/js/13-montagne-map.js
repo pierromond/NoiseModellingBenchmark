@@ -4,6 +4,7 @@
 let montagneMap = null;
 let montagneMapLayers = {};
 let montagneErrorLayer = null;
+let montagneMapModel = null;
 
 const MONTAGNE_MAP_LAYERS = [
   { id: 'BUILDINGS', label: 'Buildings', file: 'layers/BUILDINGS.geojson',
@@ -59,6 +60,28 @@ async function initMontagneMap() {
   else montagneMap.setView([47.0, -1.0], 13);
 
   renderMontagneMapLayers();
+  renderMontagneMapModelSelect();
+}
+
+function montagneMapEntry() {
+  return (montagneMapModel && montagneEntry(montagneMapModel)) || montagneEntries()[0] || null;
+}
+
+function renderMontagneMapModelSelect() {
+  const el = document.getElementById('montagne-map-model');
+  if (!el) return;
+  if (!montagneData.length) { el.style.display = 'none'; return; }
+  el.style.display = '';
+  if (!montagneMapModel || !montagneData.some(d => d.version === montagneMapModel)) {
+    montagneMapModel = (montagneEntries()[0] || montagneData[0]).version;
+  }
+  el.innerHTML = montagneData.map(d =>
+    `<option value="${d.version}"${d.version === montagneMapModel ? ' selected' : ''}>${d.version}</option>`).join('');
+  el.onchange = () => {
+    montagneMapModel = el.value;
+    updateMontagneReceivers(montagneMapEntry());
+    syncState({ dataset: 'montagne', m_map: montagneMapModel });
+  };
 }
 
 function renderMontagneMapLayers() {
@@ -113,7 +136,8 @@ function updateMontagneReceivers(entry) {
 function refreshMontagneMap() {
   if (!montagneMap) return;
   montagneMap.invalidateSize();
-  updateMontagneReceivers(montagneEntries()[0]);
+  renderMontagneMapModelSelect();
+  updateMontagneReceivers(montagneMapEntry());
 }
 
 // Restore the La Montagne view (selected models + map layers) from the URL state.
@@ -121,6 +145,7 @@ function applyMontagneState(st) {
   if (!st || !montagneData.length) return;
   const models = (st.models || []).filter(v => montagneData.some(d => d.version === v));
   if (models.length) montagneSelected = models;
+  if (st.mapModel && montagneData.some(d => d.version === st.mapModel)) montagneMapModel = st.mapModel;
 
   const ctrl = document.getElementById('montagne-controls');
   if (ctrl) {
@@ -141,7 +166,8 @@ function applyMontagneState(st) {
       if (!want && on) montagneMap.removeLayer(layer);
     });
     renderMontagneMapLayers();
-    updateMontagneReceivers(montagneEntries()[0]);
+    renderMontagneMapModelSelect();
+    updateMontagneReceivers(montagneMapEntry());
   }
 }
 

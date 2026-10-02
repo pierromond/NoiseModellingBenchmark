@@ -19,6 +19,7 @@ async function applyState(data, snapshot) {
   if (ds === 'montagne') {
     pendingMontagne = {
       models: (st.get('m_models') || '').split(',').filter(Boolean),
+      mapModel: st.get('m_map') || null,
       layers: (st.get('m_layers') || '').split(',').filter(Boolean),
     };
     switchDataset('montagne');

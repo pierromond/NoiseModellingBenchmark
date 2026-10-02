@@ -17,7 +17,7 @@ function readState() {
 }
 
 const CLISSON_STATE_KEYS = ['version', 'layers', 'a', 'b'];
-const MONTAGNE_STATE_KEYS = ['m_models', 'm_layers'];
+const MONTAGNE_STATE_KEYS = ['m_models', 'm_map', 'm_layers'];
 
 function syncState(patch) {
   const cur = new URLSearchParams(location.hash.replace(/^#/, ''));

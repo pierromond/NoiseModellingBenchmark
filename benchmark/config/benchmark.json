@@ -59,6 +59,10 @@
         "la_montagne_batiment.geojson",
         "DEM.geojson",
         "la_montagne_naturesol.geojson",
+        "la_montagne_naturesol_G0.geojson",
+        "la_montagne_naturesol_G_03.geojson",
+        "la_montagne_naturesol_G_07.geojson",
+        "la_montagne_naturesol_G_1.geojson",
         "LW_ROADS.geojson",
         "RECEIVERS.geojson"
       ],

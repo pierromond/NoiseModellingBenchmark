@@ -121,6 +121,7 @@ static def exec(Connection connection, Map input) {
 
         long elapsed = 0
         def nbRays = 0
+        def nbProfiles = 0
 
         // v4.0.0 / v4.0.1 écrivent leur profile.csv dans benchmark/output/$version (chemin codé en dur
         // dans les scripts v4xx). On garantit l'existence du dossier pour que le profiler écrive.
@@ -142,7 +143,9 @@ static def exec(Connection connection, Map input) {
             def customScript = bench.loadScript(versionConfig.script)
             customScript.exec(connection, params)
             def fallback = versionConfig.profileFallback ? new File("benchmark/output/$version/profile.csv") : null
-            nbRays = bench.readNbRays(new File("$outputFolder/profile.csv"), fallback)
+            def profileCsv = new File("$outputFolder/profile.csv")
+            nbRays = bench.readNbRays(profileCsv, fallback)
+            nbProfiles = bench.readProfileCount(profileCsv, fallback)
             if (versionConfig.countRaysInDb) {
                 nbRays = sql.firstRow("SELECT COUNT(*) FROM RAYS")[0] as Integer
             }
@@ -166,7 +169,7 @@ static def exec(Connection connection, Map input) {
         def time = elapsed/cpt
         //nbRays = nbRays * cpt
         //def res = elapsed / nbRays
-        println("rays: $nbRays")
+        println("rays: $nbRays, profiles: $nbProfiles")
         def timerays = 0
         if(nbRays !=0 ){
             timerays = elapsed / nbRays
@@ -193,6 +196,7 @@ static def exec(Connection connection, Map input) {
                 java: System.getProperty("java.version"),
                 runner: "montagne-v5",
                 nbRays : nbRays,
+                nbProfiles: nbProfiles,
                     nNan: stats.nNan,
                     silenceThreshold: silenceThreshold,
                 timePerRays: timerays,
@@ -245,6 +249,7 @@ static def exec(Connection connection, Map input) {
 
         long elapsed = 0
         int nbRays = 0
+        def nbProfiles = 0
 
         if(redoCompute) {
             long startCompute = System.currentTimeMillis()
@@ -257,7 +262,9 @@ static def exec(Connection connection, Map input) {
             }
             def customScript = bench.loadScript(versionConfig.script)
             customScript.exec(connection, paramSet.exec)
-            nbRays = bench.readNbRays(new File("$outputFolder/profile.csv"), null)
+            def profileCsv = new File("$outputFolder/profile.csv")
+            nbRays = bench.readNbRays(profileCsv, null)
+            nbProfiles = bench.readProfileCount(profileCsv, null)
             if (versionConfig.countRaysInDb) {
                 nbRays = sql.firstRow("SELECT COUNT(*) FROM RAYS")[0] as Integer
             }
@@ -284,7 +291,7 @@ static def exec(Connection connection, Map input) {
             timerays = elapsed / nbRays
         }
 
-        println("rays: $nbRays, timerey : $timerays")
+        println("rays: $nbRays, profiles: $nbProfiles, timerey : $timerays")
 
         long hours = TimeUnit.MILLISECONDS.toHours(elapsed)
         elapsed -= TimeUnit.HOURS.toMillis(hours)
@@ -307,6 +314,7 @@ static def exec(Connection connection, Map input) {
                 java: System.getProperty("java.version"),
                 runner: "montagne-v5",
                 nbRays : nbRays,
+                nbProfiles: nbProfiles,
                     nNan: stats.nNan,
                     silenceThreshold: silenceThreshold,
                 timePerRays: timerays,

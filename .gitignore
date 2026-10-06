@@ -7,6 +7,9 @@ build/
 website/data/
 website/index.html
 
+# Profiler CSV written by the v6 scripts at the repository root
+profile*.csv
+
 # NoiseModelling binaries/archives downloaded locally or by the CI
 benchmark/input/NoiseModelling_without_gui_*/
 benchmark/input/NoiseModelling_without_gui_*.zip

@@ -157,6 +157,7 @@ static def exec(Connection connection, Map input) {
 
             long elapsed = 0
             def nbRays = 0
+            def nbProfiles = 0
 
             if(redoCompute) {
                 long startCompute = System.currentTimeMillis()
@@ -166,7 +167,9 @@ static def exec(Connection connection, Map input) {
                 def params = simConfig.paramSets[versionConfig.paramSet].exec
                 def customScript = bench.loadScript(versionConfig.script)
                 customScript.exec(connection, params)
-                nbRays = bench.readNbRays(new File("$outputFolder/profile.csv"), null)
+                def profileCsv = new File("$outputFolder/profile.csv")
+                nbRays = bench.readNbRays(profileCsv, null)
+                nbProfiles = bench.readProfileCount(profileCsv, null)
                 if (versionConfig.countRaysInDb) {
                     nbRays = sql.firstRow("SELECT COUNT(*) FROM RAYS")[0] as Integer
                 }
@@ -200,9 +203,10 @@ static def exec(Connection connection, Map input) {
 
             def time = elapsed/cpt
             nbRays = nbRays * cpt
-            def res = elapsed / nbRays
-            println("rays: $nbRays, timerey : $res")
-            def timerays = elapsed / nbRays
+            nbProfiles = nbProfiles * cpt
+            def res = nbRays > 0 ? elapsed / nbRays : 0
+            println("rays: $nbRays, profiles: $nbProfiles, timerey : $res")
+            def timerays = res
 
             long hours = TimeUnit.MILLISECONDS.toHours(elapsed)
             elapsed -= TimeUnit.HOURS.toMillis(hours)
@@ -223,6 +227,7 @@ static def exec(Connection connection, Map input) {
                     time: timeString,
                     timePerReceive: f.format(time),
                     nbRays : nbRays,
+                    nbProfiles: nbProfiles,
                     timePerRays: timerays,
                     java: System.getProperty("java.version"),
                     runner: "v4-custom",
@@ -331,6 +336,7 @@ static def exec(Connection connection, Map input) {
 
             long elapsed = 0
             int nbRays = 0
+            def nbProfiles = 0
 
             if(redoCompute) {
                 long startCompute = System.currentTimeMillis()
@@ -341,7 +347,9 @@ static def exec(Connection connection, Map input) {
                 def params = simConfig.paramSets[versionConfig.paramSet].exec
                 def customScript = bench.loadScript(versionConfig.script)
                 customScript.exec(connection, params)
-                nbRays = bench.readNbRays(new File("$outputFolder/profile.csv"), null)
+                def profileCsv = new File("$outputFolder/profile.csv")
+                nbRays = bench.readNbRays(profileCsv, null)
+                nbProfiles = bench.readProfileCount(profileCsv, null)
                 if (versionConfig.countRaysInDb) {
                     nbRays = sql.firstRow("SELECT COUNT(*) FROM RAYS")[0] as Integer
                 }
@@ -374,12 +382,13 @@ static def exec(Connection connection, Map input) {
             def cpt = sql.firstRow("SELECT COUNT(*) FROM RECEIVERS")[0] as Integer
             double time = elapsed/cpt
             nbRays = nbRays * cpt
+            nbProfiles = nbProfiles * cpt
             def timerays =  0
             if(nbRays !=0 ){
                 timerays = elapsed / nbRays
             }
 
-            println("rays: $nbRays, timerey : $timerays")
+            println("rays: $nbRays, profiles: $nbProfiles, timerey : $timerays")
 
             long hours = TimeUnit.MILLISECONDS.toHours(elapsed)
             elapsed -= TimeUnit.HOURS.toMillis(hours)
@@ -400,6 +409,7 @@ static def exec(Connection connection, Map input) {
                     time: timeString,
                     timePerReceive: f.format(time),
                     nbRays : nbRays,
+                    nbProfiles: nbProfiles,
                     timePerRays: timerays,
                     java: System.getProperty("java.version"),
                     runner: "v5-custom",

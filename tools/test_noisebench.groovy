@@ -47,12 +47,15 @@ try {
 
     def csv = new File(tmp, "profile.csv")
     csv.text = "foo,receiver_median_rays,bar\nx,123,y\n"
-    check("readNbRays/median",    bench.readNbRays(csv, null), 123.0d)
+    check("readNbRays/median",        bench.readNbRays(csv, null), 123.0d)
+    check("readNbRays/missing",       bench.readNbRays(new File(tmp, "missing.csv"), null), 0.0d)
 
     def fallback = new File(tmp, "profile-fallback.csv")
     fallback.text = "foo,receiver_median_profiles_count,bar\nx,7,y\n"
-    check("readNbRays/fallback",  bench.readNbRays(new File(tmp, "missing.csv"), fallback), 7.0d)
-    check("readNbRays/missing",   bench.readNbRays(new File(tmp, "missing.csv"), null), 0.0d)
+    check("readProfiles/median",      bench.readProfileCount(fallback, null), 7.0d)
+    check("readProfiles/fallback",    bench.readProfileCount(new File(tmp, "missing.csv"), fallback), 7.0d)
+    check("readProfiles/missing",     bench.readProfileCount(new File(tmp, "missing.csv"), null), 0.0d)
+    check("readProfiles/rays-not-prof", bench.readProfileCount(csv, null), 0.0d)
 } finally {
     tmp.deleteDir()
 }

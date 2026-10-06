@@ -13,6 +13,7 @@
       "time": {"type": "string"},
       "timePerReceive": {"type": "string"},
       "nbRays": {"type": "number"},
+      "nbProfiles": {"type": "number"},
       "timePerRays": {"type": "number"},
       "nNan": {"type": "integer"},
       "silenceThreshold": {"type": "number"},

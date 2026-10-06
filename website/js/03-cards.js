@@ -8,10 +8,15 @@ function renderCards(data) {
   grid.innerHTML = data.map((row, i) => {
     const color = PALETTE[i % PALETTE.length];
     const hasRays = Number(row.nbRays) > 0;
+    const hasProfiles = Number(row.nbProfiles) > 0;
     const raysRows = `
           <div class="stat-row">
             <span class="stat-label">Rays number</span>
             <span class="stat-value accent3">${hasRays ? row.nbRays : 'n/a'}</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Profiles number</span>
+            <span class="stat-value accent3">${hasProfiles ? row.nbProfiles : 'n/a'}</span>
           </div>
           <div class="stat-row">
             <span class="stat-label">Compute time Per Rays</span>

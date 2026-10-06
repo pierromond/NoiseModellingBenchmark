@@ -71,12 +71,14 @@ function startTimeRows(label, rows, releaseVersion) {
     const isRelease = releaseVersion && r.version === releaseVersion;
     const perReceiver = r.timePerReceive ? `${normNumber(r.timePerReceive)} ms` : '—';
     const rays = Number(r.nbRays) > 0 ? Number(r.nbRays).toLocaleString() : 'n/a';
+    const profiles = Number(r.nbProfiles) > 0 ? Number(r.nbProfiles).toLocaleString() : 'n/a';
     return `<tr${isRelease ? ' class="start-highlight"' : ''}>
       <td>${esc(label)}</td>
       <td>${esc(r.version)}${isRelease ? ' <span class="start-tag">latest release</span>' : ''}</td>
       <td>${esc(r.time || '—')}</td>
       <td>${esc(perReceiver)}</td>
       <td>${esc(rays)}</td>
+      <td>${esc(profiles)}</td>
     </tr>`;
   }).join('');
 }
@@ -156,6 +158,7 @@ NoiseModelling\\bin\\ScriptRunner.bat -w workspace -s compare_clisson.groovy`;
   const refMachine = 'GitHub Actions ubuntu-latest — 4 vCPU, 16 GB RAM, SSD';
   const refMs = r => r.timePerReceive ? `${normNumber(r.timePerReceive)} ms` : '—';
   const refRays = r => Number(r.nbRays) > 0 ? Number(r.nbRays).toLocaleString() : 'n/a';
+  const refProfiles = r => Number(r.nbProfiles) > 0 ? Number(r.nbProfiles).toLocaleString() : 'n/a';
   const refJava = r => r.java ? `Java ${r.java}`
     : (String(r.version || '').startsWith('v6') ? 'Java 25' : (r.version ? 'Java 11' : '—'));
   const referenceTable = `
@@ -170,6 +173,7 @@ NoiseModelling\\bin\\ScriptRunner.bat -w workspace -s compare_clisson.groovy`;
           <tr><td>Compute time</td><td>${esc(relClisson.time || '—')}</td><td>${esc(relMontagne.time || '—')}</td></tr>
           <tr><td>Time / receiver</td><td>${esc(refMs(relClisson))}</td><td>${esc(refMs(relMontagne))}</td></tr>
           <tr><td>Rays</td><td>${esc(refRays(relClisson))}</td><td>${esc(refRays(relMontagne))}</td></tr>
+          <tr><td>Profiles</td><td>${esc(refProfiles(relClisson))}</td><td>${esc(refProfiles(relMontagne))}</td></tr>
           <tr><td>Machine</td><td colspan="2">${esc(refMachine)}</td></tr>
           <tr><td>Threads</td><td colspan="2">all available CPU cores</td></tr>
           <tr><td>GPU</td><td colspan="2">none</td></tr>
@@ -426,9 +430,9 @@ NoiseModelling\\bin\\ScriptRunner.bat -w workspace -s compare_clisson.groovy`;
       <div class="table-scroll"><table class="start-table">
         <thead>
           <tr><th align="left">Dataset</th><th align="left">Version</th><th align="left">Compute time</th>
-              <th align="left">Time per receiver</th><th align="left">Rays</th></tr>
+              <th align="left">Time per receiver</th><th align="left">Rays</th><th align="left">Profiles</th></tr>
         </thead>
-        <tbody>${timeRows || '<tr><td colspan="5">No data yet.</td></tr>'}</tbody>
+        <tbody>${timeRows || '<tr><td colspan="6">No data yet.</td></tr>'}</tbody>
       </table></div>
     </section>
 

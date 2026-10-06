@@ -28,31 +28,40 @@ class NoiseBench {
     }
 
     /**
-     * Number of rays read from a profiler CSV. The column was renamed between
-     * versions (receiver_median_rays -> receiver_median_profiles_count); both are
-     * accepted. A fallback file may be provided for the versions whose profiler
-     * writes to a legacy location.
+     * Median value of a profiler CSV column (last line). A fallback file may be
+     * provided for the versions whose profiler writes to a legacy location.
+     * Returns 0 when the file or the column is missing.
      */
-    static double readNbRays(File primary, File fallback) {
+    private static double readProfileMedian(File primary, File fallback, String column) {
         def csvFile = primary
         if (!csvFile.exists() && fallback != null) {
             csvFile = fallback
         }
-        if (!csvFile.exists()) {
+        if (!csvFile?.exists()) {
             return 0
         }
         def lines = csvFile.readLines()
         if (lines.size() >= 1) {
             def headers = lines[0].split(',')
-            def raysIdx = headers.findIndexOf { it.trim() in ['receiver_median_rays', 'receiver_median_profiles_count'] }
-            if (raysIdx >= 0) {
+            def idx = headers.findIndexOf { it.trim() == column }
+            if (idx >= 0) {
                 def lastLine = lines[lines.size() - 1].split(',')
-                if (lastLine.size() > raysIdx) {
-                    return lastLine[raysIdx].trim().toDouble()
+                if (lastLine.size() > idx) {
+                    return lastLine[idx].trim().toDouble()
                 }
             }
         }
         return 0
+    }
+
+    /** Median number of rays per receiver (v4 profiler column). */
+    static double readNbRays(File primary, File fallback) {
+        return readProfileMedian(primary, fallback, 'receiver_median_rays')
+    }
+
+    /** Median number of cut profiles per receiver (v5+ profiler column). */
+    static double readProfileCount(File primary, File fallback) {
+        return readProfileMedian(primary, fallback, 'receiver_median_profiles_count')
     }
 
     /**

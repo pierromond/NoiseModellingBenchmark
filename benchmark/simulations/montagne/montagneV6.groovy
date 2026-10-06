@@ -127,7 +127,21 @@ static def exec(Connection connection, Map input) {
                 new Set_Height().exec(connection, ["tableName": h.tableName, "height": h.height])
             }
 
-            new Noise_level_from_source().exec(connection, config.models.montagne.exec)
+            def customScripts = [
+                    "v6.0.0"         : "benchmark/simulations/v6Noise_level_from_source.groovy",
+                    "v6.0.1"         : "benchmark/simulations/v601Noise_level_from_source.groovy",
+                    "v6.0.2-SNAPSHOT": "benchmark/simulations/v602Noise_level_from_source.groovy"
+            ]
+            def execParams = new LinkedHashMap(config.models.montagne.exec)
+            execParams["confRecordProfile"] = true
+            execParams["confProfilePath"] = "$outputFolder/profile.csv"
+            def scriptPath = customScripts[version]
+            if (scriptPath != null) {
+                def customScript = new GroovyClassLoader().parseClass(new File(scriptPath)).newInstance()
+                customScript.exec(connection, execParams)
+            } else {
+                new Noise_level_from_source().exec(connection, execParams)
+            }
 
         elapsed = System.currentTimeMillis() - startCompute
         sql.execute("DROP TABLE IF EXISTS RECEIVERS_LEVEL_D")
@@ -152,6 +166,15 @@ static def exec(Connection connection, Map input) {
         timeray = elapsed/nbRays
     }
 
+    def profileFiles = [new File("$outputFolder"), new File("."), new File("benchmark/output/montagne/$version")]
+            .findAll { it?.isDirectory() }
+            .collectMany { d -> d.listFiles().findAll { it.name.startsWith("profile") && it.name.endsWith(".csv") } }
+    def profileCsv = profileFiles ? profileFiles.max { it.lastModified() } : null
+    def nbProfiles = 0
+    if (profileCsv?.exists()) {
+        nbProfiles = bench.readProfileCount(profileCsv, null) * cpt
+    }
+
     long hours = TimeUnit.MILLISECONDS.toHours(elapsed)
     elapsed -= TimeUnit.HOURS.toMillis(hours)
     long minutes = TimeUnit.MILLISECONDS.toMinutes(elapsed)
@@ -174,6 +197,7 @@ static def exec(Connection connection, Map input) {
             java: System.getProperty("java.version"),
             runner: "montagne-v6",
             nbRays : nbRays,
+            nbProfiles: nbProfiles,
             nNan: stats.nNan,
             silenceThreshold: silenceThreshold,
             timePerRays: timeray,

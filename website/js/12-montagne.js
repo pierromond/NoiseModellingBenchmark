@@ -133,6 +133,7 @@ function renderMontagneVersions(results) {
     <tr>
       <td style="padding:.15rem .8rem .15rem 0">${r.version}</td>
       <td style="padding:.15rem .8rem">${Number(r.nbRays) > 0 ? r.nbRays : 'n/a'}</td>
+      <td style="padding:.15rem .8rem">${Number(r.nbProfiles) > 0 ? r.nbProfiles : 'n/a'}</td>
       <td style="padding:.15rem .8rem">${fmt(r.mean)}</td>
       <td style="padding:.15rem .8rem">${r.time || '—'}</td>
       <td style="padding:.15rem .8rem">${(r.nNan ?? 0).toLocaleString()}</td>
@@ -141,7 +142,7 @@ function renderMontagneVersions(results) {
     <table style="border-collapse:collapse;margin-top:.5rem">
       <thead>
         <tr style="color:var(--accent)">
-          <th align="left">Version</th><th align="left">Rays</th><th align="left">Mean LAEQ</th>
+          <th align="left">Version</th><th align="left">Rays</th><th align="left">Profiles</th><th align="left">Mean LAEQ</th>
           <th align="left">Compute</th><th align="left">Silenced</th>
         </tr>
       </thead>

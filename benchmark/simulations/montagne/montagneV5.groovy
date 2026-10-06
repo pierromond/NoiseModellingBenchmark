@@ -86,10 +86,7 @@ static def exec(Connection connection, Map input) {
             new Import_File().exec(connection,
                     ["pathFile" : "benchmark/input/montagne/la_montagne_batiment.geojson",
                      "inputSRID": "2154",
-                     "tableName": "BUILDINGS_RAW"])
-            sql.execute("CREATE TABLE BUILDINGS (THE_GEOM GEOMETRY(MULTIPOLYGON, 2154), HEIGHT DOUBLE)")
-            sql.execute("INSERT INTO BUILDINGS (THE_GEOM, HEIGHT) SELECT ST_Force2D(THE_GEOM), BAT_HAUT FROM BUILDINGS_RAW")
-            sql.execute("DROP TABLE BUILDINGS_RAW")
+                     "tableName": "BUILDINGS"])
         }
 
         if (!JDBCUtilities.tableExists(connection, "DEM")) {
@@ -103,10 +100,7 @@ static def exec(Connection connection, Map input) {
             new Import_File().exec(connection,
                     ["pathFile" : "benchmark/input/montagne/la_montagne_naturesol.geojson",
                      "inputSRID": "2154",
-                     "tableName": "GROUNDS_RAW"])
-            sql.execute("CREATE TABLE GROUNDS (THE_GEOM GEOMETRY(MULTIPOLYGON, 2154), G DOUBLE)")
-            sql.execute("INSERT INTO GROUNDS (THE_GEOM, G) SELECT ST_Force2D(THE_GEOM), NATSOL_CNO FROM GROUNDS_RAW")
-            sql.execute("DROP TABLE GROUNDS_RAW")
+                     "tableName": "GROUNDS"])
         }
 
         if (!JDBCUtilities.tableExists(connection, "LW_ROADS")) {
@@ -213,10 +207,7 @@ static def exec(Connection connection, Map input) {
             new Import_File().exec(connection,
                     ["pathFile" : "benchmark/input/montagne/la_montagne_batiment.geojson",
                      "inputSRID": "2154",
-                     "tableName": "BUILDINGS_RAW"])
-            sql.execute("CREATE TABLE BUILDINGS (THE_GEOM GEOMETRY(MULTIPOLYGON, 2154), HEIGHT DOUBLE)")
-            sql.execute("INSERT INTO BUILDINGS (THE_GEOM, HEIGHT) SELECT ST_Force2D(THE_GEOM), BAT_HAUT FROM BUILDINGS_RAW")
-            sql.execute("DROP TABLE BUILDINGS_RAW")
+                     "tableName": "BUILDINGS"])
         }
 
         if (!JDBCUtilities.tableExists(connection, "DEM")) {
@@ -230,10 +221,7 @@ static def exec(Connection connection, Map input) {
             new Import_File().exec(connection,
                     ["pathFile" : "benchmark/input/montagne/la_montagne_naturesol.geojson",
                      "inputSRID": "2154",
-                     "tableName": "GROUNDS_RAW"])
-            sql.execute("CREATE TABLE GROUNDS (THE_GEOM GEOMETRY(MULTIPOLYGON, 2154), G DOUBLE)")
-            sql.execute("INSERT INTO GROUNDS (THE_GEOM, G) SELECT ST_Force2D(THE_GEOM), NATSOL_CNO FROM GROUNDS_RAW")
-            sql.execute("DROP TABLE GROUNDS_RAW")
+                     "tableName": "GROUNDS"])
         }
 
         if (!JDBCUtilities.tableExists(connection, "LW_ROADS")) {

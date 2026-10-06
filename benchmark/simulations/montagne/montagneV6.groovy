@@ -172,7 +172,8 @@ static def exec(Connection connection, Map input) {
     def profileCsv = profileFiles ? profileFiles.max { it.lastModified() } : null
     def nbProfiles = 0
     if (profileCsv?.exists()) {
-        nbProfiles = bench.readProfileCount(profileCsv, null) * cpt
+        def cutProfiles = bench.readCutProfileCount(profileCsv, null)
+        nbProfiles = cutProfiles > 0 ? cutProfiles : bench.readProfileCount(profileCsv, null) * cpt
     }
     def timePerProfiles = nbProfiles > 0 ? elapsed / nbProfiles : 0
 

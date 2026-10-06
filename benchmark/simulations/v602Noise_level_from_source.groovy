@@ -561,15 +561,13 @@ def exec(Connection connection, Map input, ProgressVisitor progress) {
     ProfilerThread profilerThread = null
     Thread profilerRunner = null
     if(recordProfile) {
+        // A partir du build 6.0.2-20261006.121554-21 (NM 9f61f41a), le nombre de
+        // profils est expose via ResultsCache.cut_profile_count par le profiler
+        // interne (CSVProfilerOutputPath), qui ecrit la derniere ligne en fin de
+        // calcul. On l'utilise plutot qu'un ProfilerThread local.
         def profilePath = input['confProfilePath'] ? (input['confProfilePath'] as String) : "profile.csv"
-        profilerThread = new ProfilerThread(new File(profilePath))
-        profilerThread.addMetric(new JVMMemoryMetric())
-        profilerThread.addMetric(new ReceiverStatsMetric())
-        profilerThread.setWriteInterval(120)
-        profilerThread.setFlushInterval(120)
-        pointNoiseMap.setProfilerThread(profilerThread)
-        profilerRunner = new Thread(profilerThread)
-        profilerRunner.start()
+        pointNoiseMap.noiseMapDatabaseParameters.CSVProfilerOutputPath = new File(profilePath)
+        pointNoiseMap.noiseMapDatabaseParameters.CSVProfilerWriteInterval = 120
     }
 
     // Do not propagate for low emission or far away sources

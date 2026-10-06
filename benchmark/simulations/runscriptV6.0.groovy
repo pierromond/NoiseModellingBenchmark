@@ -261,7 +261,10 @@ static def exec(Connection connection, Map input) {
         if (candidates) profileCsv = candidates.max { it.lastModified() }
     }
     def nbRays = bench.readNbRays(profileCsv, null) * receiverCount
-    def nbProfiles = bench.readProfileCount(profileCsv, null) * receiverCount
+    // v6.0.2 build 21+ expose le total via ResultsCache.cut_profile_count ; les
+    // versions precedentes exposent la mediane par recepteur.
+    def cutProfiles = bench.readCutProfileCount(profileCsv, null)
+    def nbProfiles = cutProfiles > 0 ? cutProfiles : bench.readProfileCount(profileCsv, null) * receiverCount
     def timePerRays = nbRays > 0 ? elapsed / nbRays : 0
     def timePerProfiles = nbProfiles > 0 ? elapsed / nbProfiles : 0
 

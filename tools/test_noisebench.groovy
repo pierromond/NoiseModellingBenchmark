@@ -56,6 +56,11 @@ try {
     check("readProfiles/fallback",    bench.readProfileCount(new File(tmp, "missing.csv"), fallback), 7.0d)
     check("readProfiles/missing",     bench.readProfileCount(new File(tmp, "missing.csv"), null), 0.0d)
     check("readProfiles/rays-not-prof", bench.readProfileCount(csv, null), 0.0d)
+
+    def cutCsv = new File(tmp, "profile-cut.csv")
+    cutCsv.text = "time,jdbc_stack,average_cut_source_distance,cut_profile_count\n1,0,0,42\n"
+    check("readCutProfiles/median",   bench.readCutProfileCount(cutCsv, null), 42.0d)
+    check("readCutProfiles/missing",  bench.readCutProfileCount(csv, null), 0.0d)
 } finally {
     tmp.deleteDir()
 }

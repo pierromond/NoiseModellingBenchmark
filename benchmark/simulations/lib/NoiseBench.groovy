@@ -64,6 +64,11 @@ class NoiseBench {
         return readProfileMedian(primary, fallback, 'receiver_median_profiles_count')
     }
 
+    /** Total number of cut profiles (ResultsCache metric, v6.0.2 build 21+). */
+    static double readCutProfileCount(File primary, File fallback) {
+        return readProfileMedian(primary, fallback, 'cut_profile_count')
+    }
+
     /**
      * Compute the LAEQ mean, the number of silenced receivers and the histogram
      * from an exported RECEIVERS_LEVEL geojson.

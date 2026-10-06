@@ -263,6 +263,7 @@ static def exec(Connection connection, Map input) {
     def nbRays = bench.readNbRays(profileCsv, null) * receiverCount
     def nbProfiles = bench.readProfileCount(profileCsv, null) * receiverCount
     def timePerRays = nbRays > 0 ? elapsed / nbRays : 0
+    def timePerProfiles = nbProfiles > 0 ? elapsed / nbProfiles : 0
 
     new Create_Isosurface().exec(connection,
             ["resultTable": "RECEIVERS_LEVEL",
@@ -309,6 +310,7 @@ static def exec(Connection connection, Map input) {
             nbRays: nbRays,
             nbProfiles: nbProfiles,
             timePerRays: timePerRays,
+            timePerProfiles: timePerProfiles,
             nNan: stats.nNan,
             silenceThreshold: silenceThreshold,
             histogram: stats.histogram

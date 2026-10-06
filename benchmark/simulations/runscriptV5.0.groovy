@@ -205,6 +205,7 @@ static def exec(Connection connection, Map input) {
             nbRays = nbRays * cpt
             nbProfiles = nbProfiles * cpt
             def res = nbRays > 0 ? elapsed / nbRays : 0
+            def timePerProfiles = nbProfiles > 0 ? elapsed / nbProfiles : 0
             println("rays: $nbRays, profiles: $nbProfiles, timerey : $res")
             def timerays = res
 
@@ -229,6 +230,7 @@ static def exec(Connection connection, Map input) {
                     nbRays : nbRays,
                     nbProfiles: nbProfiles,
                     timePerRays: timerays,
+                    timePerProfiles: timePerProfiles,
                     java: System.getProperty("java.version"),
                     runner: "v4-custom",
                     nNan: stats.nNan,
@@ -387,6 +389,7 @@ static def exec(Connection connection, Map input) {
             if(nbRays !=0 ){
                 timerays = elapsed / nbRays
             }
+            def timePerProfiles = nbProfiles > 0 ? elapsed / nbProfiles : 0
 
             println("rays: $nbRays, profiles: $nbProfiles, timerey : $timerays")
 
@@ -411,6 +414,7 @@ static def exec(Connection connection, Map input) {
                     nbRays : nbRays,
                     nbProfiles: nbProfiles,
                     timePerRays: timerays,
+                    timePerProfiles: timePerProfiles,
                     java: System.getProperty("java.version"),
                     runner: "v5-custom",
                     nNan: stats.nNan,

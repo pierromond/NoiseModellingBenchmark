@@ -12,6 +12,7 @@
     "nbRays": {"type": "number"},
     "nbProfiles": {"type": "number"},
     "timePerRays": {"type": "number"},
+    "timePerProfiles": {"type": "number"},
     "nNan": {"type": "integer"},
     "silenceThreshold": {"type": "number"},
     "histogram": {"type": "object", "additionalProperties": {"type": "integer"}},

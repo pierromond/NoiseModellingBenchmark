@@ -174,6 +174,7 @@ static def exec(Connection connection, Map input) {
         if(nbRays !=0 ){
             timerays = elapsed / nbRays
         }
+        def timePerProfiles = nbProfiles > 0 ? elapsed / nbProfiles : 0
 
         long hours = TimeUnit.MILLISECONDS.toHours(elapsed)
         elapsed -= TimeUnit.HOURS.toMillis(hours)
@@ -200,6 +201,7 @@ static def exec(Connection connection, Map input) {
                     nNan: stats.nNan,
                     silenceThreshold: silenceThreshold,
                 timePerRays: timerays,
+                timePerProfiles: timePerProfiles,
                 histogram: stats.histogram
         ]
         def outFile = new File("$outputFolder/stats_${version}.json")
@@ -290,6 +292,7 @@ static def exec(Connection connection, Map input) {
         if(nbRays !=0 ){
             timerays = elapsed / nbRays
         }
+        def timePerProfiles = nbProfiles > 0 ? elapsed / nbProfiles : 0
 
         println("rays: $nbRays, profiles: $nbProfiles, timerey : $timerays")
 
@@ -318,6 +321,7 @@ static def exec(Connection connection, Map input) {
                     nNan: stats.nNan,
                     silenceThreshold: silenceThreshold,
                 timePerRays: timerays,
+                timePerProfiles: timePerProfiles,
                 histogram: stats.histogram
         ]
 

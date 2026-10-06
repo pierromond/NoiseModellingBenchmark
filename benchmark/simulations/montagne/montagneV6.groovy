@@ -174,6 +174,7 @@ static def exec(Connection connection, Map input) {
     if (profileCsv?.exists()) {
         nbProfiles = bench.readProfileCount(profileCsv, null) * cpt
     }
+    def timePerProfiles = nbProfiles > 0 ? elapsed / nbProfiles : 0
 
     long hours = TimeUnit.MILLISECONDS.toHours(elapsed)
     elapsed -= TimeUnit.HOURS.toMillis(hours)
@@ -198,6 +199,7 @@ static def exec(Connection connection, Map input) {
             runner: "montagne-v6",
             nbRays : nbRays,
             nbProfiles: nbProfiles,
+            timePerProfiles: timePerProfiles,
             nNan: stats.nNan,
             silenceThreshold: silenceThreshold,
             timePerRays: timeray,

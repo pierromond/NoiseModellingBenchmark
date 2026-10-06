@@ -19,8 +19,8 @@ function renderCards(data) {
             <span class="stat-value accent3">${hasProfiles ? row.nbProfiles : 'n/a'}</span>
           </div>
           <div class="stat-row">
-            <span class="stat-label">Compute time Per Rays</span>
-            <span class="stat-value accent2">${hasRays ? fmt(row.timePerRays) + ' ms' : 'n/a'}</span>
+            <span class="stat-label">Compute time Per ${hasRays ? 'Rays' : (hasProfiles ? 'Profiles' : 'Rays')}</span>
+            <span class="stat-value accent2">${hasRays ? fmt(row.timePerRays) + ' ms' : (hasProfiles ? fmt(row.timePerProfiles) + ' ms' : 'n/a')}</span>
           </div>`;
     const silencedRow = row.nNan ? `
           <div class="stat-row">

@@ -112,6 +112,28 @@
         "confMaxError": 0,
         "confFavorableOccurrencesDefault": "0.5, 0.5, 0.75, 1.0, 0.75, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.0, 0.25, 0.5, 0.5, 0.5"
       },
+      "campaigns": {
+        "c1": {
+          "label": "Campagne 1 (05/08/2026)",
+          "date": "05_08_2026",
+          "referenceReceiver": 10,
+          "exec": {
+            "confTemperature": 23.4,
+            "confHumidity": 55,
+            "confFavorableOccurrencesDefault": "0.5, 0.5, 0.25, 0, 0.25, 0.5, 0.5, 0.5, 0.5, 0.5, 0.75, 1, 0.75, 0.5, 0.5, 0.5"
+          }
+        },
+        "c2": {
+          "label": "Campagne 2 (07/10/2026)",
+          "date": "07_10_2026",
+          "referenceReceiver": 11,
+          "exec": {
+            "confTemperature": 18.8,
+            "confHumidity": 79,
+            "confFavorableOccurrencesDefault": "0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0, 0.25, 0.5, 0.5, 0.5, 0.5, 0.5, 0.75, 1, 0.75"
+          }
+        }
+      },
       "setHeight": [
         {
           "tableName": "LW_ROADS",

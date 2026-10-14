@@ -45,6 +45,13 @@ inputs = [
                 description: 'Version of NoiseModellingd.',
                 min        : 0, max: 1,
                 type       : String.class,
+        ],
+        campagne:[
+                title      : 'Measurement campaign id',
+                name       : 'Measurement campaign id',
+                description: 'Measurement campaign id (c1, c2...). Meteo parameters are taken from the campaign configuration.',
+                min        : 0, max: 1,
+                type       : String.class,
         ]]
 
 outputs = [result: [name: 'Result output string', title: 'Result output string', description: 'This type of result does not allow the blocks to be linked together.', type: String.class]]
@@ -78,6 +85,9 @@ static def exec(Connection connection, Map input) {
     def config = new JsonSlurper().parse(new File("benchmark/config/benchmark.json"))
     def simConfig = config.simulations.montagne
     def versionConfig = simConfig.versions[version]
+    String campagne = input.containsKey('campagne') && input["campagne"] ? (input["campagne"] as String) : "c1"
+    boolean legacyNames = campagne == "c1"
+    def campConf = (config.models.montagne.campaigns?.get(campagne)?.exec ?: [:]) as Map
     double silenceThreshold = config.constants.silenceThreshold as double
     def bins = config.constants.histogramBins as List
 
@@ -139,7 +149,12 @@ static def exec(Connection connection, Map input) {
             if (versionConfig == null) {
                 throw new IllegalArgumentException("Version non supportee par montagneV5.groovy : ${version}")
             }
-            def params = simConfig.paramSets[versionConfig.paramSet].exec
+            def params = new LinkedHashMap(simConfig.paramSets[versionConfig.paramSet].exec)
+            params.putAll(campConf)
+            if (campConf.containsKey("confFavorableOccurrencesDefault")) {
+                params["confFavorableOccurrencesDay"] = campConf["confFavorableOccurrencesDefault"]
+                params.remove("confFavorableOccurrencesDefault")
+            }
             def customScript = bench.loadScript(versionConfig.script)
             customScript.exec(connection, params)
             def fallback = versionConfig.profileFallback ? new File("benchmark/output/$version/profile.csv") : null
@@ -154,8 +169,13 @@ static def exec(Connection connection, Map input) {
 
 
         new Export_Table().exec(connection,
-                ["exportPath"   : "$outputFolder/RECEIVERS_LEVEL.geojson",
+                ["exportPath"   : "$outputFolder/RECEIVERS_LEVEL_${campagne}.geojson",
                  "tableToExport": "LDAY_GEOM"])
+        if (legacyNames) {
+            new Export_Table().exec(connection,
+                    ["exportPath"   : "$outputFolder/RECEIVERS_LEVEL.geojson",
+                     "tableToExport": "LDAY_GEOM"])
+        }
 
 
 
@@ -185,7 +205,7 @@ static def exec(Connection connection, Map input) {
 
         println("Compuation of $cpt receivers in $timeString ( ${time} milliseconds per receiver")
 
-        def stats = bench.computeLevelStats(new File("$outputFolder/RECEIVERS_LEVEL.geojson"), false, silenceThreshold, bins)
+        def stats = bench.computeLevelStats(new File("$outputFolder/RECEIVERS_LEVEL_${campagne}.geojson"), false, silenceThreshold, bins)
 
         DecimalFormat f = new DecimalFormat()
         f.setMaximumFractionDigits(2)
@@ -204,8 +224,13 @@ static def exec(Connection connection, Map input) {
                 timePerProfiles: timePerProfiles,
                 histogram: stats.histogram
         ]
-        def outFile = new File("$outputFolder/stats_${version}.json")
+        result.campagne = campagne
+        result.version = version
+        def outFile = new File("$outputFolder/stats_${version}_${campagne}.json")
         outFile.text = JsonOutput.prettyPrint(JsonOutput.toJson(result))
+        if (legacyNames) {
+            new File("$outputFolder/stats_${version}.json").text = JsonOutput.prettyPrint(JsonOutput.toJson(result))
+        }
 
     }
     else{
@@ -262,8 +287,10 @@ static def exec(Connection connection, Map input) {
             paramSet.setHeight.each { h ->
                 new Set_Height().exec(connection, ["tableName": h.tableName, "height": h.height])
             }
+            def execParams = new LinkedHashMap(paramSet.exec)
+            execParams.putAll(campConf)
             def customScript = bench.loadScript(versionConfig.script)
-            customScript.exec(connection, paramSet.exec)
+            customScript.exec(connection, execParams)
             def profileCsv = new File("$outputFolder/profile.csv")
             nbRays = bench.readNbRays(profileCsv, null)
             nbProfiles = bench.readProfileCount(profileCsv, null)
@@ -277,8 +304,13 @@ static def exec(Connection connection, Map input) {
         sql.execute("CREATE TABLE RECEIVERS_LEVEL_D AS SELECT * FROM RECEIVERS_LEVEL WHERE PERIOD='D'")
 
         new Export_Table().exec(connection,
-                ["exportPath"   : "$outputFolder/RECEIVERS_LEVEL.geojson",
+                ["exportPath"   : "$outputFolder/RECEIVERS_LEVEL_${campagne}.geojson",
                  "tableToExport": "RECEIVERS_LEVEL_D"])
+        if (legacyNames) {
+            new Export_Table().exec(connection,
+                    ["exportPath"   : "$outputFolder/RECEIVERS_LEVEL.geojson",
+                     "tableToExport": "RECEIVERS_LEVEL_D"])
+        }
 
 
 
@@ -305,7 +337,7 @@ static def exec(Connection connection, Map input) {
 
         println("Compuation of $cpt receivers in $timeString ( ${time} milliseconds per receiver")
 
-        def stats = bench.computeLevelStats(new File("$outputFolder/RECEIVERS_LEVEL.geojson"), true, silenceThreshold, bins)
+        def stats = bench.computeLevelStats(new File("$outputFolder/RECEIVERS_LEVEL_${campagne}.geojson"), true, silenceThreshold, bins)
 
         DecimalFormat f = new DecimalFormat()
         f.setMaximumFractionDigits(2)
@@ -325,8 +357,13 @@ static def exec(Connection connection, Map input) {
                 histogram: stats.histogram
         ]
 
-        def outFile = new File("$outputFolder/stats_${version}.json")
+        result.campagne = campagne
+        result.version = version
+        def outFile = new File("$outputFolder/stats_${version}_${campagne}.json")
         outFile.text = JsonOutput.prettyPrint(JsonOutput.toJson(result))
+        if (legacyNames) {
+            new File("$outputFolder/stats_${version}.json").text = JsonOutput.prettyPrint(JsonOutput.toJson(result))
+        }
 
 
     }

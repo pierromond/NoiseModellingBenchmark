@@ -151,6 +151,30 @@ def load_measure(measure_geojson: Path, measure_fallback: Path) -> dict:
     return measured
 
 
+def load_measure_campaigns(measure_geojson: Path, measure_fallback: Path) -> dict:
+    """Mesures groupées par campagne : {campagne: {IDRECEIVER: {laeq, coords}}}."""
+    path = measure_geojson if measure_geojson.exists() else measure_fallback
+    if not path.exists():
+        return {}
+
+    with open(path) as f:
+        data = json.load(f)
+
+    campaigns: dict = {}
+    for feature in data.get("features", []):
+        props = feature.get("properties", {})
+        laeq = props.get("LAEQ") or props.get("laeq")
+        key = props.get("IDRECEIVER")
+        if key is None or laeq is None:
+            continue
+        camp = props.get("campagne") or "c1"
+        campaigns.setdefault(camp, {})[key] = {
+            "laeq": float(laeq),
+            "coords": parse_coords(feature.get("geometry")),
+        }
+    return campaigns
+
+
 def reference_receiver(measured: dict, segments: list):
     """Récepteur mesuré le plus proche des sources LW_ROADS."""
     if not segments:
@@ -218,6 +242,61 @@ def compare_to_measure(version: str, computed: dict, measured: dict, ref_key, re
     }
 
 
+def compare_to_measure_global(version: str, computed: dict, measured: dict, offset: float,
+                              references: dict, campaigns: list,
+                              campaign_labels: dict | None = None) -> dict | None:
+    """Comparaison globale (campagnes regroupées) : un seul offset, une seule RMSE/scatter."""
+    common = sorted(
+        k for k in set(measured) & set(computed)
+        if computed[k]["laeq"] is not None
+    )
+    if not common:
+        return None
+
+    corrected = {k: computed[k]["laeq"] + offset for k in common}
+    errors = [corrected[k] - measured[k]["laeq"] for k in common]
+
+    n = len(errors)
+    mean = sum(errors) / n
+    std = math.sqrt(sum((e - mean) ** 2 for e in errors) / n)
+    rmse = math.sqrt(sum(e * e for e in errors) / n)
+    max_abs = max(abs(e) for e in errors)
+
+    scatter = [[round(measured[k]["laeq"], 2), round(corrected[k], 2)] for k in common]
+
+    per_camp = {c: 0 for c in campaigns}
+    receivers = []
+    for k in common:
+        coords = measured[k].get("coords") or computed[k].get("coords")
+        camp = measured[k].get("campagne")
+        if camp in per_camp:
+            per_camp[camp] += 1
+        if coords:
+            receivers.append([
+                k, coords[0], coords[1],
+                round(measured[k]["laeq"], 2),
+                round(corrected[k], 2),
+                round(corrected[k] - measured[k]["laeq"], 2),
+            ])
+
+    return {
+        "version": version,
+        "offset": round(offset, 4),
+        "n_measured": len(measured),
+        "n_compared": n,
+        "mean_error": round(mean, 4),
+        "std_error": round(std, 4),
+        "rmse": round(rmse, 4),
+        "max_abs_error": round(max_abs, 4),
+        "scatter": scatter,
+        "receivers": receivers,
+        "campaigns": campaigns,
+        "campaign_labels": campaign_labels or {},
+        "n_per_campaign": per_camp,
+        "references": references,
+    }
+
+
 # ─────────────────────────────────────────────
 # ENTRY POINTS
 # ─────────────────────────────────────────────
@@ -266,12 +345,50 @@ def run_montagne() -> None:
     (data_dir / "comparisons.json").write_text(
         json.dumps(comparisons, separators=(",", ":")))
 
-    measured = load_measure(measure_geojson, measure_fallback)
-    ref_key, ref_dist = reference_receiver(measured, load_sources_segments(sources_geojson))
+    campaigns_map = load_measure_campaigns(measure_geojson, measure_fallback)
+    segments = load_sources_segments(sources_geojson)
+    campaign_ids = sorted(campaigns_map.keys())
+
+    campaign_labels = {}
+    try:
+        cfg = json.loads((ROOT / "benchmark" / "config" / "benchmark.json").read_text())
+        for cid, conf in (cfg.get("models", {}).get("montagne", {}).get("campaigns", {}) or {}).items():
+            campaign_labels[cid] = conf.get("label", cid)
+    except Exception:
+        pass
 
     measure_results = []
     for version in versions:
-        result = compare_to_measure(version, all_data[version], measured, ref_key, ref_dist)
+        pooled_measured = {}
+        pooled_computed = {}
+        ref_offsets = []
+        references = {}
+        for camp in campaign_ids:
+            measured = campaigns_map.get(camp) or {}
+            if not measured:
+                continue
+            computed = load_receivers(output, version, camp)
+            ref_key, ref_dist = reference_receiver(measured, segments)
+            common = set(measured) & set(computed)
+            if ref_key is None or ref_key not in common or computed[ref_key]["laeq"] is None:
+                continue
+            off = measured[ref_key]["laeq"] - computed[ref_key]["laeq"]
+            ref_offsets.append(off)
+            references[camp] = {
+                "receiver": ref_key,
+                "distance": round(ref_dist, 2) if ref_dist is not None else None,
+                "offset": round(off, 4),
+            }
+            for k in common:
+                if computed[k]["laeq"] is None:
+                    continue
+                pooled_measured[k] = {**measured[k], "campagne": camp}
+                pooled_computed[k] = {**computed[k], "campagne": camp}
+        if not ref_offsets:
+            continue
+        global_offset = sum(ref_offsets) / len(ref_offsets)
+        result = compare_to_measure_global(version, pooled_computed, pooled_measured,
+                                           global_offset, references, campaign_ids, campaign_labels)
         if result:
             measure_results.append(result)
 
@@ -280,4 +397,4 @@ def run_montagne() -> None:
 
     print(f"comparisons.json : {len(comparisons)} paire(s)")
     print(f"measure_comparison.json : {len(measure_results)} version(s) "
-          f"(récepteur de référence : {ref_key}, {ref_dist} m)")
+          f"(campagnes regroupées : {', '.join(campaign_ids)})")

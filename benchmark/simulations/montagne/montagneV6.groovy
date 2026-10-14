@@ -47,6 +47,13 @@ inputs = [
                 description: 'Version of NoiseModellingd.',
                 min        : 0, max: 1,
                 type       : String.class,
+        ],
+        campagne:[
+                title      : 'Measurement campaign id',
+                name       : 'Measurement campaign id',
+                description: 'Measurement campaign id (c1, c2...). Meteo parameters are taken from the campaign configuration.',
+                min        : 0, max: 1,
+                type       : String.class,
         ]]
 
 outputs = [result: [name: 'Result output string', title: 'Result output string', description: 'This type of result does not allow the blocks to be linked together.', type: String.class]]
@@ -65,6 +72,8 @@ static def exec(Connection connection, Map input) {
     if(input.containsKey('NM_version')){
         version=input["NM_version"] as String
     }
+    String campagne = input.containsKey('campagne') && input["campagne"] ? (input["campagne"] as String) : "c1"
+    boolean legacyNames = campagne == "c1"
     def outputFolder = new File("benchmark/output/montagne/$version")
     if (!outputFolder.exists()) {
         outputFolder.mkdir()
@@ -133,8 +142,12 @@ static def exec(Connection connection, Map input) {
                     "v6.0.2-SNAPSHOT": "benchmark/simulations/v602Noise_level_from_source.groovy"
             ]
             def execParams = new LinkedHashMap(config.models.montagne.exec)
+            def campConf = config.models.montagne.campaigns?.get(campagne)?.exec
+            if (campConf != null) {
+                execParams.putAll(campConf as Map)
+            }
             execParams["confRecordProfile"] = true
-            execParams["confProfilePath"] = "$outputFolder/profile.csv"
+            execParams["confProfilePath"] = "$outputFolder/profile_${campagne}.csv"
             def scriptPath = customScripts[version]
             if (scriptPath != null) {
                 def customScript = new GroovyClassLoader().parseClass(new File(scriptPath)).newInstance()
@@ -150,8 +163,13 @@ static def exec(Connection connection, Map input) {
 
 
         new Export_Table().exec(connection,
-                ["exportPath"   : "$outputFolder/RECEIVERS_LEVEL.geojson",
+                ["exportPath"   : "$outputFolder/RECEIVERS_LEVEL_${campagne}.geojson",
                  "tableToExport": "RECEIVERS_LEVEL_D"])
+        if (legacyNames) {
+            new Export_Table().exec(connection,
+                    ["exportPath"   : "$outputFolder/RECEIVERS_LEVEL.geojson",
+                     "tableToExport": "RECEIVERS_LEVEL_D"])
+        }
 
     }
 
@@ -166,10 +184,13 @@ static def exec(Connection connection, Map input) {
         timeray = elapsed/nbRays
     }
 
-    def profileFiles = [new File("$outputFolder"), new File("."), new File("benchmark/output/montagne/$version")]
-            .findAll { it?.isDirectory() }
-            .collectMany { d -> d.listFiles().findAll { it.name.startsWith("profile") && it.name.endsWith(".csv") } }
-    def profileCsv = profileFiles ? profileFiles.max { it.lastModified() } : null
+    def profileCsv = new File("$outputFolder/profile_${campagne}.csv")
+    if (!profileCsv.exists()) {
+        def profileFiles = [new File("$outputFolder"), new File("."), new File("benchmark/output/montagne/$version")]
+                .findAll { it?.isDirectory() }
+                .collectMany { d -> d.listFiles().findAll { it.name.startsWith("profile") && it.name.endsWith(".csv") } }
+        profileCsv = profileFiles ? profileFiles.max { it.lastModified() } : null
+    }
     def nbProfiles = 0
     if (profileCsv?.exists()) {
         def cutProfiles = bench.readCutProfileCount(profileCsv, null)
@@ -186,7 +207,7 @@ static def exec(Connection connection, Map input) {
 
     println("Compuation of $cpt receivers in $timeString ( ${time} milliseconds per receiver")
 
-    def stats = bench.computeLevelStats(new File("$outputFolder/RECEIVERS_LEVEL.geojson"), true, silenceThreshold, bins)
+    def stats = bench.computeLevelStats(new File("$outputFolder/RECEIVERS_LEVEL_${campagne}.geojson"), true, silenceThreshold, bins)
 
     DecimalFormat f = new DecimalFormat()
     f.setMaximumFractionDigits(2)
@@ -207,8 +228,13 @@ static def exec(Connection connection, Map input) {
             histogram: stats.histogram
     ]
 
-    def outFile = new File("$outputFolder/stats_${version}.json")
+    result.campagne = campagne
+    result.version = version
+    def outFile = new File("$outputFolder/stats_${version}_${campagne}.json")
     outFile.text = JsonOutput.prettyPrint(JsonOutput.toJson(result))
+    if (legacyNames) {
+        new File("$outputFolder/stats_${version}.json").text = JsonOutput.prettyPrint(JsonOutput.toJson(result))
+    }
 
     println("fini***************************************************************************")
 

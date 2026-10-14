@@ -61,11 +61,49 @@ prepare_dataset() {
     fi
 }
 
+run_simulation_montagne() {
+    local version="$1"
+    local nm_dir="$INPUT_DIR/NoiseModelling_without_gui_${version}"
+    local out_dir="$OUTPUT_DIR/$version"
+    mkdir -p "$out_dir"
+
+    local wps_bin
+    if [[ "$version" == v6* ]]; then
+        wps_bin=$(find_wps_binary_v6 "$nm_dir") || return 1
+    else
+        wps_bin=$(find_wps_binary "$nm_dir") || return 1
+    fi
+
+    for campagne in c1 c2; do
+        local workspace="$out_dir/workspace_$campagne"
+        mkdir -p "$workspace"
+        local args
+        if [ "$version" = "v4.0.0" ] || [ "$version" = "v4.0.1" ]; then
+            args=( -w"$workspace" -s"$GROOVY_SCRIPT" )
+            if [ -n "$DB4" ]; then args+=( $DB4 ); fi
+            args+=( NM_version="$version" campagne="$campagne" )
+        elif [[ "$version" == v6* ]]; then
+            args=( -w "$workspace" -s "$GROOVY_SCRIPT_v6" -NM_version "$version" -campagne "$campagne" )
+        else
+            args=( -w "$workspace" -s "$GROOVY_SCRIPT" )
+            if [ -n "$DB5" ]; then args+=( $DB5 ); fi
+            args+=( -NM_version "$version" -campagne "$campagne" )
+        fi
+        "$wps_bin" "${args[@]}" > "$out_dir/simulation_${campagne}.log" 2>&1 || return 1
+    done
+    return 0
+}
+
 run_simulation() {
     local version="$1"
     local nm_dir="$INPUT_DIR/NoiseModelling_without_gui_${version}"
     local out_dir="$OUTPUT_DIR/$version"
     local stats_file="$out_dir/stats_${version}.json"
+
+    if [ "$DATASET" = "montagne" ]; then
+        run_simulation_montagne "$version"
+        return $?
+    fi
 
     mkdir -p "$out_dir"
 
@@ -229,6 +267,12 @@ copy_geojson_montagne() {
         if [ -f "$receivgeojson" ]; then
             cp "$receivgeojson" "$DATA_DIR/$version/RECEIVERS_LEVEL.geojson"
         fi
+        for camp in c1 c2; do
+            local campgeojson="$version_dir/RECEIVERS_LEVEL_${camp}.geojson"
+            if [ -f "$campgeojson" ]; then
+                cp "$campgeojson" "$DATA_DIR/$version/RECEIVERS_LEVEL_${camp}.geojson"
+            fi
+        done
     done
 
     # Couches cartographiques communes : identiques pour toutes les versions

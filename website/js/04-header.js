@@ -45,11 +45,12 @@ function renderMontagneHeaderMeta() {
   if (!el) return;
   const n = montagneData.length;
   const ref = montagneEntries()[0] || {};
+  const nCamp = ref.campaigns ? ref.campaigns.length : 0;
+  const nMeas = (ref.n_measured !== undefined && ref.n_measured !== null) ? ref.n_measured : '—';
   el.innerHTML = `
     La Montagne — comparison to measurements.<br>
     Input: <b>La Montagne, France</b> (EPSG:2154).<br>
-    <b>${n}</b> version${n > 1 ? 's' : ''} calibrated per version; reference receiver
-    <b>#${ref.reference_receiver ?? '—'}</b> (${fmt(ref.reference_distance, 1)} m from the source).<br>
+    <b>${n}</b> version${n > 1 ? 's' : ''}; measurements from <b>${nCamp} campaign${nCamp > 1 ? 's' : ''}</b> (${nMeas} points), compared globally (one calibrated offset).<br>
     Measured reference: <code>benchmark/input/montagne/measure/RECEIVERS_LEVEL.geojson</code>.
   `;
 }

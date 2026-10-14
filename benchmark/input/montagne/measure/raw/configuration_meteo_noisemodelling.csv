@@ -1,0 +1,3 @@
+campagne;mesures_dir;date;fenetre_locale_CEST;confTemperature_C;confHumidity_pct;vent_vitesse_kmh;vent_rafales_kmh;vent_direction_deg;vent_direction_compas;confFavorableOccurrences_vent;source_meteo
+05_08_2026;mesures/05_08_2026;2026-08-05;11:45:00-11:46:00;23.4;55;14;32;267;Ouest;vent d'ouest (267 deg) -> propagation favorable vers l'est (16 secteurs horaires, nord = dernier indice);releve terrain (vent/rafales) + Open-Meteo/ECMWF (temperature/humidite)
+07_10_2026;mesures/07_10_2026;2026-10-07;11:45:00-11:47:30;18.8;79;13;30;332;Nord-Ouest;vent de nord-ouest (332 deg) -> propagation favorable vers le sud-est (16 secteurs horaires, nord = dernier indice);releve terrain (humidite) + Open-Meteo/ECMWF (temperature/vent/rafales)

@@ -116,10 +116,14 @@ function updateMontagneNote() {
   const entries = montagneEntries();
   const ref = entries[0] || {};
   const offsets = entries.map(e => `${e.version}: <b>${fmt(e.offset)} dB</b>`).join(' &middot; ');
+  const labels = (ref.campaign_labels && Object.values(ref.campaign_labels).length)
+      ? Object.values(ref.campaign_labels).join(' &middot; ') : '—';
+  const nCamp = ref.campaigns ? ref.campaigns.length : 0;
+  const nMeas = (ref.n_measured !== undefined && ref.n_measured !== null) ? ref.n_measured : '—';
   note.innerHTML =
-    `Reference receiver <b>#${ref.reference_receiver}</b> (closest to the source, ${fmt(ref.reference_distance, 1)} m). ` +
-    `Offset = measured &minus; computed at that receiver: ${offsets}. ` +
-    `Errors are computed after applying this offset to every receiver (zero at the reference by construction).` +
+    `Measurements: <b>${nCamp} campaigns</b> (${labels}), ${nMeas} points. ` +
+    `Global offset = measured &minus; computed, calibrated on each campaign reference receiver: ${offsets} dB. ` +
+    `Errors (mean, RMSE, scatter) are computed globally, after applying this offset to every receiver.` +
     `<br>Download: <a href="data/montagne/measure_comparison.json" download>measure_comparison.json</a> &middot; ` +
     `<a href="data/montagne/comparisons.json" download>comparisons.json</a> &middot; ` +
     `<a href="data/montagne/results.json" download>results.json</a>`;
@@ -195,7 +199,7 @@ function renderMontagne(data) {
   const rows = data.map(row => `
     <tr>
       <td style="padding:.15rem .8rem .15rem 0">${row.version}</td>
-      <td style="padding:.15rem .8rem">#${row.reference_receiver}</td>
+      <td style="padding:.15rem .8rem">#${(row.references && Object.values(row.references).map(r => r.receiver).join('/')) || '—'}</td>
       <td style="padding:.15rem .8rem">${fmt(row.offset)}</td>
       <td style="padding:.15rem .8rem">${fmt(row.mean_error)}</td>
       <td style="padding:.15rem .8rem">${fmt(row.std_error)}</td>

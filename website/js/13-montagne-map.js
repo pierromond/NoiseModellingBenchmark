@@ -124,21 +124,23 @@ function updateMontagneReceivers(entry) {
   }
   const labels = (montagneData.find(d => d.campaign_labels) || {}).campaign_labels || {};
   const labelOf = c => labels[c] || c;
+  const size = 14;
   entry.receivers.forEach(([id, x, y, measured, corrected, error, camp]) => {
     const c = camp || 'c1';
     const [lng, lat] = proj4(LAMBERT93, 'WGS84', [x, y]);
-    const style = { color: '#222', weight: 1, fillColor: montagneErrorColor(error), fillOpacity: 1 };
-    const tip = `#${id} · ${labelOf(c)} — measured ${measured} dB · calibrated ${corrected} dB · Δ ${error >= 0 ? '+' : ''}${error} dB`;
-    if (c === 'c2') {
-      const d = 0.00006;
-      L.rectangle([[lat - d, lng - d], [lat + d, lng + d]], style)
-        .bindTooltip(tip, { direction: 'top' })
-        .addTo(montagneErrorLayer);
-    } else {
-      L.circleMarker([lat, lng], { ...style, radius: 8 })
-        .bindTooltip(tip, { direction: 'top' })
-        .addTo(montagneErrorLayer);
-    }
+    const fill = montagneErrorColor(error);
+    const shape = (c === 'c2')
+      ? `width:${size}px;height:${size}px;background:${fill};border:1px solid #222`
+      : `width:${size}px;height:${size}px;border-radius:50%;background:${fill};border:1px solid #222`;
+    const icon = L.divIcon({
+      className: 'montagne-rx-marker',
+      html: `<div style="${shape}"></div>`,
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
+    });
+    L.marker([lat, lng], { icon })
+      .bindTooltip(`#${id} · ${labelOf(c)} — measured ${measured} dB · calibrated ${corrected} dB · Δ ${error >= 0 ? '+' : ''}${error} dB`, { direction: 'top' })
+      .addTo(montagneErrorLayer);
   });
   if (shapes) {
     const camps = (entry.campaigns && entry.campaigns.length) ? entry.campaigns : ['c1', 'c2'];

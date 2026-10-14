@@ -591,6 +591,11 @@
       color: var(--text-muted);
     }
 
+    .montagne-rx-marker {
+      background: transparent;
+      border: none;
+    }
+
     .legend-swatch {
       width: 14px;
       height: 14px;

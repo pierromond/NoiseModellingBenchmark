@@ -133,8 +133,9 @@ function updateMontagneNote() {
   const nMeas = (ref.n_measured !== undefined && ref.n_measured !== null) ? ref.n_measured : '—';
   note.innerHTML =
     `Measurements: <b>${nCamp} campaigns</b> (${labels}), ${nMeas} points. ` +
-    `Global offset = measured &minus; computed, calibrated on each campaign reference receiver: ${offsets} dB. ` +
-    `Errors (mean, RMSE, scatter) are computed globally, after applying this offset to every receiver.` +
+    `Each campaign is calibrated on its own reference receiver (closest to the source: emission level unknown), so the error is zero there. ` +
+    `Global indicators (mean, RMSE, scatter) are computed on the pooled calibrated points. ` +
+    `Mean offset: ${offsets} dB.` +
     `<br>Download: <a href="data/montagne/measure_comparison.json" download>measure_comparison.json</a> &middot; ` +
     `<a href="data/montagne/comparisons.json" download>comparisons.json</a> &middot; ` +
     `<a href="data/montagne/results.json" download>results.json</a>`;
@@ -211,7 +212,7 @@ function renderMontagne(data) {
     <tr>
       <td style="padding:.15rem .8rem .15rem 0">${row.version}</td>
       <td style="padding:.15rem .8rem">#${(row.references && Object.values(row.references).map(r => r.receiver).join('/')) || '—'}</td>
-      <td style="padding:.15rem .8rem">${fmt(row.offset)}</td>
+      <td style="padding:.15rem .8rem">${row.offsets ? Object.entries(row.offsets).map(([c, v]) => `${c} ${fmt(v)}`).join(' / ') : fmt(row.offset)}</td>
       <td style="padding:.15rem .8rem">${fmt(row.mean_error)}</td>
       <td style="padding:.15rem .8rem">${fmt(row.std_error)}</td>
       <td style="padding:.15rem .8rem">${fmt(row.rmse)}</td>

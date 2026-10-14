@@ -242,10 +242,15 @@ def compare_to_measure(version: str, computed: dict, measured: dict, ref_key, re
     }
 
 
-def compare_to_measure_global(version: str, computed: dict, measured: dict, offset: float,
+def compare_to_measure_global(version: str, computed: dict, measured: dict, offsets_by_camp: dict,
                               references: dict, campaigns: list,
                               campaign_labels: dict | None = None) -> dict | None:
-    """Comparaison globale (campagnes regroupées) : un seul offset, une seule RMSE/scatter."""
+    """Comparaison globale (campagnes regroupées), calibrée par campagne.
+
+    Chaque campagne est recalée sur son propre récepteur de référence (le plus proche
+    de la source : niveau d'émission inconnu), donc l'écart y est nul ; les indicateurs
+    (mean/std/RMSE/scatter) sont ensuite calculés globalement sur les points corrigés.
+    """
     common = sorted(
         k for k in set(measured) & set(computed)
         if computed[k]["laeq"] is not None
@@ -253,7 +258,8 @@ def compare_to_measure_global(version: str, computed: dict, measured: dict, offs
     if not common:
         return None
 
-    corrected = {k: computed[k]["laeq"] + offset for k in common}
+    corrected = {k: computed[k]["laeq"] + offsets_by_camp.get(measured[k].get("campagne"), 0.0)
+                 for k in common}
     errors = [corrected[k] - measured[k]["laeq"] for k in common]
 
     n = len(errors)
@@ -281,9 +287,11 @@ def compare_to_measure_global(version: str, computed: dict, measured: dict, offs
                 camp,
             ])
 
+    offset_mean = (sum(offsets_by_camp.values()) / len(offsets_by_camp)) if offsets_by_camp else 0.0
     return {
         "version": version,
-        "offset": round(offset, 4),
+        "offset": round(offset_mean, 4),
+        "offsets": {c: round(v, 4) for c, v in offsets_by_camp.items()},
         "n_measured": len(measured),
         "n_compared": n,
         "mean_error": round(mean, 4),
@@ -386,11 +394,11 @@ def run_montagne() -> None:
                     continue
                 pooled_measured[k] = {**measured[k], "campagne": camp}
                 pooled_computed[k] = {**computed[k], "campagne": camp}
-        if not ref_offsets:
+        if not references:
             continue
-        global_offset = sum(ref_offsets) / len(ref_offsets)
+        offsets_by_camp = {camp: references[camp]["offset"] for camp in references}
         result = compare_to_measure_global(version, pooled_computed, pooled_measured,
-                                           global_offset, references, campaign_ids, campaign_labels)
+                                           offsets_by_camp, references, campaign_ids, campaign_labels)
         if result:
             measure_results.append(result)
 

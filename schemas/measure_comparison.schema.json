@@ -22,7 +22,8 @@
       "campaigns": {"type": "array", "items": {"type": "string"}},
       "campaign_labels": {"type": "object"},
       "n_per_campaign": {"type": "object"},
-      "references": {"type": "object"}
+      "references": {"type": "object"},
+      "offsets": {"type": "object"}
     },
     "additionalProperties": true
   }

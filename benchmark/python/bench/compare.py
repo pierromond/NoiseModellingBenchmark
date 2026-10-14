@@ -262,7 +262,8 @@ def compare_to_measure_global(version: str, computed: dict, measured: dict, offs
     rmse = math.sqrt(sum(e * e for e in errors) / n)
     max_abs = max(abs(e) for e in errors)
 
-    scatter = [[round(measured[k]["laeq"], 2), round(corrected[k], 2)] for k in common]
+    scatter = [[round(measured[k]["laeq"], 2), round(corrected[k], 2), measured[k].get("campagne")]
+               for k in common]
 
     per_camp = {c: 0 for c in campaigns}
     receivers = []
@@ -277,6 +278,7 @@ def compare_to_measure_global(version: str, computed: dict, measured: dict, offs
                 round(measured[k]["laeq"], 2),
                 round(corrected[k], 2),
                 round(corrected[k] - measured[k]["laeq"], 2),
+                camp,
             ])
 
     return {

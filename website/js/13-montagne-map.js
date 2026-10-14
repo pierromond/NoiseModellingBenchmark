@@ -115,21 +115,35 @@ function montagneMapLayerIds() {
 
 function updateMontagneReceivers(entry) {
   const legend = document.getElementById('montagne-map-legend');
+  const shapes = document.getElementById('montagne-map-shapes');
   if (!montagneErrorLayer) return;
   montagneErrorLayer.clearLayers();
   if (!entry || !entry.receivers || !entry.receivers.length) {
     if (legend) legend.style.display = 'none';
     return;
   }
-  entry.receivers.forEach(([id, x, y, measured, corrected, error]) => {
+  const labels = (montagneData.find(d => d.campaign_labels) || {}).campaign_labels || {};
+  const labelOf = c => labels[c] || c;
+  entry.receivers.forEach(([id, x, y, measured, corrected, error, camp]) => {
+    const c = camp || 'c1';
     const [lng, lat] = proj4(LAMBERT93, 'WGS84', [x, y]);
-    L.circleMarker([lat, lng], {
-      radius: 8, color: '#222', weight: 1,
-      fillColor: montagneErrorColor(error), fillOpacity: 1,
-    })
-      .bindTooltip(`#${id} — measured ${measured} dB · calibrated ${corrected} dB · Δ ${error >= 0 ? '+' : ''}${error} dB`, { direction: 'top' })
-      .addTo(montagneErrorLayer);
+    const style = { color: '#222', weight: 1, fillColor: montagneErrorColor(error), fillOpacity: 1 };
+    const tip = `#${id} · ${labelOf(c)} — measured ${measured} dB · calibrated ${corrected} dB · Δ ${error >= 0 ? '+' : ''}${error} dB`;
+    if (c === 'c2') {
+      const d = 0.00006;
+      L.rectangle([[lat - d, lng - d], [lat + d, lng + d]], style)
+        .bindTooltip(tip, { direction: 'top' })
+        .addTo(montagneErrorLayer);
+    } else {
+      L.circleMarker([lat, lng], { ...style, radius: 8 })
+        .bindTooltip(tip, { direction: 'top' })
+        .addTo(montagneErrorLayer);
+    }
   });
+  if (shapes) {
+    const camps = (entry.campaigns && entry.campaigns.length) ? entry.campaigns : ['c1', 'c2'];
+    shapes.innerHTML = camps.map(c => `${c === 'c2' ? '■' : '●'} ${labelOf(c)}`).join(' &middot; ');
+  }
   if (legend) legend.style.display = '';
 }
 

@@ -583,6 +583,14 @@
       color: var(--text-muted);
     }
 
+    .legend-shapes {
+      flex-basis: 100%;
+      margin-top: .3rem;
+      font-family: var(--font-mono);
+      font-size: .62rem;
+      color: var(--text-muted);
+    }
+
     .legend-swatch {
       width: 14px;
       height: 14px;

@@ -34,18 +34,29 @@ function drawMontagneScatter(entries) {
 
   if (montagneChart) montagneChart.destroy();
 
-  const datasets = entries.map((entry, i) => {
+  const labelOf = camp =>
+    (entries[0].campaign_labels && entries[0].campaign_labels[camp]) || camp;
+  const datasets = [];
+  entries.forEach((entry, i) => {
     const color = modelColor(i);
-    return {
-      type: 'scatter',
-      label: `${entry.version} (n=${entry.n_compared})`,
-      data: entry.scatter.map(([m, c]) => ({ x: m, y: c })),
-      backgroundColor: color,
-      borderColor: color,
-      pointRadius: 4,
-      pointHoverRadius: 7,
-      order: 2,
-    };
+    const byCamp = {};
+    (entry.scatter || []).forEach(([m, c, camp]) => {
+      const key = camp || 'c1';
+      (byCamp[key] = byCamp[key] || []).push({ x: m, y: c });
+    });
+    Object.keys(byCamp).sort().forEach(camp => {
+      datasets.push({
+        type: 'scatter',
+        label: `${entry.version} · ${labelOf(camp)} (n=${byCamp[camp].length})`,
+        data: byCamp[camp],
+        backgroundColor: color,
+        borderColor: color,
+        pointRadius: 4,
+        pointHoverRadius: 7,
+        pointStyle: camp === 'c2' ? 'rect' : 'circle',
+        order: 2,
+      });
+    });
   });
   datasets.push({
     type: 'line',

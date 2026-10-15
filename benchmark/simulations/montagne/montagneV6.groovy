@@ -171,6 +171,50 @@ static def exec(Connection connection, Map input) {
                      "tableToExport": "RECEIVERS_LEVEL_D"])
         }
 
+        try {
+            def notableTypes = ['Reflection', 'DIFH', 'DIFH_RCRIT', 'VEdgeDiffraction', 'Diffraction'] as Set
+            def raysFeatures = []
+            def pathSlurper = new JsonSlurper()
+            sql.eachRow("SELECT IDRECEIVER, IDSOURCE, LEQ, METEO, PERIOD, PATH FROM RAYS") { row ->
+                def path = pathSlurper.parseText(row.PATH as String)
+                def cutPoints = path.cutProfile?.cutPoints ?: []
+                def coords = cutPoints.collect { c -> [c.coordinate.x, c.coordinate.y, c.coordinate.z] }
+                if (!coords.isEmpty()) {
+                    def nodes = cutPoints.findAll { c -> notableTypes.contains(c.type) }
+                            .collect { c -> [c.type, c.coordinate.x, c.coordinate.y, c.coordinate.z] }
+                    def nRefl = cutPoints.count { it.type == 'Reflection' }
+                    def nDiff = cutPoints.count { notableTypes.contains(it.type) && it.type != 'Reflection' }
+                    raysFeatures << [
+                            type: 'Feature',
+                            properties: [
+                                    receiver    : row.IDRECEIVER,
+                                    source      : row.IDSOURCE,
+                                    campagne    : campagne,
+                                    leq         : row.LEQ,
+                                    meteo       : row.METEO,
+                                    period      : row.PERIOD,
+                                    aDiv        : path.aDiv ? path.aDiv[0] : null,
+                                    aAtm        : path.aAtm ? path.aAtm[0] : null,
+                                    aDif        : path.aDif ? path.aDif[0] : null,
+                                    aRef        : path.aRef ? path.aRef[0] : null,
+                                    aGlobal     : path.aGlobal ? path.aGlobal[0] : null,
+                                    ground      : path.groundAttenuation,
+                                    nReflections: nRefl,
+                                    nDiffractions: nDiff,
+                                    nodes       : nodes
+                            ],
+                            geometry: [type: 'LineString', coordinates: coords]
+                    ]
+                }
+            }
+            def raysCollection = [type: 'FeatureCollection',
+                                  crs : [type: 'name', properties: [name: 'urn:ogc:def:crs:EPSG::2154']],
+                                  features: raysFeatures]
+            new File("$outputFolder/rays_${campagne}.geojson").text = JsonOutput.toJson(raysCollection)
+        } catch (Exception e) {
+            println("Ray export skipped: " + e.message)
+        }
+
     }
 
     threadDump(true, true)

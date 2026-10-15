@@ -88,7 +88,8 @@ function initMap() {
   map = L.map('map', { zoomControl: true }).setView([47.086, -1.27], 13);
   L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
     attribution: '&copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
-    maxZoom: 16
+    maxNativeZoom: 16,
+    maxZoom: 19
   }).addTo(map);
 }
 

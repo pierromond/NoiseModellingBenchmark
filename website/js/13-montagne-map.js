@@ -32,7 +32,8 @@ async function initMontagneMap() {
   montagneMap = L.map(el, { zoomControl: true });
   L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
     attribution: '&copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
-    maxZoom: 16,
+    maxNativeZoom: 16,
+    maxZoom: 19,
   }).addTo(montagneMap);
 
   const bounds = L.latLngBounds([]);
@@ -81,6 +82,7 @@ function renderMontagneMapModelSelect() {
     montagneMapModel = el.value;
     updateMontagneReceivers(montagneMapEntry());
     syncState({ dataset: 'montagne', m_map: montagneMapModel });
+    if (typeof renderMontagneExplain === 'function') renderMontagneExplain();
   };
 }
 
@@ -154,6 +156,7 @@ function refreshMontagneMap() {
   montagneMap.invalidateSize();
   renderMontagneMapModelSelect();
   updateMontagneReceivers(montagneMapEntry());
+  if (typeof renderMontagneExplain === 'function') renderMontagneExplain();
 }
 
 // Restore the La Montagne view (selected models + map layers) from the URL state.

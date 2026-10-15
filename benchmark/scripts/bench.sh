@@ -272,6 +272,10 @@ copy_geojson_montagne() {
             if [ -f "$campgeojson" ]; then
                 cp "$campgeojson" "$DATA_DIR/$version/RECEIVERS_LEVEL_${camp}.geojson"
             fi
+            local raysgeojson="$version_dir/rays_${camp}.geojson"
+            if [ -f "$raysgeojson" ]; then
+                cp "$raysgeojson" "$DATA_DIR/$version/rays_${camp}.geojson"
+            fi
         done
     done
 
@@ -338,6 +342,7 @@ run_aggregate_only() {
         python3 benchmark/python/compare_versions.py
         python3 website/build.py
     else
+        python3 benchmark/python/build_dem_grid.py
         python3 benchmark/python/compare_versions_montagne.py
     fi
 }

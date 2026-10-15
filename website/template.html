@@ -257,6 +257,32 @@
       </div>
     </section>
 
+    <section id="montagne-explain" style="display:none">
+      <div class="section-title" role="heading" aria-level="2">La Montagne — measurement / simulation gap explainability</div>
+      <div class="explain-intro" id="montagne-explain-intro"></div>
+      <div class="explain-controls">
+        <label class="sidebar-label" for="montagne-explain-receiver">Receiver</label>
+        <select id="montagne-explain-receiver" class="sidebar-select" aria-label="Receiver"></select>
+        <span id="montagne-explain-model" class="explain-model"></span>
+        <div class="explain-modes" id="montagne-explain-modes">
+          <button class="map-btn active" data-mode="interaction">Interaction</button>
+          <button class="map-btn" data-mode="attenuation">Attenuation</button>
+        </div>
+        <div class="explain-views" id="montagne-explain-views">
+          <button class="map-btn active" data-view="2d">2D</button>
+          <button class="map-btn" data-view="3d">3D</button>
+        </div>
+        <button class="map-btn" id="montagne-explain-kml">Download KML</button>
+      </div>
+      <div class="explain-legend" id="montagne-explain-legend"></div>
+      <div class="explain-body">
+        <div id="montagne-explain-map" class="explain-2d"></div>
+        <div id="montagne-explain-3d" class="explain-3d" style="display:none"></div>
+      </div>
+      <div id="montagne-explain-summary" class="explain-summary"></div>
+      <div id="montagne-explain-table" class="explain-table"></div>
+    </section>
+
   </div><!-- /panel-montagne -->
 
   <div class="dataset-panel" id="panel-start">
@@ -280,6 +306,7 @@
 <!-- Chart.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/3.0.1/chartjs-plugin-annotation.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <!-- app.js split into ordered modules (see website/js/); defer preserves order -->
 <script src="js/00-constants.js" defer></script>
@@ -297,6 +324,7 @@
 <script src="js/11-diffmap.js" defer></script>
 <script src="js/12-montagne.js" defer></script>
 <script src="js/13-montagne-map.js" defer></script>
+<script src="js/17-montagne-explain.js" defer></script>
 <script src="js/14-start.js" defer></script>
 <script src="js/15-sidebar.js" defer></script>
 <script src="js/16-boot.js" defer></script>

@@ -129,28 +129,6 @@ def load_sources_segments(sources_geojson: Path) -> list:
     return segments
 
 
-def load_measure(measure_geojson: Path, measure_fallback: Path) -> dict:
-    path = measure_geojson if measure_geojson.exists() else measure_fallback
-    if not path.exists():
-        return {}
-
-    with open(path) as f:
-        data = json.load(f)
-
-    measured = {}
-    for feature in data.get("features", []):
-        props = feature.get("properties", {})
-        laeq = props.get("LAEQ") or props.get("laeq")
-        key = props.get("IDRECEIVER")
-        if key is None or laeq is None:
-            continue
-        measured[key] = {
-            "laeq": float(laeq),
-            "coords": parse_coords(feature.get("geometry")),
-        }
-    return measured
-
-
 def load_measure_campaigns(measure_geojson: Path, measure_fallback: Path) -> dict:
     """Mesures groupées par campagne : {campagne: {IDRECEIVER: {laeq, coords}}}."""
     path = measure_geojson if measure_geojson.exists() else measure_fallback

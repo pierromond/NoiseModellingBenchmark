@@ -4,6 +4,31 @@
 let montagneChart = null;
 let montagneData = [];
 let pendingMontagne = null;
+// Display mode shared by the scatter plot and the map: absolute levels, or
+// levels relative to each campaign reference receiver (#10 for c1, #11 for c2).
+let montagneRelative = false;
+
+function montagneRefLevel(entry, camp) {
+  const refs = (entry && entry.references) || {};
+  const ref = refs[camp || 'c1'];
+  return (ref && ref.measured != null) ? Number(ref.measured) : 0;
+}
+
+function montagneLatestVersion() {
+  if (!montagneData.length) return null;
+  const versions = montagneData.map(d => d.version)
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  return versions[versions.length - 1] || null;
+}
+
+function setMontagneRelative(value) {
+  montagneRelative = !!value;
+  const btn = document.getElementById('montagne-level-mode');
+  if (btn) {
+    btn.classList.toggle('active', montagneRelative);
+    btn.setAttribute('aria-pressed', String(montagneRelative));
+  }
+}
 
 // Draws the upper (homogeneous -> favourable) error bar for every scatter point.
 const montagneErrorBarsPlugin = {
@@ -56,14 +81,6 @@ function drawMontagneScatter(entries) {
   nodata.style.display = 'none';
   canvas.style.display = 'block';
 
-  const allVals = entries.flatMap(e => {
-    const points = (e.scatter || []).flatMap(([m, c]) => [m, c]);
-    const favs = (e.bars || []).map(b => b[2]).filter(v => v != null);
-    return points.concat(favs);
-  });
-  const minV = Math.floor(Math.min(...allVals) / 5) * 5;
-  const maxV = Math.ceil(Math.max(...allVals) / 5) * 5;
-  const diagLine = [{ x: minV, y: minV }, { x: maxV, y: maxV }];
   const font = { family: C('--chart-font', 'Space Mono, monospace'), size: 12 };
 
   if (montagneChart) montagneChart.destroy();
@@ -78,9 +95,10 @@ function drawMontagneScatter(entries) {
     (entry.scatter || []).forEach((pt, idx) => {
       const [m, c, camp] = pt;
       const key = camp || 'c1';
+      const shift = montagneRelative ? montagneRefLevel(entry, key) : 0;
       const bar = bars[idx];
-      const yFav = (bar && bar[2] != null) ? bar[2] : null;
-      (byCamp[key] = byCamp[key] || []).push({ x: m, y: c, yFav });
+      const yFav = (bar && bar[2] != null) ? bar[2] - shift : null;
+      (byCamp[key] = byCamp[key] || []).push({ x: m - shift, y: c - shift, yFav });
     });
     Object.keys(byCamp).sort().forEach(camp => {
       datasets.push({
@@ -97,6 +115,12 @@ function drawMontagneScatter(entries) {
       });
     });
   });
+
+  const allVals = datasets.flatMap(ds =>
+    ds.data.flatMap(p => (p.yFav != null ? [p.x, p.y, p.yFav] : [p.x, p.y])));
+  const minV = Math.floor(Math.min(...allVals) / 5) * 5;
+  const maxV = Math.ceil(Math.max(...allVals) / 5) * 5;
+  const diagLine = [{ x: minV, y: minV }, { x: maxV, y: maxV }];
   datasets.push({
     type: 'line',
     label: 'y = x',
@@ -130,10 +154,11 @@ function drawMontagneScatter(entries) {
             label: item => {
               if (item.dataset.type !== 'scatter') return null;
               const { x, y } = item.parsed;
-              let text = ` ${item.dataset.label}: measured ${x} dB -> ${y} dB (delta=${(y - x).toFixed(2)} dB)`;
+              const rel = montagneRelative ? ' (rel.)' : '';
+              let text = ` ${item.dataset.label}: measured${rel} ${x} dB -> ${y} dB (delta=${(y - x).toFixed(2)} dB)`;
               const raw = item.raw || {};
               if (raw.yFav != null && raw.yFav !== y) {
-                text += ` · favorable ${Number(raw.yFav).toFixed(2)} dB (${raw.yFav - y >= 0 ? '+' : ''}${(raw.yFav - y).toFixed(2)})`;
+                text += ` · favorable${rel} ${Number(raw.yFav).toFixed(2)} dB (${raw.yFav - y >= 0 ? '+' : ''}${(raw.yFav - y).toFixed(2)})`;
               }
               return text;
             }
@@ -144,11 +169,13 @@ function drawMontagneScatter(entries) {
         x: { type: 'linear', min: minV, max: maxV,
           ticks: { color: CHART.text, font, callback: v => v + ' dB' },
           grid: { color: CHART.grid },
-          title: { display: true, text: 'Measured LAeq,D (dB)', color: CHART.text, font } },
+          title: { display: true, text: montagneRelative ? 'Measured LAeq,D relative to reference (dB)' : 'Measured LAeq,D (dB)', color: CHART.text, font } },
         y: { type: 'linear', min: minV, max: maxV,
           ticks: { color: CHART.text, font, callback: v => v + ' dB' },
           grid: { color: CHART.grid },
-          title: { display: true, text: multi ? 'Calibrated LAeq,D (dB)' : `${entries[0].version} calibrated LAeq,D (dB)`,
+          title: { display: true, text: montagneRelative
+              ? 'Calibrated LAeq,D relative to reference (dB)'
+              : (multi ? 'Calibrated LAeq,D (dB)' : `${entries[0].version} calibrated LAeq,D (dB)`),
             color: CHART.text, font } }
       }
     }
@@ -181,6 +208,7 @@ function updateMontagneNote() {
     `Each campaign is calibrated on its own reference receiver (closest to the source: emission level unknown), so the error is zero there. ` +
     `Global indicators (mean, RMSE, scatter) are computed on the pooled calibrated points. ` +
     `Scatter points are the <b>homogeneous</b> scenario; the upper error bar reaches the <b>favourable</b>-wind scenario. ` +
+    `Display: <b>${montagneRelative ? 'relative to the reference receiver (#10/#11)' : 'absolute levels'}</b> (toggle above). ` +
     `Mean offset: ${offsets} dB.` +
     `<br>Download: <a href="data/montagne/measure_comparison.json" download>measure_comparison.json</a> &middot; ` +
     `<a href="data/montagne/comparisons.json" download>comparisons.json</a> &middot; ` +
@@ -212,6 +240,46 @@ function renderMontagneVersions(results) {
     </table>`;
 }
 
+function montagneOffsetCell(row) {
+  if (montagneRelative) {
+    const camps = Object.keys(row.offsets || {});
+    return (camps.length ? camps.map(c => `${c} 0.00`) : ['0.00']).join(' / ');
+  }
+  return row.offsets
+    ? Object.entries(row.offsets).map(([c, v]) => `${c} ${fmt(v)}`).join(' / ')
+    : fmt(row.offset);
+}
+
+function renderMontagneTable(data) {
+  const el = document.getElementById('montagne-table');
+  if (!el) return;
+  const rows = data.map(row => `
+    <tr>
+      <td style="padding:.15rem .8rem .15rem 0">${row.version}</td>
+      <td style="padding:.15rem .8rem">#${(row.references && Object.values(row.references).map(r => r.receiver).join('/')) || '—'}</td>
+      <td style="padding:.15rem .8rem">${montagneOffsetCell(row)}</td>
+      <td style="padding:.15rem .8rem">${fmt(row.mean_error)}</td>
+      <td style="padding:.15rem .8rem">${fmt(row.std_error)}</td>
+      <td style="padding:.15rem .8rem">${fmt(row.rmse)}</td>
+      <td style="padding:.15rem .8rem">${fmt(row.max_abs_error)}</td>
+      <td style="padding:.15rem 0">${row.n_compared}/${row.n_measured}</td>
+    </tr>`).join('');
+  el.innerHTML = `
+    <table style="border-collapse:collapse;margin-top:.5rem">
+      <thead>
+        <tr style="color:var(--accent)">
+          <th align="left">Version</th><th align="left">Ref.</th><th align="left">Offset (dB)</th>
+          <th align="left">Mean error</th><th align="left">Std</th><th align="left">RMSE</th>
+          <th align="left">Max |error|</th><th align="left">Receivers</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div style="margin-top:.4rem">${montagneRelative
+      ? 'Relative mode: the reference receiver (#10/#11) is the origin, so the calibration offset is 0. Error statistics are differences, so they are identical in both modes.'
+      : 'Absolute mode: the offset is the model bias at the reference receiver.'}</div>`;
+}
+
 function renderMontagne(data) {
   const panel = document.getElementById('panel-montagne');
   const tab   = document.querySelector('.dataset-tab[data-dataset="montagne"]');
@@ -227,14 +295,15 @@ function renderMontagne(data) {
   montagneSelected = [data[0].version];
 
   const ctrl = document.getElementById('montagne-controls');
-  const tableEl = document.getElementById('montagne-table');
 
   ctrl.innerHTML = data.map(row => {
     const on = montagneSelected.includes(row.version);
     return `<button class="map-btn${on ? ' active' : ''}" data-version="${row.version}" aria-pressed="${on}">${row.version}</button>`;
-  }).join('') + `<span class="start-hint" style="margin-left:.4rem">select one or more models</span>`;
+  }).join('') +
+    `<span class="start-hint" style="margin-left:.4rem">select one or more models</span>` +
+    `<button class="map-btn${montagneRelative ? ' active' : ''}" id="montagne-level-mode" aria-pressed="${montagneRelative}" style="margin-left:1rem">Relative to reference</button>`;
 
-  ctrl.querySelectorAll('.map-btn').forEach(btn => {
+  ctrl.querySelectorAll('.map-btn[data-version]').forEach(btn => {
     btn.addEventListener('click', () => {
       const v = btn.dataset.version;
       if (montagneSelected.includes(v)) {
@@ -254,29 +323,20 @@ function renderMontagne(data) {
     });
   });
 
-  const rows = data.map(row => `
-    <tr>
-      <td style="padding:.15rem .8rem .15rem 0">${row.version}</td>
-      <td style="padding:.15rem .8rem">#${(row.references && Object.values(row.references).map(r => r.receiver).join('/')) || '—'}</td>
-      <td style="padding:.15rem .8rem">${row.offsets ? Object.entries(row.offsets).map(([c, v]) => `${c} ${fmt(v)}`).join(' / ') : fmt(row.offset)}</td>
-      <td style="padding:.15rem .8rem">${fmt(row.mean_error)}</td>
-      <td style="padding:.15rem .8rem">${fmt(row.std_error)}</td>
-      <td style="padding:.15rem .8rem">${fmt(row.rmse)}</td>
-      <td style="padding:.15rem .8rem">${fmt(row.max_abs_error)}</td>
-      <td style="padding:.15rem 0">${row.n_compared}/${row.n_measured}</td>
-    </tr>`).join('');
+  const modeBtn = document.getElementById('montagne-level-mode');
+  if (modeBtn) {
+    modeBtn.addEventListener('click', () => {
+      setMontagneRelative(!montagneRelative);
+      drawMontagneScatter(montagneEntries());
+      updateMontagneNote();
+      renderMontagneTable(montagneData);
+      if (montagneMap) updateMontagneReceivers(montagneMapEntry());
+      if (typeof renderMontagneExplain === 'function') renderMontagneExplain();
+      syncState({ dataset: 'montagne', m_rel: montagneRelative ? '1' : '' });
+    });
+  }
 
-  tableEl.innerHTML = `
-    <table style="border-collapse:collapse;margin-top:.5rem">
-      <thead>
-        <tr style="color:var(--accent)">
-          <th align="left">Version</th><th align="left">Ref.</th><th align="left">Offset (dB)</th>
-          <th align="left">Mean error</th><th align="left">Std</th><th align="left">RMSE</th>
-          <th align="left">Max |error|</th><th align="left">Receivers</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>`;
+  renderMontagneTable(data);
 
   updateMontagneNote();
   // Le canvas et la carte n'ont une taille que lorsque l'onglet est visible.

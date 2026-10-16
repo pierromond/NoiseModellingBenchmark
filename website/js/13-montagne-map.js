@@ -131,6 +131,8 @@ function updateMontagneReceivers(entry) {
     const c = camp || 'c1';
     const [lng, lat] = proj4(LAMBERT93, 'WGS84', [x, y]);
     const fill = montagneErrorColor(error);
+    const shift = montagneRelative ? montagneRefLevel(entry, c) : 0;
+    const relTag = montagneRelative ? ' (rel.)' : '';
     const shape = (c === 'c2')
       ? `width:${size}px;height:${size}px;background:${fill};border:1px solid #222`
       : `width:${size}px;height:${size}px;border-radius:50%;background:${fill};border:1px solid #222`;
@@ -141,7 +143,7 @@ function updateMontagneReceivers(entry) {
       iconAnchor: [size / 2, size / 2],
     });
     L.marker([lat, lng], { icon })
-      .bindTooltip(`#${id} · ${labelOf(c)} — measured ${measured} dB · calibrated ${corrected} dB · Δ ${error >= 0 ? '+' : ''}${error} dB`, { direction: 'top' })
+      .bindTooltip(`#${id} · ${labelOf(c)} — measured${relTag} ${(measured - shift).toFixed(1)} dB · calibrated${relTag} ${(corrected - shift).toFixed(1)} dB · Δ ${error >= 0 ? '+' : ''}${error} dB`, { direction: 'top' })
       .addTo(montagneErrorLayer);
   });
   if (shapes) {
@@ -165,6 +167,7 @@ function applyMontagneState(st) {
   const models = (st.models || []).filter(v => montagneData.some(d => d.version === v));
   if (models.length) montagneSelected = models;
   if (st.mapModel && montagneData.some(d => d.version === st.mapModel)) montagneMapModel = st.mapModel;
+  if (typeof st.relative === 'boolean') setMontagneRelative(st.relative);
 
   const ctrl = document.getElementById('montagne-controls');
   if (ctrl) {

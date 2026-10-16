@@ -386,6 +386,8 @@ def run_montagne() -> None:
                 "receiver": ref_key,
                 "distance": round(ref_dist, 2) if ref_dist is not None else None,
                 "offset": round(off, 4),
+                "measured": round(measured[ref_key]["laeq"], 2),
+                "computed": round(computed[ref_key]["laeq"], 2),
             }
             for k in common:
                 if computed[k]["laeq"] is None:

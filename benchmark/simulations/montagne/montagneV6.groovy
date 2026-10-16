@@ -74,6 +74,18 @@ private static String threadDump(boolean lockedMonitors, boolean lockedSynchroni
     return threadDump.toString();
 }
 
+// JsonOutput refuses Infinity/NaN, and silent paths yield -Infinity attenuations.
+private static Double finite(Object value) {
+    if (value == null) {
+        return null
+    }
+    if (value instanceof Number) {
+        double d = ((Number) value).doubleValue()
+        return Double.isFinite(d) ? d : null
+    }
+    return null
+}
+
 static def exec(Connection connection, Map input) {
     String version=""
     if(input.containsKey('NM_version')){
@@ -201,10 +213,10 @@ static def exec(Connection connection, Map input) {
             sql.eachRow("SELECT IDRECEIVER, IDSOURCE, LEQ, METEO, PERIOD, PATH FROM RAYS") { row ->
                 def path = pathSlurper.parseText(row.PATH as String)
                 def cutPoints = path.cutProfile?.cutPoints ?: []
-                def coords = cutPoints.collect { c -> [c.coordinate.x, c.coordinate.y, c.coordinate.z] }
+                def coords = cutPoints.collect { c -> [finite(c.coordinate.x), finite(c.coordinate.y), finite(c.coordinate.z)] }
                 if (!coords.isEmpty()) {
                     def nodes = cutPoints.findAll { c -> notableTypes.contains(c.type) }
-                            .collect { c -> [c.type, c.coordinate.x, c.coordinate.y, c.coordinate.z] }
+                            .collect { c -> [c.type, finite(c.coordinate.x), finite(c.coordinate.y), finite(c.coordinate.z)] }
                     def nRefl = cutPoints.count { it.type == 'Reflection' }
                     def nDiff = cutPoints.count { notableTypes.contains(it.type) && it.type != 'Reflection' }
                     raysFeatures << [
@@ -213,15 +225,15 @@ static def exec(Connection connection, Map input) {
                                     receiver    : row.IDRECEIVER,
                                     source      : row.IDSOURCE,
                                     campagne    : campagne,
-                                    leq         : row.LEQ,
+                                    leq         : finite(row.LEQ),
                                     meteo       : row.METEO,
                                     period      : row.PERIOD,
-                                    aDiv        : path.aDiv ? path.aDiv[0] : null,
-                                    aAtm        : path.aAtm ? path.aAtm[0] : null,
-                                    aDif        : path.aDif ? path.aDif[0] : null,
-                                    aRef        : path.aRef ? path.aRef[0] : null,
-                                    aGlobal     : path.aGlobal ? path.aGlobal[0] : null,
-                                    ground      : path.groundAttenuation,
+                                    aDiv        : finite(path.aDiv ? path.aDiv[0] : null),
+                                    aAtm        : finite(path.aAtm ? path.aAtm[0] : null),
+                                    aDif        : finite(path.aDif ? path.aDif[0] : null),
+                                    aRef        : finite(path.aRef ? path.aRef[0] : null),
+                                    aGlobal     : finite(path.aGlobal ? path.aGlobal[0] : null),
+                                    ground      : finite(path.groundAttenuation),
                                     nReflections: nRefl,
                                     nDiffractions: nDiff,
                                     nodes       : nodes

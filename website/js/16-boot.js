@@ -21,6 +21,7 @@ async function applyState(data, snapshot) {
       models: (st.get('m_models') || '').split(',').filter(Boolean),
       mapModel: st.get('m_map') || null,
       layers: (st.get('m_layers') || '').split(',').filter(Boolean),
+      relative: st.get('m_rel') === '1',
     };
     switchDataset('montagne');
     return;

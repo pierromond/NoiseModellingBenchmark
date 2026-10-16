@@ -765,8 +765,14 @@ async function renderMontagneExplain() {
   const section = document.getElementById('montagne-explain');
   if (!section) return;
   const version = (typeof montagneMapModel !== 'undefined' && montagneMapModel) ? montagneMapModel : null;
+  const latest = (typeof montagneLatestVersion === 'function') ? montagneLatestVersion() : null;
   const entry = version ? montagneEntry(version) : null;
-  if (!version || !entry || !entry.receivers || !entry.receivers.length) { section.style.display = 'none'; return; }
+  // Explainability is restricted to the latest snapshot (that is where the
+  // propagation rays are exported and kept in the published data).
+  if (!version || version !== latest || !entry || !entry.receivers || !entry.receivers.length) {
+    section.style.display = 'none';
+    return;
+  }
 
   explainState.version = version;
   explainState.receivers = entry.receivers;
@@ -787,7 +793,8 @@ async function renderMontagneExplain() {
 
   section.style.display = '';
   document.getElementById('montagne-explain-intro').innerHTML =
-    `Propagation rays are available for <b>${version}</b> (v6-based models). Pick a receiver to see its rays, ` +
+    `Propagation rays are exported for the latest snapshot only (<b>${version}</b>), so this section is shown ` +
+    `only when that model is selected on the map. Pick a receiver to see its rays (homogeneous scenario), ` +
     `where the sound is attenuated, and the ray contributions. 2D and 3D views; KML download for Google Earth.`;
 
   select.innerHTML = entry.receivers.map(r =>

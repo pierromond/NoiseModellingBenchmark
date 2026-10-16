@@ -52,6 +52,13 @@ inputs = [
                 description: 'Measurement campaign id (c1, c2...). Meteo parameters are taken from the campaign configuration.',
                 min        : 0, max: 1,
                 type       : String.class,
+        ],
+        scenario:[
+                title      : 'Meteorological scenario',
+                name       : 'Meteorological scenario',
+                description: 'homogene (occurrences 0 everywhere) or favorable (occurrences 1 everywhere); campaign temperature/humidity are kept.',
+                min        : 0, max: 1,
+                type       : String.class,
         ]]
 
 outputs = [result: [name: 'Result output string', title: 'Result output string', description: 'This type of result does not allow the blocks to be linked together.', type: String.class]]
@@ -86,7 +93,9 @@ static def exec(Connection connection, Map input) {
     def simConfig = config.simulations.montagne
     def versionConfig = simConfig.versions[version]
     String campagne = input.containsKey('campagne') && input["campagne"] ? (input["campagne"] as String) : "c1"
-    boolean legacyNames = campagne == "c1"
+    String scenario = input.containsKey('scenario') && input["scenario"] ? (input["scenario"] as String) : "homogene"
+    boolean homogene = scenario == "homogene"
+    boolean legacyNames = campagne == "c1" && homogene
     def campConf = (config.models.montagne.campaigns?.get(campagne)?.exec ?: [:]) as Map
     double silenceThreshold = config.constants.silenceThreshold as double
     def bins = config.constants.histogramBins as List
@@ -151,8 +160,10 @@ static def exec(Connection connection, Map input) {
             }
             def params = new LinkedHashMap(simConfig.paramSets[versionConfig.paramSet].exec)
             params.putAll(campConf)
-            if (campConf.containsKey("confFavorableOccurrencesDefault")) {
-                params["confFavorableOccurrencesDay"] = campConf["confFavorableOccurrencesDefault"]
+            def scenConf = (config.models.montagne.scenarios?.get(scenario)?.exec ?: [:]) as Map
+            params.putAll(scenConf)
+            if (params.containsKey("confFavorableOccurrencesDefault")) {
+                params["confFavorableOccurrencesDay"] = params["confFavorableOccurrencesDefault"]
                 params.remove("confFavorableOccurrencesDefault")
             }
             def customScript = bench.loadScript(versionConfig.script)
@@ -169,8 +180,13 @@ static def exec(Connection connection, Map input) {
 
 
         new Export_Table().exec(connection,
-                ["exportPath"   : "$outputFolder/RECEIVERS_LEVEL_${campagne}.geojson",
+                ["exportPath"   : "$outputFolder/RECEIVERS_LEVEL_${campagne}_${scenario}.geojson",
                  "tableToExport": "LDAY_GEOM"])
+        if (homogene) {
+            new Export_Table().exec(connection,
+                    ["exportPath"   : "$outputFolder/RECEIVERS_LEVEL_${campagne}.geojson",
+                     "tableToExport": "LDAY_GEOM"])
+        }
         if (legacyNames) {
             new Export_Table().exec(connection,
                     ["exportPath"   : "$outputFolder/RECEIVERS_LEVEL.geojson",
@@ -225,11 +241,15 @@ static def exec(Connection connection, Map input) {
                 histogram: stats.histogram
         ]
         result.campagne = campagne
+        result.scenario = scenario
         result.version = version
-        def outFile = new File("$outputFolder/stats_${version}_${campagne}.json")
-        outFile.text = JsonOutput.prettyPrint(JsonOutput.toJson(result))
+        def statsJson = JsonOutput.prettyPrint(JsonOutput.toJson(result))
+        new File("$outputFolder/stats_${version}_${campagne}_${scenario}.json").text = statsJson
+        if (homogene) {
+            new File("$outputFolder/stats_${version}_${campagne}.json").text = statsJson
+        }
         if (legacyNames) {
-            new File("$outputFolder/stats_${version}.json").text = JsonOutput.prettyPrint(JsonOutput.toJson(result))
+            new File("$outputFolder/stats_${version}.json").text = statsJson
         }
 
     }
@@ -289,6 +309,8 @@ static def exec(Connection connection, Map input) {
             }
             def execParams = new LinkedHashMap(paramSet.exec)
             execParams.putAll(campConf)
+            def scenConf = (config.models.montagne.scenarios?.get(scenario)?.exec ?: [:]) as Map
+            execParams.putAll(scenConf)
             def customScript = bench.loadScript(versionConfig.script)
             customScript.exec(connection, execParams)
             def profileCsv = new File("$outputFolder/profile.csv")
@@ -304,8 +326,13 @@ static def exec(Connection connection, Map input) {
         sql.execute("CREATE TABLE RECEIVERS_LEVEL_D AS SELECT * FROM RECEIVERS_LEVEL WHERE PERIOD='D'")
 
         new Export_Table().exec(connection,
-                ["exportPath"   : "$outputFolder/RECEIVERS_LEVEL_${campagne}.geojson",
+                ["exportPath"   : "$outputFolder/RECEIVERS_LEVEL_${campagne}_${scenario}.geojson",
                  "tableToExport": "RECEIVERS_LEVEL_D"])
+        if (homogene) {
+            new Export_Table().exec(connection,
+                    ["exportPath"   : "$outputFolder/RECEIVERS_LEVEL_${campagne}.geojson",
+                     "tableToExport": "RECEIVERS_LEVEL_D"])
+        }
         if (legacyNames) {
             new Export_Table().exec(connection,
                     ["exportPath"   : "$outputFolder/RECEIVERS_LEVEL.geojson",
@@ -358,11 +385,15 @@ static def exec(Connection connection, Map input) {
         ]
 
         result.campagne = campagne
+        result.scenario = scenario
         result.version = version
-        def outFile = new File("$outputFolder/stats_${version}_${campagne}.json")
-        outFile.text = JsonOutput.prettyPrint(JsonOutput.toJson(result))
+        def statsJson = JsonOutput.prettyPrint(JsonOutput.toJson(result))
+        new File("$outputFolder/stats_${version}_${campagne}_${scenario}.json").text = statsJson
+        if (homogene) {
+            new File("$outputFolder/stats_${version}_${campagne}.json").text = statsJson
+        }
         if (legacyNames) {
-            new File("$outputFolder/stats_${version}.json").text = JsonOutput.prettyPrint(JsonOutput.toJson(result))
+            new File("$outputFolder/stats_${version}.json").text = statsJson
         }
 
 

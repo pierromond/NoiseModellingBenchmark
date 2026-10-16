@@ -5,6 +5,36 @@ let montagneChart = null;
 let montagneData = [];
 let pendingMontagne = null;
 
+// Draws the upper (homogeneous -> favourable) error bar for every scatter point.
+const montagneErrorBarsPlugin = {
+  id: 'montagneErrorBars',
+  afterDatasetsDraw(chart) {
+    const ctx = chart.ctx;
+    chart.data.datasets.forEach((ds, di) => {
+      if (!ds.errorBars) return;
+      const meta = chart.getDatasetMeta(di);
+      const yScale = chart.scales.y;
+      ctx.save();
+      ctx.strokeStyle = ds.borderColor || '#888';
+      ctx.globalAlpha = 0.8;
+      ctx.lineWidth = 1.5;
+      meta.data.forEach((el, i) => {
+        const raw = ds.data[i];
+        // Upper error bar only: skip when the favourable level is not above.
+        if (!raw || raw.y == null || raw.yFav == null || raw.yFav <= raw.y) return;
+        const yFav = yScale.getPixelForValue(raw.yFav);
+        ctx.beginPath();
+        ctx.moveTo(el.x, el.y);
+        ctx.lineTo(el.x, yFav);
+        ctx.moveTo(el.x - 3, yFav);
+        ctx.lineTo(el.x + 3, yFav);
+        ctx.stroke();
+      });
+      ctx.restore();
+    });
+  }
+};
+
 function modelColor(index) {
   const light = document.documentElement.dataset.theme === 'light';
   const lightPalette = ['#0e6b6b', '#b45309', '#15803d', '#b91c1c', '#6d28d9', '#0369a1', '#a16207', '#4d7c0f', '#9d174d'];
@@ -26,7 +56,11 @@ function drawMontagneScatter(entries) {
   nodata.style.display = 'none';
   canvas.style.display = 'block';
 
-  const allVals = entries.flatMap(e => e.scatter.flatMap(([m, c]) => [m, c]));
+  const allVals = entries.flatMap(e => {
+    const points = (e.scatter || []).flatMap(([m, c]) => [m, c]);
+    const favs = (e.bars || []).map(b => b[2]).filter(v => v != null);
+    return points.concat(favs);
+  });
   const minV = Math.floor(Math.min(...allVals) / 5) * 5;
   const maxV = Math.ceil(Math.max(...allVals) / 5) * 5;
   const diagLine = [{ x: minV, y: minV }, { x: maxV, y: maxV }];
@@ -39,10 +73,14 @@ function drawMontagneScatter(entries) {
   const datasets = [];
   entries.forEach((entry, i) => {
     const color = modelColor(i);
+    const bars = entry.bars || [];
     const byCamp = {};
-    (entry.scatter || []).forEach(([m, c, camp]) => {
+    (entry.scatter || []).forEach((pt, idx) => {
+      const [m, c, camp] = pt;
       const key = camp || 'c1';
-      (byCamp[key] = byCamp[key] || []).push({ x: m, y: c });
+      const bar = bars[idx];
+      const yFav = (bar && bar[2] != null) ? bar[2] : null;
+      (byCamp[key] = byCamp[key] || []).push({ x: m, y: c, yFav });
     });
     Object.keys(byCamp).sort().forEach(camp => {
       datasets.push({
@@ -55,6 +93,7 @@ function drawMontagneScatter(entries) {
         pointHoverRadius: 7,
         pointStyle: camp === 'c2' ? 'rect' : 'circle',
         order: 2,
+        errorBars: true,
       });
     });
   });
@@ -74,6 +113,7 @@ function drawMontagneScatter(entries) {
   const ctx = canvas.getContext('2d');
   montagneChart = new Chart(ctx, {
     data: { datasets },
+    plugins: [montagneErrorBarsPlugin],
     options: {
       responsive: true,
       animation: false,
@@ -90,7 +130,12 @@ function drawMontagneScatter(entries) {
             label: item => {
               if (item.dataset.type !== 'scatter') return null;
               const { x, y } = item.parsed;
-              return ` ${item.dataset.label}: measured ${x} dB -> ${y} dB (delta=${(y - x).toFixed(2)} dB)`;
+              let text = ` ${item.dataset.label}: measured ${x} dB -> ${y} dB (delta=${(y - x).toFixed(2)} dB)`;
+              const raw = item.raw || {};
+              if (raw.yFav != null && raw.yFav !== y) {
+                text += ` · favorable ${Number(raw.yFav).toFixed(2)} dB (${raw.yFav - y >= 0 ? '+' : ''}${(raw.yFav - y).toFixed(2)})`;
+              }
+              return text;
             }
           }
         }
@@ -135,6 +180,7 @@ function updateMontagneNote() {
     `Measurements: <b>${nCamp} campaigns</b> (${labels}), ${nMeas} points. ` +
     `Each campaign is calibrated on its own reference receiver (closest to the source: emission level unknown), so the error is zero there. ` +
     `Global indicators (mean, RMSE, scatter) are computed on the pooled calibrated points. ` +
+    `Scatter points are the <b>homogeneous</b> scenario; the upper error bar reaches the <b>favourable</b>-wind scenario. ` +
     `Mean offset: ${offsets} dB.` +
     `<br>Download: <a href="data/montagne/measure_comparison.json" download>measure_comparison.json</a> &middot; ` +
     `<a href="data/montagne/comparisons.json" download>comparisons.json</a> &middot; ` +

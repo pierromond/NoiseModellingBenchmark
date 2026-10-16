@@ -54,6 +54,13 @@ inputs = [
                 description: 'Measurement campaign id (c1, c2...). Meteo parameters are taken from the campaign configuration.',
                 min        : 0, max: 1,
                 type       : String.class,
+        ],
+        scenario:[
+                title      : 'Meteorological scenario',
+                name       : 'Meteorological scenario',
+                description: 'homogene (occurrences 0 everywhere) or favorable (occurrences 1 everywhere); campaign temperature/humidity are kept.',
+                min        : 0, max: 1,
+                type       : String.class,
         ]]
 
 outputs = [result: [name: 'Result output string', title: 'Result output string', description: 'This type of result does not allow the blocks to be linked together.', type: String.class]]
@@ -73,7 +80,9 @@ static def exec(Connection connection, Map input) {
         version=input["NM_version"] as String
     }
     String campagne = input.containsKey('campagne') && input["campagne"] ? (input["campagne"] as String) : "c1"
-    boolean legacyNames = campagne == "c1"
+    String scenario = input.containsKey('scenario') && input["scenario"] ? (input["scenario"] as String) : "homogene"
+    boolean homogene = scenario == "homogene"
+    boolean legacyNames = campagne == "c1" && homogene
     def outputFolder = new File("benchmark/output/montagne/$version")
     if (!outputFolder.exists()) {
         outputFolder.mkdir()
@@ -146,8 +155,17 @@ static def exec(Connection connection, Map input) {
             if (campConf != null) {
                 execParams.putAll(campConf as Map)
             }
+            def scenConf = config.models.montagne.scenarios?.get(scenario)?.exec
+            if (scenConf != null) {
+                execParams.putAll(scenConf as Map)
+            }
+            // v6.0.0 reads confFavorableOccurrencesDefault, v6.0.1/v6.0.2 read the
+            // British spelling confFavourableOccurrencesDefault: expose both.
+            if (execParams.containsKey("confFavorableOccurrencesDefault")) {
+                execParams["confFavourableOccurrencesDefault"] = execParams["confFavorableOccurrencesDefault"]
+            }
             execParams["confRecordProfile"] = true
-            execParams["confProfilePath"] = "$outputFolder/profile_${campagne}.csv"
+            execParams["confProfilePath"] = "$outputFolder/profile_${campagne}_${scenario}.csv"
             def scriptPath = customScripts[version]
             if (scriptPath != null) {
                 def customScript = new GroovyClassLoader().parseClass(new File(scriptPath)).newInstance()
@@ -163,15 +181,20 @@ static def exec(Connection connection, Map input) {
 
 
         new Export_Table().exec(connection,
-                ["exportPath"   : "$outputFolder/RECEIVERS_LEVEL_${campagne}.geojson",
+                ["exportPath"   : "$outputFolder/RECEIVERS_LEVEL_${campagne}_${scenario}.geojson",
                  "tableToExport": "RECEIVERS_LEVEL_D"])
+        if (homogene) {
+            new Export_Table().exec(connection,
+                    ["exportPath"   : "$outputFolder/RECEIVERS_LEVEL_${campagne}.geojson",
+                     "tableToExport": "RECEIVERS_LEVEL_D"])
+        }
         if (legacyNames) {
             new Export_Table().exec(connection,
                     ["exportPath"   : "$outputFolder/RECEIVERS_LEVEL.geojson",
                      "tableToExport": "RECEIVERS_LEVEL_D"])
         }
 
-        try {
+        if (homogene) try {
             def notableTypes = ['Reflection', 'DIFH', 'DIFH_RCRIT', 'VEdgeDiffraction', 'Diffraction'] as Set
             def raysFeatures = []
             def pathSlurper = new JsonSlurper()
@@ -210,6 +233,7 @@ static def exec(Connection connection, Map input) {
             def raysCollection = [type: 'FeatureCollection',
                                   crs : [type: 'name', properties: [name: 'urn:ogc:def:crs:EPSG::2154']],
                                   features: raysFeatures]
+            new File("$outputFolder/rays_${campagne}_${scenario}.geojson").text = JsonOutput.toJson(raysCollection)
             new File("$outputFolder/rays_${campagne}.geojson").text = JsonOutput.toJson(raysCollection)
         } catch (Exception e) {
             println("Ray export skipped: " + e.message)
@@ -228,12 +252,14 @@ static def exec(Connection connection, Map input) {
         timeray = elapsed/nbRays
     }
 
-    def profileCsv = new File("$outputFolder/profile_${campagne}.csv")
+    def profileCsv = new File("$outputFolder/profile_${campagne}_${scenario}.csv")
     if (!profileCsv.exists()) {
         def profileFiles = [new File("$outputFolder"), new File("."), new File("benchmark/output/montagne/$version")]
                 .findAll { it?.isDirectory() }
                 .collectMany { d -> d.listFiles().findAll { it.name.startsWith("profile") && it.name.endsWith(".csv") } }
-        profileCsv = profileFiles ? profileFiles.max { it.lastModified() } : null
+        def scoped = profileFiles.findAll { it.name.contains("_${scenario}") }
+        def candidates = scoped ?: profileFiles
+        profileCsv = candidates ? candidates.max { it.lastModified() } : null
     }
     def nbProfiles = 0
     if (profileCsv?.exists()) {
@@ -273,11 +299,15 @@ static def exec(Connection connection, Map input) {
     ]
 
     result.campagne = campagne
+    result.scenario = scenario
     result.version = version
-    def outFile = new File("$outputFolder/stats_${version}_${campagne}.json")
-    outFile.text = JsonOutput.prettyPrint(JsonOutput.toJson(result))
+    def statsJson = JsonOutput.prettyPrint(JsonOutput.toJson(result))
+    new File("$outputFolder/stats_${version}_${campagne}_${scenario}.json").text = statsJson
+    if (homogene) {
+        new File("$outputFolder/stats_${version}_${campagne}.json").text = statsJson
+    }
     if (legacyNames) {
-        new File("$outputFolder/stats_${version}.json").text = JsonOutput.prettyPrint(JsonOutput.toJson(result))
+        new File("$outputFolder/stats_${version}.json").text = statsJson
     }
 
     println("fini***************************************************************************")

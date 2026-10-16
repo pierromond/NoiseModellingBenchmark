@@ -22,11 +22,18 @@ doit la modifier : les garde-fous de `tools/` le vérifient.
 
 ```
 benchmark/output/<v>/{stats_<v>.json, RECEIVERS_LEVEL.geojson, ISO_CONTOUR.geojson, profile.csv, simulation.log}
-benchmark/output/montagne/<v>/{stats_<v>.json, RECEIVERS_LEVEL.geojson, profile.csv, simulation.log}
+benchmark/output/montagne/<v>/{stats_<v>_<campagne>_<scenario>.json, RECEIVERS_LEVEL_<campagne>_<scenario>.geojson, rays_<campagne>_<scenario>.geojson, ...}
 website/data/{results.json, comparisons.json, settings.json, build.json, start.json, <v>/...}
 website/data/montagne/{results.json, comparisons.json, measure_comparison.json, layers/..., measure/..., <v>/...}
 website/index.html
 ```
+
+La Montagne lance deux scénarios météo par campagne (`homogene` = occurrences
+favorables nulles (0 partout) ; `favorable` = 1 partout). La température et
+l'humidité restent celles mesurées pour la campagne. Les noms « legacy »
+sans suffixe de scénario (`stats_<v>.json`, `RECEIVERS_LEVEL.geojson`,
+`RECEIVERS_LEVEL_<campagne>.geojson`, `rays_<campagne>.geojson`) sont des alias du
+scénario **homogène** (celui affiché sur la carte).
 
 ## Schémas des artefacts
 

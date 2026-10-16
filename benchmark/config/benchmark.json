@@ -119,8 +119,7 @@
           "referenceReceiver": 10,
           "exec": {
             "confTemperature": 23.4,
-            "confHumidity": 55,
-            "confFavorableOccurrencesDefault": "0.5, 0.5, 0.25, 0, 0.25, 0.5, 0.5, 0.5, 0.5, 0.5, 0.75, 1, 0.75, 0.5, 0.5, 0.5"
+            "confHumidity": 55
           }
         },
         "c2": {
@@ -129,8 +128,21 @@
           "referenceReceiver": 11,
           "exec": {
             "confTemperature": 18.8,
-            "confHumidity": 79,
-            "confFavorableOccurrencesDefault": "0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0, 0.25, 0.5, 0.5, 0.5, 0.5, 0.5, 0.75, 1, 0.75"
+            "confHumidity": 79
+          }
+        }
+      },
+      "scenarios": {
+        "homogene": {
+          "label": "Homogène",
+          "exec": {
+            "confFavorableOccurrencesDefault": "0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0"
+          }
+        },
+        "favorable": {
+          "label": "Favorable",
+          "exec": {
+            "confFavorableOccurrencesDefault": "1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1"
           }
         }
       },

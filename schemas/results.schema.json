@@ -20,7 +20,9 @@
       "silenceThreshold": {"type": "number"},
       "histogram": {"type": "object", "additionalProperties": {"type": "integer"}},
       "java": {"type": "string"},
-      "runner": {"type": "string"}
+      "runner": {"type": "string"},
+      "campagne": {"type": "string"},
+      "scenario": {"type": "string"}
     },
     "additionalProperties": true
   }

@@ -222,12 +222,18 @@ def compare_to_measure(version: str, computed: dict, measured: dict, ref_key, re
 
 def compare_to_measure_global(version: str, computed: dict, measured: dict, offsets_by_camp: dict,
                               references: dict, campaigns: list,
-                              campaign_labels: dict | None = None) -> dict | None:
+                              campaign_labels: dict | None = None,
+                              favorable: dict | None = None) -> dict | None:
     """Comparaison globale (campagnes regroupées), calibrée par campagne.
 
     Chaque campagne est recalée sur son propre récepteur de référence (le plus proche
     de la source : niveau d'émission inconnu), donc l'écart y est nul ; les indicateurs
     (mean/std/RMSE/scatter) sont ensuite calculés globalement sur les points corrigés.
+
+    `computed` porte le scénario homogène (référence des indicateurs). `favorable`,
+    s'il est fourni, porte le scénario météo favorable : la même correction par
+    campagne est appliquée et les niveaux sont exposés dans `bars` pour la barre
+    d'erreur supérieure du scatter (homogène -> favorable).
     """
     common = sorted(
         k for k in set(measured) & set(computed)
@@ -248,6 +254,17 @@ def compare_to_measure_global(version: str, computed: dict, measured: dict, offs
 
     scatter = [[round(measured[k]["laeq"], 2), round(corrected[k], 2), measured[k].get("campagne")]
                for k in common]
+
+    bars = []
+    for k in common:
+        camp = measured[k].get("campagne")
+        fav = (favorable or {}).get(k, {}).get("laeq")
+        if fav is None:
+            fav_corrected = corrected[k]
+        else:
+            fav_corrected = fav + offsets_by_camp.get(camp, 0.0)
+        bars.append([round(measured[k]["laeq"], 2), round(corrected[k], 2),
+                     round(fav_corrected, 2), camp])
 
     per_camp = {c: 0 for c in campaigns}
     receivers = []
@@ -277,6 +294,7 @@ def compare_to_measure_global(version: str, computed: dict, measured: dict, offs
         "rmse": round(rmse, 4),
         "max_abs_error": round(max_abs, 4),
         "scatter": scatter,
+        "bars": bars,
         "receivers": receivers,
         "campaigns": campaigns,
         "campaign_labels": campaign_labels or {},
@@ -349,6 +367,7 @@ def run_montagne() -> None:
     for version in versions:
         pooled_measured = {}
         pooled_computed = {}
+        pooled_favorable = {}
         ref_offsets = []
         references = {}
         for camp in campaign_ids:
@@ -356,6 +375,7 @@ def run_montagne() -> None:
             if not measured:
                 continue
             computed = load_receivers(output, version, camp)
+            computed_fav = load_receivers(output, version, camp, scenario="favorable")
             ref_key, ref_dist = reference_receiver(measured, segments)
             common = set(measured) & set(computed)
             if ref_key is None or ref_key not in common or computed[ref_key]["laeq"] is None:
@@ -372,11 +392,15 @@ def run_montagne() -> None:
                     continue
                 pooled_measured[k] = {**measured[k], "campagne": camp}
                 pooled_computed[k] = {**computed[k], "campagne": camp}
+                fav = computed_fav.get(k, {}).get("laeq")
+                if fav is not None:
+                    pooled_favorable[k] = {"laeq": fav, "campagne": camp}
         if not references:
             continue
         offsets_by_camp = {camp: references[camp]["offset"] for camp in references}
         result = compare_to_measure_global(version, pooled_computed, pooled_measured,
-                                           offsets_by_camp, references, campaign_ids, campaign_labels)
+                                           offsets_by_camp, references, campaign_ids, campaign_labels,
+                                           favorable=pooled_favorable)
         if result:
             measure_results.append(result)
 

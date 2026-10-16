@@ -33,8 +33,14 @@ def parse_coords(geometry: dict) -> list:
     return None
 
 
-def load_receivers(output_dir: Path, version: str, campagne: str | None = None) -> dict:
-    name = f"RECEIVERS_LEVEL_{campagne}.geojson" if campagne else "RECEIVERS_LEVEL.geojson"
+def load_receivers(output_dir: Path, version: str, campagne: str | None = None,
+                   scenario: str | None = None) -> dict:
+    if campagne and scenario:
+        name = f"RECEIVERS_LEVEL_{campagne}_{scenario}.geojson"
+    elif campagne:
+        name = f"RECEIVERS_LEVEL_{campagne}.geojson"
+    else:
+        name = "RECEIVERS_LEVEL.geojson"
     geojson_path = output_dir / version / name
     if not geojson_path.exists() and campagne:
         geojson_path = output_dir / version / "RECEIVERS_LEVEL.geojson"

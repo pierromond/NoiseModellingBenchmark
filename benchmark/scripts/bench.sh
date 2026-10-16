@@ -75,21 +75,23 @@ run_simulation_montagne() {
     fi
 
     for campagne in c1 c2; do
-        local workspace="$out_dir/workspace_$campagne"
-        mkdir -p "$workspace"
-        local args
-        if [ "$version" = "v4.0.0" ] || [ "$version" = "v4.0.1" ]; then
-            args=( -w"$workspace" -s"$GROOVY_SCRIPT" )
-            if [ -n "$DB4" ]; then args+=( $DB4 ); fi
-            args+=( NM_version="$version" campagne="$campagne" )
-        elif [[ "$version" == v6* ]]; then
-            args=( -w "$workspace" -s "$GROOVY_SCRIPT_v6" -NM_version "$version" -campagne "$campagne" )
-        else
-            args=( -w "$workspace" -s "$GROOVY_SCRIPT" )
-            if [ -n "$DB5" ]; then args+=( $DB5 ); fi
-            args+=( -NM_version "$version" -campagne "$campagne" )
-        fi
-        "$wps_bin" "${args[@]}" > "$out_dir/simulation_${campagne}.log" 2>&1 || return 1
+        for scenario in homogene favorable; do
+            local workspace="$out_dir/workspace_${campagne}_${scenario}"
+            mkdir -p "$workspace"
+            local args
+            if [ "$version" = "v4.0.0" ] || [ "$version" = "v4.0.1" ]; then
+                args=( -w"$workspace" -s"$GROOVY_SCRIPT" )
+                if [ -n "$DB4" ]; then args+=( $DB4 ); fi
+                args+=( NM_version="$version" campagne="$campagne" scenario="$scenario" )
+            elif [[ "$version" == v6* ]]; then
+                args=( -w "$workspace" -s "$GROOVY_SCRIPT_v6" -NM_version "$version" -campagne "$campagne" -scenario "$scenario" )
+            else
+                args=( -w "$workspace" -s "$GROOVY_SCRIPT" )
+                if [ -n "$DB5" ]; then args+=( $DB5 ); fi
+                args+=( -NM_version "$version" -campagne "$campagne" -scenario "$scenario" )
+            fi
+            "$wps_bin" "${args[@]}" > "$out_dir/simulation_${campagne}_${scenario}.log" 2>&1 || return 1
+        done
     done
     return 0
 }

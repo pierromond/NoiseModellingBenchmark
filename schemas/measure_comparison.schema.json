@@ -18,6 +18,7 @@
       "rmse": {"type": "number"},
       "max_abs_error": {"type": "number"},
       "scatter": {"type": "array", "items": {"type": "array", "items": {"type": ["number", "string"]}}},
+      "bars": {"type": "array", "items": {"type": "array", "items": {"type": ["number", "string"]}}},
       "receivers": {"type": "array", "items": {"type": "array"}},
       "campaigns": {"type": "array", "items": {"type": "string"}},
       "campaign_labels": {"type": "object"},

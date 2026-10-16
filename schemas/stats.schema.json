@@ -18,7 +18,9 @@
     "histogram": {"type": "object", "additionalProperties": {"type": "integer"}},
     "java": {"type": "string"},
     "runner": {"type": "string"},
-    "version": {"type": "string"}
+    "version": {"type": "string"},
+    "campagne": {"type": "string"},
+    "scenario": {"type": "string"}
   },
   "additionalProperties": true
 }

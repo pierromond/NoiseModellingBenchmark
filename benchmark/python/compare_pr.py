@@ -80,6 +80,14 @@ def _fetch(url: str, destination: Path) -> bool:
     return True
 
 
+def _is_json(path: Path) -> bool:
+    try:
+        json.loads(path.read_text(encoding="utf-8"))
+        return True
+    except (OSError, json.JSONDecodeError):
+        return False
+
+
 def _data_root(dataset: str) -> Path:
     return ROOT / ("benchmark/output" if dataset == "clisson" else "benchmark/output/montagne")
 
@@ -162,13 +170,30 @@ def _measure_paths(dataset: str, pages_url: str) -> tuple[Path, Path] | None:
         ROOT / "website" / "data" / "montagne" / "measure" / "RECEIVERS_LEVEL.geojson",
     ]
     for candidate in candidates:
-        if candidate.exists():
+        if candidate.exists() and _is_json(candidate):
             return candidate, candidate
     destination = _cache_root("montagne") / "measure" / "RECEIVERS_LEVEL.geojson"
-    if destination.exists() or _fetch(
-        f"{pages_url.rstrip('/')}/data/montagne/measure/RECEIVERS_LEVEL.geojson", destination
-    ):
+    if destination.exists() and _is_json(destination):
         return destination, destination
+    if _fetch(f"{pages_url.rstrip('/')}/data/montagne/measure/RECEIVERS_LEVEL.geojson", destination):
+        return destination, destination
+    return None
+
+
+def _sources_path(pages_url: str) -> Path | None:
+    """LW_ROADS, preferably from the pack because the CI checkout has LFS pointers."""
+    candidates = [
+        _pack_root("montagne") / "LW_ROADS.geojson",
+        ROOT / "benchmark" / "input" / "montagne" / "LW_ROADS.geojson",
+    ]
+    for candidate in candidates:
+        if candidate.exists() and _is_json(candidate):
+            return candidate
+    destination = _cache_root("montagne") / "LW_ROADS.geojson"
+    if destination.exists() and _is_json(destination):
+        return destination
+    if _fetch(f"{pages_url.rstrip('/')}/data/montagne/layers/LW_ROADS.geojson", destination):
+        return destination
     return None
 
 
@@ -344,8 +369,8 @@ def main() -> int:
             _write_json(out_pr / "montagne" / "comparisons.json", montagne_comparisons)
 
             paths = _measure_paths("montagne", args.pages_url)
-            sources = ROOT / "benchmark" / "input" / "montagne" / "LW_ROADS.geojson"
-            if paths and sources.exists():
+            sources = _sources_path(args.pages_url)
+            if paths and sources:
                 measure, _ = build_measure_results(
                     pr_root, [args.label], paths[0], paths[1], sources, _campaign_labels()
                 )

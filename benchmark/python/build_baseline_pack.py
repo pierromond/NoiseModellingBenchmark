@@ -69,6 +69,15 @@ def build(root: Path, out: Path) -> list[str]:
                 versions.append(version_dir.name)
         compact(montagne / "measure" / "RECEIVERS_LEVEL.geojson",
                 montagne_out / "measure" / "RECEIVERS_LEVEL.geojson")
+        source = ROOT / "benchmark" / "input" / "montagne" / "LW_ROADS.geojson"
+        if source.exists():
+            try:
+                json.loads(source.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                pass
+            else:
+                montagne_out.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source, montagne_out / "LW_ROADS.geojson")
 
     manifest = {"versions": sorted(set(versions))}
     out.mkdir(parents=True, exist_ok=True)

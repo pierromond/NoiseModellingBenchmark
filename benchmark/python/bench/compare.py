@@ -107,8 +107,11 @@ def load_sources_segments(sources_geojson: Path) -> list:
     if not sources_geojson.exists():
         return []
 
-    with open(sources_geojson) as f:
-        data = json.load(f)
+    try:
+        with open(sources_geojson) as f:
+            data = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return []
 
     segments = []
     for feature in data.get("features", []):
@@ -135,8 +138,11 @@ def load_measure_campaigns(measure_geojson: Path, measure_fallback: Path) -> dic
     if not path.exists():
         return {}
 
-    with open(path) as f:
-        data = json.load(f)
+    try:
+        with open(path) as f:
+            data = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return {}
 
     campaigns: dict = {}
     for feature in data.get("features", []):

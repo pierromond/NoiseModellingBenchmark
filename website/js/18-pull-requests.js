@@ -6,6 +6,7 @@ let prIndex = [];
 let prSource = 'local';
 let prCache = {};
 let prComparison = null;
+let prClissonResults = null;
 let prScatterChart = null;
 let prDensityChart = null;
 let prMontagneChart = null;
@@ -77,6 +78,61 @@ function prComparisonsFor(dataset) {
   return (prComparison[dataset] && prComparison[dataset].comparisons) || [];
 }
 
+function prParseTime(value) {
+  if (!value) return null;
+  const parts = String(value).trim().split(':').map(Number);
+  if (parts.some(Number.isNaN)) return null;
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  return Number.isFinite(parts[0]) ? parts[0] : null;
+}
+
+function prParseNumber(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const number = Number.parseFloat(String(value).replace(',', '.'));
+  return Number.isFinite(number) ? number : null;
+}
+
+function prDelta(value, digits = 2) {
+  if (value === null || !Number.isFinite(value)) return 'n/a';
+  return `${value >= 0 ? '+' : ''}${value.toFixed(digits)}`;
+}
+
+function prCount(value) {
+  const number = prParseNumber(value);
+  return number !== null && number > 0 ? number.toLocaleString() : 'n/a';
+}
+
+function prCountDelta(prValue, baseValue) {
+  const pr = prParseNumber(prValue);
+  const base = prParseNumber(baseValue);
+  if (pr === null || base === null || pr <= 0 || base <= 0) return 'n/a';
+  return prDelta(pr - base, 0);
+}
+
+function prNumberDelta(prValue, baseValue, digits = 2) {
+  const pr = prParseNumber(prValue);
+  const base = prParseNumber(baseValue);
+  if (pr === null || base === null) return 'n/a';
+  return prDelta(pr - base, digits);
+}
+
+function prPerfValue(value, count) {
+  const number = prParseNumber(count);
+  return number !== null && number > 0 ? fmt(value) : 'n/a';
+}
+
+async function prOfficialClissonResults() {
+  if (prClissonResults !== null) return prClissonResults;
+  const results = await prFetchJson('data/results.json');
+  prClissonResults = Array.isArray(results) ? results : [];
+  return prClissonResults;
+}
+
+function prResultForVersion(version, results) {
+  return (results || []).find(item => item.version === version) || null;
+}
+
 function prSelectedComparison() {
   const dataset = prCurrentDataset();
   const baseline = document.getElementById('pr-baseline')?.value;
@@ -110,41 +166,52 @@ function prMetaHtml(item, manifest) {
     </div>`;
 }
 
-function prSummaryTable(comparisons) {
-  if (!comparisons.length) return '<div class="empty">No comparison data for this PR and dataset.</div>';
-  const rows = comparisons.map(item => `
-    <tr>
-      <td>${esc(item.version_a)}</td>
-      <td>${fmt(item.rmse)}</td>
-      <td>${fmt(item.mean_delta)}</td>
-      <td>${fmt(item.max_delta)}</td>
-      <td>${Number(item.n_valid || 0).toLocaleString()}</td>
-    </tr>`).join('');
-  return `
-    <div class="table-scroll"><table class="pr-table">
-      <thead><tr><th align="left">Baseline</th><th align="left">RMSE (dB)</th>
-        <th align="left">Mean |Δ| (dB)</th><th align="left">Max |Δ| (dB)</th><th align="left">Compared</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table></div>`;
-}
-
-function prSelectedCard(item) {
+function prSelectedCard(item, baselineRow, prRow) {
   if (!item) return '';
   const stable = item.rmse < 0.1;
   const warn = item.rmse >= 0.1 && item.rmse < 0.5;
   const color = stable ? 'var(--accent3)' : warn ? 'var(--accent2)' : '#f44336';
   const verdict = stable ? 'Numerically stable' : warn ? 'Minor differences' : 'Significant differences';
+  const baseSeconds = prParseTime(baselineRow?.time);
+  const prSeconds = prParseTime(prRow?.time);
+  const timeDelta = baseSeconds !== null && prSeconds !== null ? prSeconds - baseSeconds : null;
+  const basePer = prParseNumber(baselineRow?.timePerReceive);
+  const prPer = prParseNumber(prRow?.timePerReceive);
+  const perDelta = basePer !== null && prPer !== null ? prPer - basePer : null;
+  const tag = text => `<span class="start-tag">${text}</span>`;
+  const pair = (prValue, baseValue, suffix = '') =>
+    `${tag('PR')} ${prValue}${suffix} · ${tag('base')} ${baseValue}${suffix}`;
+  const timeRow = baseSeconds !== null && prSeconds !== null ? `
+        <div class="stat-row"><span class="stat-label">Compute time</span><span class="stat-value accent3">${pair(esc(prRow.time), esc(baselineRow.time))}</span></div>
+        <div class="stat-row"><span class="stat-label">Time difference (PR − baseline)</span><span class="stat-value" style="color:${timeDelta > 0 ? '#f44336' : 'var(--accent3)'}">${prDelta(timeDelta, 0)} s (${prDelta(timeDelta / 60)} min)</span></div>
+        <div class="stat-row"><span class="stat-label">Compute time per receiver</span><span class="stat-value">${pair(fmt(prPer), fmt(basePer), ' ms')} (${prDelta(perDelta)} ms)</span></div>` : '';
+  const workloadRows = prRow ? `
+        <div class="stat-row"><span class="stat-label">Rays number</span><span class="stat-value">${pair(prCount(prRow.nbRays), prCount(baselineRow?.nbRays))} (${prCountDelta(prRow.nbRays, baselineRow?.nbRays)})</span></div>
+        <div class="stat-row"><span class="stat-label">Profiles number</span><span class="stat-value">${pair(prCount(prRow.nbProfiles), prCount(baselineRow?.nbProfiles))} (${prCountDelta(prRow.nbProfiles, baselineRow?.nbProfiles)})</span></div>
+        <div class="stat-row"><span class="stat-label">Compute time per ray</span><span class="stat-value">${pair(prPerfValue(prRow.timePerRays, prRow.nbRays), prPerfValue(baselineRow?.timePerRays, baselineRow?.nbRays), ' ms')}</span></div>
+        <div class="stat-row"><span class="stat-label">Compute time per profile</span><span class="stat-value">${pair(prPerfValue(prRow.timePerProfiles, prRow.nbProfiles), prPerfValue(baselineRow?.timePerProfiles, baselineRow?.nbProfiles), ' ms')}</span></div>` : '';
   return `
     <div class="card" style="--card-accent:${color};margin-top:1rem">
-      <div class="card-version">${esc(item.version_a)} → ${esc(item.version_b)}
-        <span style="margin-left:.75rem;font-size:.65rem;color:${color}">${verdict}</span></div>
+      <div class="card-version">
+        ${tag('Baseline')} ${esc(item.version_a)}
+        <span style="color:var(--text-muted);margin:0 .4rem">→</span>
+        ${tag('PR')} ${esc(item.version_b)}
+        <span style="margin-left:.75rem;font-size:.65rem;color:${color}">${verdict}</span>
+      </div>
+      <div class="pr-meta" style="margin:.35rem 0 .6rem">
+        ${tag('PR')} = tested CI artifact · ${tag('base')} = selected published version
+      </div>
       <div class="card-stats">
-        <div class="stat-row"><span class="stat-label">RMSE</span><span class="stat-value accent2">${fmt(item.rmse)} dB</span></div>
-        <div class="stat-row"><span class="stat-label">Standard deviation</span><span class="stat-value accent2">${fmt(item.std_delta)} dB</span></div>
-        <div class="stat-row"><span class="stat-label">Mean |delta|</span><span class="stat-value">${fmt(item.mean_delta)} dB</span></div>
-        <div class="stat-row"><span class="stat-label">Max |delta|</span><span class="stat-value">${fmt(item.max_delta)} dB</span></div>
+        <div class="stat-row"><span class="stat-label">Mean LAEQ</span><span class="stat-value">${pair(fmt(prRow?.mean), fmt(baselineRow?.mean), ' dB')} (${prNumberDelta(prRow?.mean, baselineRow?.mean)} dB)</span></div>
+        <div class="stat-row"><span class="stat-label">RMSE (PR vs baseline)</span><span class="stat-value accent2">${fmt(item.rmse)} dB</span></div>
+        <div class="stat-row"><span class="stat-label">Standard deviation of Δ</span><span class="stat-value accent2">${fmt(item.std_delta)} dB</span></div>
+        <div class="stat-row"><span class="stat-label">Mean |Δ|</span><span class="stat-value">${fmt(item.mean_delta)} dB</span></div>
+        <div class="stat-row"><span class="stat-label">Max |Δ|</span><span class="stat-value">${fmt(item.max_delta)} dB</span></div>
         <div class="stat-row"><span class="stat-label">Compared receivers</span><span class="stat-value">${Number(item.n_valid || 0).toLocaleString()} / ${Number(item.n_common || 0).toLocaleString()}</span></div>
-        <div class="stat-row"><span class="stat-label">Silenced receivers (a / b)</span><span class="stat-value">${Number(item.n_nan_a || 0).toLocaleString()} / ${Number(item.n_nan_b || 0).toLocaleString()}</span></div>
+        <div class="stat-row"><span class="stat-label">Silenced receivers (PR / baseline)</span><span class="stat-value">${Number(item.n_nan_b || 0).toLocaleString()} / ${Number(item.n_nan_a || 0).toLocaleString()}</span></div>
+        ${timeRow}
+        ${workloadRows}
+        <div class="stat-row"><span class="stat-label">Java / runner</span><span class="stat-value">${pair(`${esc(prRow?.java || '—')} / ${esc(prRow?.runner || '—')}`, `${esc(baselineRow?.java || '—')} / ${esc(baselineRow?.runner || '—')}`)}</span></div>
       </div>
     </div>`;
 }
@@ -316,12 +383,18 @@ async function prRender() {
   prUpdateBaselineOptions();
   const dataset = prCurrentDataset();
   const selected = prSelectedComparison();
-  const comparisons = prComparisonsFor(dataset);
+  const prResult = dataset === 'clisson' ? ((data.clisson.results || [])[0] || null) : null;
+  const baselineResults = dataset === 'clisson' ? await prOfficialClissonResults() : [];
+  const baselineRow = selected ? prResultForVersion(selected.version_a, baselineResults) : null;
 
   const meta = document.getElementById('pr-meta');
   if (meta) meta.innerHTML = prMetaHtml(item, data.manifest || {});
   const summary = document.getElementById('pr-summary');
-  if (summary) summary.innerHTML = prSummaryTable(comparisons) + prSelectedCard(selected);
+  if (summary) {
+    summary.innerHTML = selected
+      ? prSelectedCard(selected, baselineRow, prResult)
+      : '<div class="empty">No comparison data for this baseline.</div>';
+  }
 
   document.getElementById('pr-charts-section').style.display = dataset === 'clisson' ? '' : 'none';
   document.getElementById('pr-montagne-section').style.display = dataset === 'montagne' ? '' : 'none';

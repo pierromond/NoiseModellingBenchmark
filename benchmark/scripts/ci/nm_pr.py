@@ -26,6 +26,7 @@ import re
 import sys
 import tempfile
 import urllib.error
+import urllib.parse
 import urllib.request
 import zipfile
 from datetime import datetime, timezone
@@ -195,6 +196,19 @@ def resolve(pr_number: int, repo: str, workflow: str, artifact_zip: Path | None)
     return manifest
 
 
+class _StripAuthOnRedirect(urllib.request.HTTPRedirectHandler):
+    """Do not forward the GitHub token to the Azure blob storage redirect."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        new_request = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if new_request is not None:
+            old_host = urllib.parse.urlparse(req.full_url).netloc
+            new_host = urllib.parse.urlparse(newurl).netloc
+            if old_host != new_host:
+                new_request.remove_header("Authorization")
+        return new_request
+
+
 def _download_artifact(url: str, destination: Path) -> None:
     token = _token()
     if not token:
@@ -207,7 +221,8 @@ def _download_artifact(url: str, destination: Path) -> None:
             "User-Agent": USER_AGENT,
         },
     )
-    with urllib.request.urlopen(request, timeout=300) as response:
+    opener = urllib.request.build_opener(_StripAuthOnRedirect())
+    with opener.open(request, timeout=300) as response:
         payload = response.read()
     with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as handle:
         handle.write(payload)

@@ -36,7 +36,7 @@ Development currently happens on the fork
 | `website/data/pr/` | **generated, non-official**: `index.json`, one `manifest.json` and comparison files per pull request |
 | `benchmark/simulations/` | the simulation scripts launched by NoiseModelling: `runscriptV5.0.groovy`, `runscriptV6.0.groovy`, plus one script per version when the API changed |
 | `benchmark/simulations/lib/NoiseBench.groovy` | shared simulation helpers: script loading, profiler CSV, LAEQ statistics |
-| `benchmark/input/clisson/` | the Clisson reference dataset (Git LFS) |
+| `benchmark/input/clisson/` | the Clisson raw dataset (`clisson/`) and the benchmark dataset (`cropped/`, Git LFS) |
 | `benchmark/input/montagne/` | the La Montagne dataset (Git LFS) and its measured reference `measure/RECEIVERS_LEVEL.geojson` |
 | `schemas/` | JSON schemas of the generated artifacts, checked by `tools/validate_outputs.py` |
 | `tools/` | the characterization harness: `run_checks.sh`, `snapshot.py`, `check.py`, `sim_spec.py`, `check_groovy.py`, `test_noisebench.py` |
@@ -47,7 +47,7 @@ Development currently happens on the fork
 ## How it works
 
 1. `benchmark/drivers/benchmark_run_clisson.sh --version v5.0.1` downloads that release, then NoiseModelling's ScriptRunner runs
-   `benchmark/simulations/runscriptV5.0.groovy` on `benchmark/input/clisson/`; results land in `benchmark/output/v5.0.1/`.
+   `benchmark/simulations/runscriptV5.0.groovy` on `benchmark/input/clisson/cropped/`; results land in `benchmark/output/v5.0.1/`.
    The script to load and its parameters come from `benchmark/config/benchmark.json`, not from hard-coded branches.
 2. `benchmark/drivers/benchmark_run_clisson.sh --aggregate-only` turns `benchmark/output/*/` into `website/data/` and computes the comparisons.
 3. `benchmark/drivers/benchmark_run_montagne.sh --version v5.0.1` runs `benchmark/simulations/montagne/montagneV5.groovy` on
@@ -144,7 +144,8 @@ The list of things that must never change is in `docs/contracts.md`.
   NoiseModelling CI artifact; on a fork this needs the optional `GH_PAT` secret and depends on a non-expired
   artifact being found) or an entry pinned to a **Maven Central snapshot URL** (built deterministically by the
   normal matrix). `v6.0.2-SNAPSHOT` is pinned this way; a new unreleased version is auto-added without URL by the CI.
-- Do not modify `benchmark/input/clisson/`: published results would no longer be comparable.
+- The Clisson benchmark uses `benchmark/input/clisson/cropped/`: a 300 m x 300 m receiver area with a 1.25 km buffer of buildings, roads and DEM around it. The grid spacing is unchanged. This keeps the recommended propagation parameters (`confMaxSrcDist=800 m`, `confMaxReflDist=350 m`) at roughly the previous runtime.
+- Do not modify `benchmark/input/clisson/clisson/` or `benchmark/input/clisson/cropped/`: published results would no longer be comparable.
 - For La Montagne, the comparison to the measurements is **calibrated per version**: `offset = measured − computed`
   at the receiver closest to the source (`benchmark/input/montagne/LW_ROADS.geojson`), so the error is zero there for every model.
 - Do not modify `benchmark/input/montagne/` nor `benchmark/input/montagne/measure/`: published results would no longer be comparable.

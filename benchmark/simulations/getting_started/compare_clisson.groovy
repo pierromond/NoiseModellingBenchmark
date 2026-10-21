@@ -2,8 +2,9 @@
  * Compare your own implementation with NoiseModelling on the Clisson dataset.
  *
  * Clisson is a road-traffic scene (line sources, a full urban noise map).
- * A full run with the parameters below typically takes ~15 minutes on a
- * GitHub Actions runner.
+ * A full run with the parameters below typically takes ~9 minutes on a
+ * GitHub Actions runner. The dataset is cropped to a 300 m x 300 m receiver
+ * area, with a 1.25 km buffer of buildings, roads and DEM around it.
  *
  * Usage:
  *   ScriptRunner -w workspace -s compare_clisson.groovy
@@ -69,7 +70,8 @@ static def exec(Connection connection, Map input) {
              "tableDEM"          : "DEM",
              "tableGroundAbs"    : "GROUNDS",
              "confReflOrder"     : 1,
-             "confMaxSrcDist"    : 300,
+             "confMaxReflDist"   : 350,
+             "confMaxSrcDist"    : 800,
              "confDiffHorizontal": true,
              "confMaxError"      : 0.1,
              "confFavorableOccurrencesDefault": "0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25"])

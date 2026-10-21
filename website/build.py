@@ -22,8 +22,9 @@ def dem_url():
     ref  = os.environ.get("GITHUB_REF_NAME", "")
     if not repo or not ref:
         return ""
+    dataset_dir = CONFIG["datasets"]["clisson"]["dir"]
     return (f"https://media.githubusercontent.com/media/{repo}/{ref}"
-            "/input/clisson/clisson/DEM.geojson")
+            f"/{dataset_dir}/DEM.geojson")
 
 
 NM_REPO = "Universite-Gustave-Eiffel/NoiseModelling"

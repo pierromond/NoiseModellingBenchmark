@@ -219,7 +219,7 @@ copy_geojson() {
 }
 
 copy_geojson_clisson() {
-    local CLISSON_DIR="$INPUT_DIR/clisson/clisson"
+    local CLISSON_DIR="$INPUT_DIR/clisson/cropped"
 
     declare -A COMMON_LAYERS=(
         ["BUILDINGS.geojson"]="BUILDINGS.geojson"

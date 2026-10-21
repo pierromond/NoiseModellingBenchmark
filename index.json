@@ -1,0 +1,86 @@
+[
+  {
+    "pr": 1092,
+    "title": "Fix mixed geometry results when clipping line sources",
+    "url": "https://github.com/Universite-Gustave-Eiffel/NoiseModelling/pull/1092",
+    "label": "v6.0.2-SNAPSHOT-pr1092-680a381",
+    "version": "6.0.2-SNAPSHOT",
+    "headSha": "680a381481437e78816d2d5428b17dda83c3bd80",
+    "baseSha": "8baad2de028ecb6ece3cb36673272d6bce19c103",
+    "runId": 39401005439,
+    "runUrl": "https://github.com/Universite-Gustave-Eiffel/NoiseModelling/actions/runs/39401005439",
+    "publishedAt": "2026-10-21T09:31:06Z",
+    "datasets": [
+      "clisson",
+      "montagne"
+    ],
+    "baselines": {
+      "clisson": [
+        "v4.0.0",
+        "v4.0.1",
+        "v4.0.2",
+        "v4.0.4",
+        "v4.0.5",
+        "v5.0.0",
+        "v5.0.1",
+        "v6.0.0",
+        "v6.0.1",
+        "v6.0.2-SNAPSHOT"
+      ],
+      "montagne": [
+        "v4.0.0",
+        "v4.0.1",
+        "v4.0.2",
+        "v4.0.4",
+        "v4.0.5",
+        "v5.0.0",
+        "v5.0.1",
+        "v6.0.0",
+        "v6.0.1",
+        "v6.0.2-SNAPSHOT"
+      ]
+    }
+  },
+  {
+    "pr": 1063,
+    "title": "Only build receiver images from the walls that can reflect toward a source",
+    "url": "https://github.com/Universite-Gustave-Eiffel/NoiseModelling/pull/1063",
+    "label": "v6.0.2-SNAPSHOT-pr1063-b617439",
+    "version": "6.0.2-SNAPSHOT",
+    "headSha": "b617439f92325f45d1430a52ab2c22093748d6de",
+    "baseSha": "77fa27ea3c5bb3442e1e0cbd938547ecc5bf5751",
+    "runId": 37022791098,
+    "runUrl": "https://github.com/Universite-Gustave-Eiffel/NoiseModelling/actions/runs/37022791098",
+    "publishedAt": "2026-10-21T09:30:02Z",
+    "datasets": [
+      "clisson",
+      "montagne"
+    ],
+    "baselines": {
+      "clisson": [
+        "v4.0.0",
+        "v4.0.1",
+        "v4.0.2",
+        "v4.0.4",
+        "v4.0.5",
+        "v5.0.0",
+        "v5.0.1",
+        "v6.0.0",
+        "v6.0.1",
+        "v6.0.2-SNAPSHOT"
+      ],
+      "montagne": [
+        "v4.0.0",
+        "v4.0.1",
+        "v4.0.2",
+        "v4.0.4",
+        "v4.0.5",
+        "v5.0.0",
+        "v5.0.1",
+        "v6.0.0",
+        "v6.0.1",
+        "v6.0.2-SNAPSHOT"
+      ]
+    }
+  }
+]

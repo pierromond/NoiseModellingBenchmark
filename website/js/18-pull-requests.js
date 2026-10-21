@@ -374,7 +374,11 @@ async function initPullRequests() {
     prSource = 'raw';
   }
   if (!prIndex.length) {
-    if (tab) tab.style.display = 'none';
+    // Keep the tab visible so the tab bar never changes shape. The panel
+    // explains how to publish the first PR result.
+    if (tab) tab.style.display = '';
+    document.querySelectorAll('#panel-pr .pair-selector, #panel-pr #pr-summary, #panel-pr #pr-charts-section, #panel-pr #pr-montagne-section')
+      .forEach(element => { element.style.display = 'none'; });
     const intro = document.getElementById('pr-intro');
     if (intro) {
       intro.innerHTML = 'No pull-request benchmark has been published yet. '
@@ -382,6 +386,7 @@ async function initPullRequests() {
     }
     return;
   }
+  if (tab) tab.style.display = '';
   prIndex.sort((a, b) => Number(b.pr) - Number(a.pr));
   prFillSelectors();
   const initial = readState();

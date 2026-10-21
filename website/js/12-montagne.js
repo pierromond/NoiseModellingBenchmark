@@ -286,8 +286,13 @@ function renderMontagne(data) {
   if (!panel) return;
 
   if (!data.length) {
-    panel.style.display = 'none';
-    if (tab) tab.style.display = 'none';
+    // Keep the tab visible: hiding it makes the tab bar look broken when a
+    // dataset is temporarily unavailable or the page is opened from a link.
+    panel.style.display = '';
+    if (tab) tab.style.display = '';
+    montagneData = [];
+    const versions = document.getElementById('montagne-versions');
+    if (versions) versions.innerHTML = '<div class="empty">No La Montagne results.</div>';
     return;
   }
 

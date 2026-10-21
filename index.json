@@ -82,5 +82,47 @@
         "v6.0.2-SNAPSHOT"
       ]
     }
+  },
+  {
+    "pr": 1003,
+    "title": "Move frequency independent work out of the attenuation loop, share profile geometry between paths",
+    "url": "https://github.com/Universite-Gustave-Eiffel/NoiseModelling/pull/1003",
+    "label": "v6.0.2-SNAPSHOT-pr1003-df2cb77",
+    "version": "6.0.2-SNAPSHOT",
+    "headSha": "df2cb7726bb10a39ff63e211311bd17df17e2b82",
+    "baseSha": "f7f67455d393f0feacc6b2c7769165b5b21be590",
+    "runId": 37803251174,
+    "runUrl": "https://github.com/Universite-Gustave-Eiffel/NoiseModelling/actions/runs/37803251174",
+    "publishedAt": "2026-10-21T13:09:15Z",
+    "datasets": [
+      "clisson",
+      "montagne"
+    ],
+    "baselines": {
+      "clisson": [
+        "v4.0.0",
+        "v4.0.1",
+        "v4.0.2",
+        "v4.0.4",
+        "v4.0.5",
+        "v5.0.0",
+        "v5.0.1",
+        "v6.0.0",
+        "v6.0.1",
+        "v6.0.2-SNAPSHOT"
+      ],
+      "montagne": [
+        "v4.0.0",
+        "v4.0.1",
+        "v4.0.2",
+        "v4.0.4",
+        "v4.0.5",
+        "v5.0.0",
+        "v5.0.1",
+        "v6.0.0",
+        "v6.0.1",
+        "v6.0.2-SNAPSHOT"
+      ]
+    }
   }
 ]

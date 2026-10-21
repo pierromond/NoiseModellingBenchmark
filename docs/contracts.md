@@ -74,7 +74,7 @@ Validation : `python3 tools/validate_outputs.py`.
   `confFavorableOccurrencesDay` (v4) / `confFavorableOccurrencesDefault` (v5+),
   `confRecordProfile`.
 - Clés `localStorage` du site : `nm-benchmark-state-v1`, `nm-theme`.
-- Branche de publication des PR : `pr-data` (index à la racine, données dans `pr/<numéro>/`).
+- Branche de publication des PR : `pr-data` (index à la racine, données dans `<numéro>/`).
   Elle est lue par l'onglet « Pull requests » et n'est jamais incluse dans les résultats officiels.
 
 ## Garde-fous (`tools/run_checks.sh`)

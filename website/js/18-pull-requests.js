@@ -30,7 +30,8 @@ async function prFetchJson(url) {
 }
 
 function prDataBase(pr) {
-  return prSource === 'raw' ? `${prRawBase()}/pr/${pr}` : `data/pr/${pr}`;
+  // The pr-data branch stores index.json at its root and one directory per PR.
+  return prSource === 'raw' ? `${prRawBase()}/${pr}` : `data/pr/${pr}`;
 }
 
 async function prLoad(pr) {

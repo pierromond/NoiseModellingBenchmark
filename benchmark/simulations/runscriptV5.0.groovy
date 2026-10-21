@@ -80,7 +80,8 @@ static def exec(Connection connection, Map input) {
 
     def config = new JsonSlurper().parse(new File("benchmark/config/benchmark.json"))
     def simConfig = config.simulations.clisson
-    def versionConfig = simConfig.versions[version]
+    def baseVersion = version.replaceFirst(/-pr\d+-[0-9a-f]{7,}$/, "")
+    def versionConfig = simConfig.versions[version] ?: simConfig.versions[baseVersion]
     double silenceThreshold = config.constants.silenceThreshold as double
     def bins = config.constants.histogramBins as List
 

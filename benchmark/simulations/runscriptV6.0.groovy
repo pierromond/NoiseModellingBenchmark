@@ -206,7 +206,10 @@ static def exec(Connection connection, Map input) {
                 "v6.0.1"         : "benchmark/simulations/v601Noise_level_from_source.groovy",
                 "v6.0.2-SNAPSHOT": "benchmark/simulations/v602Noise_level_from_source.groovy"
         ]
-        def scriptPath = customScripts[version]
+        // PR labels are v<version>-pr<number>-<sha>; select the same script as
+        // the published version so that timing comparisons are apples-to-apples.
+        def baseVersion = version.replaceFirst(/-pr\d+-[0-9a-f]{7,}$/, "")
+        def scriptPath = customScripts[baseVersion]
 
         if(scriptPath != null){
             runner = "v6-custom"

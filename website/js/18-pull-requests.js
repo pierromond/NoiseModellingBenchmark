@@ -7,6 +7,7 @@ let prSource = 'local';
 let prCache = {};
 let prComparison = null;
 let prClissonResults = null;
+let prMontagneResults = null;
 let prPairedVersion = null;
 let prScatterChart = null;
 let prDensityChart = null;
@@ -92,7 +93,11 @@ function prParseTime(value) {
 
 function prParseNumber(value) {
   if (value === null || value === undefined || value === '') return null;
-  const number = Number.parseFloat(String(value).replace(',', '.'));
+  let text = String(value).trim();
+  // The stats may use "2,910.47" (thousands separator) or "17,81" (decimal comma).
+  if (text.includes(',') && text.includes('.')) text = text.replace(/,/g, '');
+  else if (text.includes(',')) text = text.replace(',', '.');
+  const number = Number.parseFloat(text);
   return Number.isFinite(number) ? number : null;
 }
 
@@ -130,6 +135,13 @@ async function prOfficialClissonResults() {
   const results = await prFetchJson('data/results.json');
   prClissonResults = Array.isArray(results) ? results : [];
   return prClissonResults;
+}
+
+async function prOfficialMontagneResults() {
+  if (prMontagneResults !== null) return prMontagneResults;
+  const results = await prFetchJson('data/montagne/results.json');
+  prMontagneResults = Array.isArray(results) ? results : [];
+  return prMontagneResults;
 }
 
 function prResultForVersion(version, results) {
@@ -397,9 +409,12 @@ async function prRender() {
   prUpdateBaselineOptions();
   const dataset = prCurrentDataset();
   const selected = prSelectedComparison();
-  const prResult = dataset === 'clisson' ? ((data.clisson.results || [])[0] || null) : null;
-  const baselineResults = dataset === 'clisson' ? (await prOfficialClissonResults()).slice() : [];
-  const pairedRows = dataset === 'clisson' ? (data.clisson.baseline_results || []) : [];
+  const datasetData = dataset === 'clisson' ? data.clisson : data.montagne;
+  const prResult = (datasetData?.results || [])[0] || null;
+  const baselineResults = dataset === 'clisson'
+    ? (await prOfficialClissonResults()).slice()
+    : (await prOfficialMontagneResults()).slice();
+  const pairedRows = datasetData?.baseline_results || [];
   pairedRows.forEach(row => {
     const index = baselineResults.findIndex(item => item.version === row.version);
     if (index >= 0) baselineResults[index] = row;

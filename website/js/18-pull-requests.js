@@ -205,6 +205,10 @@ function prSelectedCard(item, baselineRow, prRow, pairedHost) {
   const timingNote = prRow && baselineRow ? (baselineRow.paired
     ? `<div class="pr-meta" style="margin:.15rem 0 .6rem">${tag('same runner')} Baseline timing was rerun on this runner${hostDetails ? `: ${esc(hostDetails)}` : ''}.</div>`
     : `<div class="pr-meta" style="margin:.15rem 0 .6rem">${tag('historical')} Baseline timing comes from a different CI run — treat it as indicative.</div>`) : '';
+  const sameBenchmarkScript = !prRow?.runner || !baselineRow?.runner || prRow.runner === baselineRow.runner;
+  const scriptNote = prRow && baselineRow && !sameBenchmarkScript
+    ? `<div class="pr-meta" style="margin:.15rem 0 .6rem">${tag('script differs')} PR used <code>${esc(prRow.runner)}</code>, baseline used <code>${esc(baselineRow.runner)}</code> — timing is not fully comparable.</div>`
+    : '';
   const timeRow = baseSeconds !== null && prSeconds !== null ? `
         <div class="stat-row"><span class="stat-label">Compute time</span><span class="stat-value accent3">${pair(esc(prRow.time), esc(baselineRow.time))}</span></div>
         <div class="stat-row"><span class="stat-label">Time difference (PR − baseline)</span><span class="stat-value" style="color:${timeDelta > 0 ? '#f44336' : 'var(--accent3)'}">${prDelta(timeDelta, 0)} s (${prDelta(timeDelta / 60)} min)</span></div>
@@ -226,6 +230,7 @@ function prSelectedCard(item, baselineRow, prRow, pairedHost) {
         ${tag('PR')} = tested CI artifact · ${tag('base')} = selected published version
       </div>
       ${timingNote}
+      ${scriptNote}
       <div class="card-stats">
         <div class="stat-row"><span class="stat-label">Mean LAEQ</span><span class="stat-value">${pair(fmt(prRow?.mean), fmt(baselineRow?.mean), ' dB')} (${prNumberDelta(prRow?.mean, baselineRow?.mean)} dB)</span></div>
         <div class="stat-row"><span class="stat-label">RMSE (PR vs baseline)</span><span class="stat-value accent2">${fmt(item.rmse)} dB</span></div>

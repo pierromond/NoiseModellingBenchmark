@@ -95,6 +95,10 @@ From GitHub, use **Actions → Benchmark PR → Run workflow** (or
 secret with read access to the NoiseModelling Actions artifacts; without it,
 download the artifact manually and use the local `--artifact-zip` path. It:
 
+- reruns the selected baseline once on the same runner (`paired=true`,
+  `baseline=v6.0.2-SNAPSHOT` by default) so that compute times are comparable;
+  no repeated runs are made. Use `paired=false` to skip the extra run and keep
+  the historical baseline timing;
 - uploads the JSON report and site data as artifacts;
 - posts a summary on the NoiseModelling PR only when `comment=true` (disabled by
   default while testing);

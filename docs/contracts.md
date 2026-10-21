@@ -58,6 +58,7 @@ scénario **homogène** (celui affiché sur la carte).
 | `website/data/pr/<pr>/manifest.json` | `schemas/pr_manifest.schema.json` |
 | `website/data/pr/<pr>/*/comparisons.json` | `schemas/comparisons.schema.json` |
 | `website/data/pr/<pr>/montagne/measure_comparison.json` | `schemas/measure_comparison.schema.json` |
+| `website/data/pr/<pr>/<dataset>/baseline_results.json` | `schemas/results.schema.json` |
 
 Validation : `python3 tools/validate_outputs.py`.
 

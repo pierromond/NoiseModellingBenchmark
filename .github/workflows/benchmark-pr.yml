@@ -16,6 +16,16 @@ on:
           - both
           - clisson
           - montagne
+      paired:
+        description: 'Rerun the baseline once on the same runner for comparable timings'
+        required: true
+        default: true
+        type: boolean
+      baseline:
+        description: 'Baseline version to rerun for the paired timing'
+        required: true
+        default: v6.0.2-SNAPSHOT
+        type: string
       publish:
         description: 'Publish the result to the Pull requests tab (pr-data branch)'
         required: true
@@ -164,6 +174,61 @@ jobs:
       - name: Check Java
         run: java -version
 
+      - name: Run paired baseline on Clisson
+        if: inputs.paired && (inputs.dataset == 'both' || inputs.dataset == 'clisson')
+        continue-on-error: true
+        run: bash benchmark/drivers/benchmark_run_clisson.sh --version "${{ inputs.baseline }}"
+
+      - name: Run paired baseline on La Montagne
+        if: inputs.paired && (inputs.dataset == 'both' || inputs.dataset == 'montagne')
+        continue-on-error: true
+        run: bash benchmark/drivers/benchmark_run_montagne.sh --version "${{ inputs.baseline }}"
+
+      - name: Save paired baseline timing and host
+        if: always() && inputs.paired
+        run: |
+          set -e
+          BASE="${{ inputs.baseline }}"
+          mkdir -p benchmark/output/pair/clisson benchmark/output/pair/montagne
+          if [ -f "benchmark/output/$BASE/stats_$BASE.json" ]; then
+            cp "benchmark/output/$BASE/stats_$BASE.json" benchmark/output/pair/clisson/
+          fi
+          if [ -f "benchmark/output/montagne/$BASE/stats_$BASE.json" ]; then
+            cp "benchmark/output/montagne/$BASE/stats_$BASE.json" benchmark/output/pair/montagne/
+          fi
+          python3 - <<'PY' > benchmark/output/pair/host.json
+          import json, os, platform, subprocess
+          model = ""
+          try:
+              with open("/proc/cpuinfo", encoding="utf-8") as handle:
+                  for line in handle:
+                      if line.startswith("model name"):
+                          model = line.split(":", 1)[1].strip()
+                          break
+          except OSError:
+              pass
+          try:
+              java = subprocess.check_output(["java", "-version"], stderr=subprocess.STDOUT, text=True).splitlines()[0]
+          except Exception:
+              java = ""
+          print(json.dumps({
+              "runner": os.environ.get("RUNNER_NAME", ""),
+              "image": os.environ.get("ImageOS", ""),
+              "cpu": model,
+              "cores": os.cpu_count(),
+              "platform": platform.platform(),
+              "java": java,
+          }))
+          PY
+
+      - name: Upload paired baseline
+        if: always() && inputs.paired
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-pair-baseline-${{ inputs.pr }}
+          path: benchmark/output/pair
+          retention-days: 7
+
       - name: Download PR manifest
         uses: actions/download-artifact@v4
         with:
@@ -268,6 +333,14 @@ jobs:
           name: pr-output-montagne-${{ inputs.pr }}
           path: benchmark/output/montagne/${{ needs.resolve.outputs.label }}
 
+      - name: Download paired baseline timing
+        if: inputs.paired
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: pr-pair-baseline-${{ inputs.pr }}
+          path: benchmark/output/pair
+
       - name: Download latest baseline pack
         continue-on-error: true
         env:
@@ -290,6 +363,8 @@ jobs:
             --baseline existing \
             --baseline-source auto \
             --pages-url "$PAGES_URL" \
+            --paired-dir benchmark/output/pair \
+            --paired-version "${{ inputs.baseline }}" \
             --out website/data/pr \
             --report-dir "benchmark/output/pr/${{ inputs.pr }}"
 

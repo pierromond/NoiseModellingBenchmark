@@ -7,6 +7,7 @@ let prSource = 'local';
 let prCache = {};
 let prComparison = null;
 let prClissonResults = null;
+let prPairedVersion = null;
 let prScatterChart = null;
 let prDensityChart = null;
 let prMontagneChart = null;
@@ -44,11 +45,13 @@ async function prLoad(pr) {
     clisson: {
       results: await get('clisson/results.json', []),
       comparisons: await get('clisson/comparisons.json', []),
+      baseline_results: await get('clisson/baseline_results.json', []),
     },
     montagne: {
       results: await get('montagne/results.json', []),
       comparisons: await get('montagne/comparisons.json', []),
       measure: await get('montagne/measure_comparison.json', []),
+      baseline_results: await get('montagne/baseline_results.json', []),
     },
   };
   prCache[pr] = data;
@@ -144,7 +147,8 @@ function prUpdateBaselineOptions() {
   if (!select) return;
   const values = prComparisonsFor(prCurrentDataset()).map(item => item.version_a);
   const current = select.value;
-  prOptions(select, values, values.includes(current) ? current : values[0]);
+  const preferred = prPairedVersion && values.includes(prPairedVersion) ? prPairedVersion : values[0];
+  prOptions(select, values, values.includes(current) ? current : preferred);
 }
 
 function prMetaHtml(item, manifest) {
@@ -166,7 +170,7 @@ function prMetaHtml(item, manifest) {
     </div>`;
 }
 
-function prSelectedCard(item, baselineRow, prRow) {
+function prSelectedCard(item, baselineRow, prRow, pairedHost) {
   if (!item) return '';
   const stable = item.rmse < 0.1;
   const warn = item.rmse >= 0.1 && item.rmse < 0.5;
@@ -181,6 +185,14 @@ function prSelectedCard(item, baselineRow, prRow) {
   const tag = text => `<span class="start-tag">${text}</span>`;
   const pair = (prValue, baseValue, suffix = '') =>
     `${tag('PR')} ${prValue}${suffix} · ${tag('base')} ${baseValue}${suffix}`;
+  const hostDetails = [
+    pairedHost?.cpu,
+    pairedHost?.cores ? `${pairedHost.cores} cores` : '',
+    pairedHost?.java,
+  ].filter(Boolean).join(' · ');
+  const timingNote = prRow && baselineRow ? (baselineRow.paired
+    ? `<div class="pr-meta" style="margin:.15rem 0 .6rem">${tag('same runner')} Baseline timing was rerun on this runner${hostDetails ? `: ${esc(hostDetails)}` : ''}.</div>`
+    : `<div class="pr-meta" style="margin:.15rem 0 .6rem">${tag('historical')} Baseline timing comes from a different CI run — treat it as indicative.</div>`) : '';
   const timeRow = baseSeconds !== null && prSeconds !== null ? `
         <div class="stat-row"><span class="stat-label">Compute time</span><span class="stat-value accent3">${pair(esc(prRow.time), esc(baselineRow.time))}</span></div>
         <div class="stat-row"><span class="stat-label">Time difference (PR − baseline)</span><span class="stat-value" style="color:${timeDelta > 0 ? '#f44336' : 'var(--accent3)'}">${prDelta(timeDelta, 0)} s (${prDelta(timeDelta / 60)} min)</span></div>
@@ -201,6 +213,7 @@ function prSelectedCard(item, baselineRow, prRow) {
       <div class="pr-meta" style="margin:.35rem 0 .6rem">
         ${tag('PR')} = tested CI artifact · ${tag('base')} = selected published version
       </div>
+      ${timingNote}
       <div class="card-stats">
         <div class="stat-row"><span class="stat-label">Mean LAEQ</span><span class="stat-value">${pair(fmt(prRow?.mean), fmt(baselineRow?.mean), ' dB')} (${prNumberDelta(prRow?.mean, baselineRow?.mean)} dB)</span></div>
         <div class="stat-row"><span class="stat-label">RMSE (PR vs baseline)</span><span class="stat-value accent2">${fmt(item.rmse)} dB</span></div>
@@ -380,11 +393,18 @@ async function prRender() {
   if (!item) return;
   const data = await prLoad(item.pr);
   prComparison = data;
+  prPairedVersion = data.manifest?.pairedBaseline?.version || null;
   prUpdateBaselineOptions();
   const dataset = prCurrentDataset();
   const selected = prSelectedComparison();
   const prResult = dataset === 'clisson' ? ((data.clisson.results || [])[0] || null) : null;
-  const baselineResults = dataset === 'clisson' ? await prOfficialClissonResults() : [];
+  const baselineResults = dataset === 'clisson' ? (await prOfficialClissonResults()).slice() : [];
+  const pairedRows = dataset === 'clisson' ? (data.clisson.baseline_results || []) : [];
+  pairedRows.forEach(row => {
+    const index = baselineResults.findIndex(item => item.version === row.version);
+    if (index >= 0) baselineResults[index] = row;
+    else baselineResults.push(row);
+  });
   const baselineRow = selected ? prResultForVersion(selected.version_a, baselineResults) : null;
 
   const meta = document.getElementById('pr-meta');
@@ -392,7 +412,7 @@ async function prRender() {
   const summary = document.getElementById('pr-summary');
   if (summary) {
     summary.innerHTML = selected
-      ? prSelectedCard(selected, baselineRow, prResult)
+      ? prSelectedCard(selected, baselineRow, prResult, data.manifest?.pairedBaseline?.host || null)
       : '<div class="empty">No comparison data for this baseline.</div>';
   }
 

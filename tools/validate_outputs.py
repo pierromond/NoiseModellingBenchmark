@@ -51,6 +51,8 @@ def targets() -> list[tuple[Path, Path]]:
             out.append((path, SCHEMAS / "comparisons.schema.json"))
     for path in sorted(ROOT.glob("website/data/pr/*/montagne/measure_comparison.json")):
         out.append((path, SCHEMAS / "measure_comparison.schema.json"))
+    for path in sorted(ROOT.glob("website/data/pr/*/*/baseline_results.json")):
+        out.append((path, SCHEMAS / "results.schema.json"))
     return out
 
 

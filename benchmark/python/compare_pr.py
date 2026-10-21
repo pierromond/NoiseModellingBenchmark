@@ -161,6 +161,21 @@ def _load_stats(root: Path, label: str) -> dict | None:
     return None
 
 
+def _load_paired(paired_dir: Path | None, version: str | None, dataset: str) -> dict | None:
+    """Fresh baseline timing produced on the same runner as the PR."""
+    if paired_dir is None or not version:
+        return None
+    path = paired_dir / dataset / f"stats_{version}.json"
+    if not path.exists():
+        return None
+    data = _read_json(path, None)
+    if isinstance(data, dict):
+        data["version"] = version
+        data["paired"] = True
+        return data
+    return None
+
+
 def _measure_paths(dataset: str, pages_url: str) -> tuple[Path, Path] | None:
     if dataset != "montagne":
         return None
@@ -249,6 +264,15 @@ def _report(manifest: dict, label: str, clisson: list[dict], montagne: list[dict
         f"**Base SHA:** `{manifest.get('baseSha', '')}`  ",
         f"**CI run:** {manifest.get('runUrl', '—')}  ",
         f"**Artifact:** `{manifest.get('artifactName', '—')}`",
+    ]
+    paired = manifest.get("pairedBaseline") or {}
+    if paired.get("version"):
+        host = paired.get("host") or {}
+        details = [value for value in (host.get("cpu"), f"{host.get('cores')} cores" if host.get("cores") else "",
+                                       host.get("java")) if value]
+        lines.append(f"**Paired baseline:** `{paired['version']}` rerun on the same runner"
+                     + (f" ({', '.join(details)})" if details else "") + ".")
+    lines += [
         "",
         "> PR result — not an official benchmark release. "
         "The CI artifact is built from the PR merge ref and may include base-branch changes.",
@@ -308,6 +332,10 @@ def main() -> int:
     parser.add_argument("--baseline", choices=("existing", "same-series", "none"), default="existing")
     parser.add_argument("--baseline-source", choices=("auto", "local", "pages"), default="auto")
     parser.add_argument("--pages-url", default=DEFAULT_PAGES)
+    parser.add_argument("--paired-dir", type=Path, default=None,
+                        help="fresh baseline stats produced on the same runner as the PR")
+    parser.add_argument("--paired-version", default=None,
+                        help="version label of the paired baseline")
     parser.add_argument("--versions", type=Path, default=ROOT / "benchmark" / "versions.json")
     parser.add_argument("--out", type=Path, default=ROOT / "website" / "data" / "pr")
     parser.add_argument("--report-dir", type=Path, default=None)
@@ -324,6 +352,8 @@ def main() -> int:
     montagne_comparisons: list[dict] = []
     measure: list[dict] = []
     baselines: dict[str, list[str]] = {"clisson": [], "montagne": []}
+    paired_host = _read_json(args.paired_dir / "host.json", {}) if args.paired_dir else {}
+    paired_datasets: list[str] = []
 
     if args.dataset in ("both", "clisson"):
         pr_root = _data_root("clisson")
@@ -331,6 +361,10 @@ def main() -> int:
         stats = _load_stats(pr_root, args.label)
         if pr_data and stats:
             _write_json(out_pr / "clisson" / "results.json", [stats])
+            paired_row = _load_paired(args.paired_dir, args.paired_version, "clisson")
+            if paired_row:
+                _write_json(out_pr / "clisson" / "baseline_results.json", [paired_row])
+                paired_datasets.append("clisson")
             for version in versions:
                 root = _find_baseline_root("clisson", version, args.baseline_source, args.pages_url)
                 if root is None:
@@ -354,6 +388,10 @@ def main() -> int:
         stats = _load_stats(pr_root, args.label)
         if pr_data and stats:
             _write_json(out_pr / "montagne" / "results.json", [stats])
+            paired_row = _load_paired(args.paired_dir, args.paired_version, "montagne")
+            if paired_row:
+                _write_json(out_pr / "montagne" / "baseline_results.json", [paired_row])
+                paired_datasets.append("montagne")
             for version in versions:
                 root = _find_baseline_root("montagne", version, args.baseline_source, args.pages_url)
                 if root is None:
@@ -385,6 +423,11 @@ def main() -> int:
         "datasets": [name for name in ("clisson", "montagne")
                      if (out_pr / name / "results.json").exists()],
         "baselines": baselines,
+        "pairedBaseline": {
+            "version": args.paired_version or "",
+            "datasets": paired_datasets,
+            "host": paired_host,
+        },
         "publishedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     })
     _write_json(out_pr / "manifest.json", manifest)

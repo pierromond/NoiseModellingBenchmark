@@ -861,6 +861,16 @@ jobs:
       - name: Generate La Montagne website data
         run: bash benchmark/drivers/benchmark_run_montagne.sh --aggregate-only
 
+      - name: Build baseline pack for PR comparisons
+        run: python3 benchmark/python/build_baseline_pack.py
+
+      - name: Upload baseline pack
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-baseline-pack
+          path: benchmark/baseline-pack/
+          retention-days: 90
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
 

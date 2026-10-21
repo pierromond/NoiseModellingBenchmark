@@ -41,6 +41,16 @@ def targets() -> list[tuple[Path, Path]]:
             out.append((path, SCHEMAS / "stats.schema.json"))
     for path in sorted(ROOT.glob("website/data/montagne/*/rays_*.geojson")):
         out.append((path, SCHEMAS / "rays.schema.json"))
+    for path in sorted(ROOT.glob("website/data/pr/index.json")):
+        out.append((path, SCHEMAS / "pr_index.schema.json"))
+    for path in sorted(ROOT.glob("website/data/pr/*/manifest.json")):
+        out.append((path, SCHEMAS / "pr_manifest.schema.json"))
+    for pattern in ("website/data/pr/*/clisson/comparisons.json",
+                    "website/data/pr/*/montagne/comparisons.json"):
+        for path in sorted(ROOT.glob(pattern)):
+            out.append((path, SCHEMAS / "comparisons.schema.json"))
+    for path in sorted(ROOT.glob("website/data/pr/*/montagne/measure_comparison.json")):
+        out.append((path, SCHEMAS / "measure_comparison.schema.json"))
     return out
 
 

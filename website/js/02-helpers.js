@@ -18,6 +18,7 @@ function readState() {
 
 const CLISSON_STATE_KEYS = ['version', 'layers', 'a', 'b'];
 const MONTAGNE_STATE_KEYS = ['m_models', 'm_map', 'm_layers', 'm_rel'];
+const PR_STATE_KEYS = ['pr', 'pr_base', 'pr_dataset'];
 
 function syncState(patch) {
   const cur = new URLSearchParams(location.hash.replace(/^#/, ''));
@@ -25,6 +26,7 @@ function syncState(patch) {
   // Keep the URL scoped to the active dataset only.
   if (ds !== 'clisson') CLISSON_STATE_KEYS.forEach(k => cur.delete(k));
   if (ds !== 'montagne') MONTAGNE_STATE_KEYS.forEach(k => cur.delete(k));
+  if (ds !== 'pr') PR_STATE_KEYS.forEach(k => cur.delete(k));
   Object.entries(patch).forEach(([key, value]) => {
     if (value === null || value === undefined || value === '') cur.delete(key);
     else cur.set(key, value);

@@ -93,7 +93,7 @@ function renderStart(start, clissonResults, montagneResults) {
   const relUrl = release.url || 'https://github.com/Universite-Gustave-Eiffel/NoiseModelling/releases/latest';
   const relZip = (relUrl.split('/').pop()) || 'NoiseModelling.zip';
   const nmDocs = (start && start.nmDocs) || 'https://noise-planet.org/noisemodelling.html';
-  const repo = (start && start.repo) || 'Universite-Gustave-Eiffel/NoiseModellingBenchmark';
+  const repo = (start && start.repo) || 'pierromond/NoiseModellingBenchmark';
 
   const glanceRows = datasets.map(ds => `
     <tr>

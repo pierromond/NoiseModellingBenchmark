@@ -1233,3 +1233,42 @@ html[data-theme="light"] .leaflet-tooltip-dark {
   border: 1px solid var(--border) !important;
   color: var(--text) !important;
 }
+
+/* ── PULL REQUEST PREVIEW ── */
+.pr-banner {
+  margin: .75rem 0 1rem;
+  padding: .75rem 1rem;
+  border-left: 3px solid var(--accent2);
+  background: rgba(255, 107, 53, .08);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: .72rem;
+  line-height: 1.7;
+}
+.pr-meta {
+  font-family: var(--font-mono);
+  font-size: .68rem;
+  line-height: 1.8;
+  color: var(--text-muted);
+  margin: .75rem 0;
+}
+.pr-meta a { color: var(--accent); }
+.pr-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: .68rem;
+  color: var(--text-muted);
+}
+.pr-table th {
+  color: var(--accent);
+  font-weight: 500;
+  padding: .25rem .6rem .25rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.pr-table td {
+  padding: .3rem .6rem .3rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.pr-table tr.pr-row td { color: var(--accent2); }
+#pr-diff-map { height: 480px; min-height: 320px; width: 100%; }

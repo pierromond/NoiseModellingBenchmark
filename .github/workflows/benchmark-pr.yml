@@ -1,0 +1,382 @@
+name: Benchmark PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: 'NoiseModelling pull request number'
+        required: true
+        type: string
+      dataset:
+        description: 'Dataset to run'
+        required: true
+        default: both
+        type: choice
+        options:
+          - both
+          - clisson
+          - montagne
+      publish:
+        description: 'Publish the result to the Pull requests tab (pr-data branch)'
+        required: true
+        default: false
+        type: boolean
+      comment:
+        description: 'Post the summary on the NoiseModelling pull request (keep false for now)'
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: write
+
+concurrency:
+  group: benchmark-pr-${{ inputs.pr }}
+  cancel-in-progress: true
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      label: ${{ steps.meta.outputs.label }}
+      java: ${{ steps.meta.outputs.java }}
+      artifactUrl: ${{ steps.meta.outputs.artifactUrl }}
+      artifactName: ${{ steps.meta.outputs.artifactName }}
+      headSha: ${{ steps.meta.outputs.headSha }}
+      baseSha: ${{ steps.meta.outputs.baseSha }}
+      version: ${{ steps.meta.outputs.version }}
+    steps:
+      - name: Checkout benchmark
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Resolve pull request and CI artifact
+        id: meta
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          PR_NUMBER: ${{ inputs.pr }}
+        run: |
+          python3 benchmark/scripts/ci/nm_pr.py resolve "$PR_NUMBER" \
+            --output benchmark/output/pr/manifest.json
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          from pathlib import Path
+          data = json.loads(Path("benchmark/output/pr/manifest.json").read_text())
+          for key in ("label", "java", "artifactUrl", "artifactName", "headSha", "baseSha", "version"):
+              print(f"{key}={data.get(key, '')}")
+          PY
+
+      - name: Upload PR manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-manifest-${{ inputs.pr }}
+          path: benchmark/output/pr/manifest.json
+          retention-days: 7
+
+  benchmark:
+    needs: resolve
+    if: needs.resolve.outputs.label != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 480
+    steps:
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
+      - name: Checkout benchmark
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+
+      - name: Compute Clisson input cache key
+        id: clisson_key
+        run: echo "key=clisson-${{ hashFiles('benchmark/input/clisson/**') }}" >> "$GITHUB_OUTPUT"
+
+      - name: Restore Clisson input data
+        id: clisson
+        uses: actions/cache/restore@v4
+        with:
+          path: benchmark/input/clisson
+          key: ${{ steps.clisson_key.outputs.key }}
+
+      - name: Fetch Clisson LFS data
+        if: steps.clisson.outputs.cache-hit != 'true'
+        run: |
+          git config --local --unset-all lfs.fetchexclude || true
+          git lfs pull --include="benchmark/input/clisson/**"
+          test "$(stat -c%s benchmark/input/clisson/clisson/DEM.geojson)" -gt 100000
+
+      - name: Save Clisson input data
+        if: steps.clisson.outputs.cache-hit != 'true'
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: benchmark/input/clisson
+          key: ${{ steps.clisson_key.outputs.key }}
+
+      - name: Compute La Montagne input cache key
+        id: montagne_key
+        run: echo "key=montagne-${{ hashFiles('benchmark/input/montagne/**') }}" >> "$GITHUB_OUTPUT"
+
+      - name: Restore La Montagne input data
+        id: montagne
+        uses: actions/cache/restore@v4
+        with:
+          path: benchmark/input/montagne
+          key: ${{ steps.montagne_key.outputs.key }}
+
+      - name: Fetch La Montagne LFS data
+        if: steps.montagne.outputs.cache-hit != 'true'
+        run: |
+          git config --local --unset-all lfs.fetchexclude || true
+          git lfs pull --include="benchmark/input/montagne/**"
+          test "$(stat -c%s benchmark/input/montagne/DEM.geojson)" -gt 100000
+
+      - name: Save La Montagne input data
+        if: steps.montagne.outputs.cache-hit != 'true'
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: benchmark/input/montagne
+          key: ${{ steps.montagne_key.outputs.key }}
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ needs.resolve.outputs.java }}
+
+      - name: Check Java
+        run: java -version
+
+      - name: Download PR manifest
+        uses: actions/download-artifact@v4
+        with:
+          name: pr-manifest-${{ inputs.pr }}
+          path: benchmark/output/pr
+
+      - name: Download and extract PR binary
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          LABEL: ${{ needs.resolve.outputs.label }}
+          ARTIFACT_URL: ${{ needs.resolve.outputs.artifactUrl }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::GH_PAT is required to download a NoiseModelling CI artifact."
+            exit 1
+          fi
+          if [ -z "$ARTIFACT_URL" ]; then
+            echo "::error::No artifact URL resolved for this pull request."
+            exit 1
+          fi
+          DEST="benchmark/input/NoiseModelling_without_gui_${LABEL}"
+          mkdir -p "$DEST"
+          ARCHIVE="$(mktemp --suffix=.zip)"
+          curl -fL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "$ARTIFACT_URL" -o "$ARCHIVE"
+          TMP="$(mktemp -d)"
+          unzip -q "$ARCHIVE" -d "$TMP"
+          if [ -d "$TMP/bin" ]; then
+            cp -a "$TMP"/. "$DEST"/
+          else
+            ROOT_DIR="$(find "$TMP" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
+            cp -a "$ROOT_DIR"/. "$DEST"/
+          fi
+          find "$DEST" -name ScriptRunner -o -name wps_scripts | head
+
+      - name: Run Clisson benchmark
+        if: inputs.dataset == 'both' || inputs.dataset == 'clisson'
+        run: bash -x benchmark/drivers/benchmark_run_clisson.sh --version "${{ needs.resolve.outputs.label }}"
+
+      - name: Run La Montagne benchmark
+        if: inputs.dataset == 'both' || inputs.dataset == 'montagne'
+        run: bash -x benchmark/drivers/benchmark_run_montagne.sh --version "${{ needs.resolve.outputs.label }}"
+
+      - name: Show simulation logs
+        if: always()
+        run: |
+          find benchmark/output -name 'simulation*.log' -exec sh -c 'echo ==== $1 ====; tail -60 "$1"' _ {} \;
+
+      - name: Upload Clisson output
+        if: inputs.dataset == 'both' || inputs.dataset == 'clisson'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-output-clisson-${{ inputs.pr }}
+          path: |
+            benchmark/output/${{ needs.resolve.outputs.label }}/stats_*.json
+            benchmark/output/${{ needs.resolve.outputs.label }}/RECEIVERS_LEVEL*.geojson
+          retention-days: 7
+
+      - name: Upload La Montagne output
+        if: inputs.dataset == 'both' || inputs.dataset == 'montagne'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-output-montagne-${{ inputs.pr }}
+          path: |
+            benchmark/output/montagne/${{ needs.resolve.outputs.label }}/stats_*.json
+            benchmark/output/montagne/${{ needs.resolve.outputs.label }}/RECEIVERS_LEVEL*.geojson
+          retention-days: 7
+
+  compare:
+    needs: [resolve, benchmark]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout benchmark
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Download PR manifest
+        uses: actions/download-artifact@v4
+        with:
+          name: pr-manifest-${{ inputs.pr }}
+          path: benchmark/output/pr
+
+      - name: Download Clisson output
+        if: inputs.dataset == 'both' || inputs.dataset == 'clisson'
+        uses: actions/download-artifact@v4
+        with:
+          name: pr-output-clisson-${{ inputs.pr }}
+          path: benchmark/output/${{ needs.resolve.outputs.label }}
+
+      - name: Download La Montagne output
+        if: inputs.dataset == 'both' || inputs.dataset == 'montagne'
+        uses: actions/download-artifact@v4
+        with:
+          name: pr-output-montagne-${{ inputs.pr }}
+          path: benchmark/output/montagne/${{ needs.resolve.outputs.label }}
+
+      - name: Download latest baseline pack
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 benchmark/scripts/ci/nm_pr.py download-latest \
+            --repo "$GITHUB_REPOSITORY" \
+            --workflow benchmark.yml \
+            --artifact benchmark-baseline-pack \
+            --dest benchmark/baseline-pack
+
+      - name: Compare PR with published versions
+        run: |
+          PAGES_URL="https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}"
+          python3 benchmark/python/compare_pr.py \
+            --pr "${{ inputs.pr }}" \
+            --label "${{ needs.resolve.outputs.label }}" \
+            --manifest benchmark/output/pr/manifest.json \
+            --dataset "${{ inputs.dataset }}" \
+            --baseline existing \
+            --baseline-source auto \
+            --pages-url "$PAGES_URL" \
+            --out website/data/pr \
+            --report-dir "benchmark/output/pr/${{ inputs.pr }}"
+
+      - name: Add report to job summary
+        run: cat "benchmark/output/pr/${{ inputs.pr }}/report.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload PR site data
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-site-data-${{ inputs.pr }}
+          path: website/data/pr
+          retention-days: 7
+
+      - name: Upload PR report
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-report-${{ inputs.pr }}
+          path: benchmark/output/pr/${{ inputs.pr }}/
+          retention-days: 7
+
+  comment:
+    needs: [resolve, compare]
+    if: inputs.comment
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download report
+        uses: actions/download-artifact@v4
+        with:
+          name: pr-report-${{ inputs.pr }}
+          path: report
+
+      - name: Comment on the NoiseModelling pull request
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          PR_NUMBER: ${{ inputs.pr }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::warning::GH_PAT is not configured; skipping PR comment."
+            exit 0
+          fi
+          gh pr comment "$PR_NUMBER" \
+            --repo Universite-Gustave-Eiffel/NoiseModelling \
+            --body-file report/report.md
+
+  publish:
+    needs: [resolve, compare]
+    if: inputs.publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - name: Download PR site data
+        uses: actions/download-artifact@v4
+        with:
+          name: pr-site-data-${{ inputs.pr }}
+          path: pr-data-staging
+
+      - name: Publish to the pr-data branch
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pr }}
+        run: |
+          set -e
+          AUTH="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          rm -rf pr-data-repo
+          if git clone --depth 1 --branch pr-data "$AUTH" pr-data-repo; then
+            cd pr-data-repo
+          else
+            rm -rf pr-data-repo
+            mkdir pr-data-repo
+            cd pr-data-repo
+            git init
+            git remote add origin "$AUTH"
+            git checkout --orphan pr-data
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -f index.json ]; then cp index.json /tmp/pr-old-index.json; fi
+          cp -a ../pr-data-staging/. .
+          if [ -f /tmp/pr-old-index.json ]; then
+            python3 -c 'import json,sys; old=json.load(open(sys.argv[1])); new=json.load(open("index.json")); merged={str(x["pr"]):x for x in old}; merged.update({str(x["pr"]):x for x in new}); json.dump(sorted(merged.values(), key=lambda x:int(x["pr"]), reverse=True), open("index.json","w"), indent=2)' /tmp/pr-old-index.json
+          fi
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No PR data changes to publish."
+            exit 0
+          fi
+          git commit -m "pr: publish benchmark for #${PR_NUMBER}"
+          git push origin HEAD:pr-data

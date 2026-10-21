@@ -10,6 +10,9 @@ Covered artifacts:
   - website/index.html         (generated from website/template.html)
   - output/*/stats_*.json      and output/montagne/*/stats_*.json
 
+PR preview data (website/data/pr/**) is intentionally excluded: it is ephemeral
+and must never affect the official benchmark baseline.
+
 Volatile fields (timestamps, CI environment variables, CI-derived URLs) are
 normalised so a snapshot taken locally and one taken on a GitHub runner match.
 
@@ -84,7 +87,10 @@ def collect_paths() -> list[Path]:
     paths: list[Path] = []
     data_dir = ROOT / "website" / "data"
     if data_dir.exists():
-        paths.extend(p for p in data_dir.rglob("*") if p.is_file())
+        paths.extend(
+            p for p in data_dir.rglob("*")
+            if p.is_file() and p.relative_to(data_dir).parts[:1] != ("pr",)
+        )
     index = ROOT / "website" / "index.html"
     if index.exists():
         paths.append(index)

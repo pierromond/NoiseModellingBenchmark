@@ -101,7 +101,7 @@ function renderMethod(data) {
   const threshold = fmt(data.length ? (data[0].silenceThreshold ?? SILENCE_THRESHOLD) : SILENCE_THRESHOLD, 0);
   const samplePoints = (pairComparisons[0] || {}).max_payload_points || 3000;
   const demUrl = (document.querySelector('meta[name="dem-url"]') || {}).content || '';
-  const repo = BUILD.repo || 'Universite-Gustave-Eiffel/NoiseModellingBenchmark';
+  const repo = BUILD.repo || 'pierromond/NoiseModellingBenchmark';
 
   const rows = data.map(row => `
     <tr>

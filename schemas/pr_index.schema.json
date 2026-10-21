@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pr_index.schema.json",
+  "title": "PR benchmark index",
+  "description": "List of pull-request benchmark results published on the site.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["pr", "title", "url", "label", "headSha", "publishedAt", "datasets", "baselines"],
+    "properties": {
+      "pr": {"type": "integer"},
+      "title": {"type": "string"},
+      "url": {"type": "string"},
+      "label": {"type": "string"},
+      "version": {"type": "string"},
+      "headSha": {"type": "string"},
+      "baseSha": {"type": "string"},
+      "runId": {"type": ["integer", "null"]},
+      "runUrl": {"type": "string"},
+      "publishedAt": {"type": "string"},
+      "datasets": {"type": "array", "items": {"type": "string"}},
+      "baselines": {"type": "object", "additionalProperties": {"type": "array", "items": {"type": "string"}}}
+    },
+    "additionalProperties": true
+  }
+}

@@ -303,6 +303,61 @@ def compare_to_measure_global(version: str, computed: dict, measured: dict, offs
     }
 
 
+def build_measure_results(output_dir: Path, versions: list[str], measure_geojson: Path,
+                          measure_fallback: Path, sources_geojson: Path,
+                          campaign_labels: dict | None = None) -> tuple[list[dict], list[str]]:
+    """Compare versions to the measured La Montagne levels.
+
+    Kept as a separate function so the PR comparison can reuse exactly the same
+    calibration as the official site.
+    """
+    campaigns_map = load_measure_campaigns(measure_geojson, measure_fallback)
+    segments = load_sources_segments(sources_geojson)
+    campaign_ids = sorted(campaigns_map.keys())
+
+    measure_results = []
+    for version in versions:
+        pooled_measured = {}
+        pooled_computed = {}
+        pooled_favorable = {}
+        references = {}
+        for camp in campaign_ids:
+            measured = campaigns_map.get(camp) or {}
+            if not measured:
+                continue
+            computed = load_receivers(output_dir, version, camp)
+            computed_fav = load_receivers(output_dir, version, camp, scenario="favorable")
+            ref_key, ref_dist = reference_receiver(measured, segments)
+            common = set(measured) & set(computed)
+            if ref_key is None or ref_key not in common or computed[ref_key]["laeq"] is None:
+                continue
+            off = measured[ref_key]["laeq"] - computed[ref_key]["laeq"]
+            references[camp] = {
+                "receiver": ref_key,
+                "distance": round(ref_dist, 2) if ref_dist is not None else None,
+                "offset": round(off, 4),
+                "measured": round(measured[ref_key]["laeq"], 2),
+                "computed": round(computed[ref_key]["laeq"], 2),
+            }
+            for k in common:
+                if computed[k]["laeq"] is None:
+                    continue
+                pooled_measured[k] = {**measured[k], "campagne": camp}
+                pooled_computed[k] = {**computed[k], "campagne": camp}
+                fav = computed_fav.get(k, {}).get("laeq")
+                if fav is not None:
+                    pooled_favorable[k] = {"laeq": fav, "campagne": camp}
+        if not references:
+            continue
+        offsets_by_camp = {camp: references[camp]["offset"] for camp in references}
+        result = compare_to_measure_global(version, pooled_computed, pooled_measured,
+                                           offsets_by_camp, references, campaign_ids, campaign_labels,
+                                           favorable=pooled_favorable)
+        if result:
+            measure_results.append(result)
+    return measure_results, campaign_ids
+
+
 # ─────────────────────────────────────────────
 # ENTRY POINTS
 # ─────────────────────────────────────────────
@@ -351,10 +406,6 @@ def run_montagne() -> None:
     (data_dir / "comparisons.json").write_text(
         json.dumps(comparisons, separators=(",", ":")))
 
-    campaigns_map = load_measure_campaigns(measure_geojson, measure_fallback)
-    segments = load_sources_segments(sources_geojson)
-    campaign_ids = sorted(campaigns_map.keys())
-
     campaign_labels = {}
     try:
         cfg = json.loads((ROOT / "benchmark" / "config" / "benchmark.json").read_text())
@@ -363,48 +414,9 @@ def run_montagne() -> None:
     except Exception:
         pass
 
-    measure_results = []
-    for version in versions:
-        pooled_measured = {}
-        pooled_computed = {}
-        pooled_favorable = {}
-        ref_offsets = []
-        references = {}
-        for camp in campaign_ids:
-            measured = campaigns_map.get(camp) or {}
-            if not measured:
-                continue
-            computed = load_receivers(output, version, camp)
-            computed_fav = load_receivers(output, version, camp, scenario="favorable")
-            ref_key, ref_dist = reference_receiver(measured, segments)
-            common = set(measured) & set(computed)
-            if ref_key is None or ref_key not in common or computed[ref_key]["laeq"] is None:
-                continue
-            off = measured[ref_key]["laeq"] - computed[ref_key]["laeq"]
-            ref_offsets.append(off)
-            references[camp] = {
-                "receiver": ref_key,
-                "distance": round(ref_dist, 2) if ref_dist is not None else None,
-                "offset": round(off, 4),
-                "measured": round(measured[ref_key]["laeq"], 2),
-                "computed": round(computed[ref_key]["laeq"], 2),
-            }
-            for k in common:
-                if computed[k]["laeq"] is None:
-                    continue
-                pooled_measured[k] = {**measured[k], "campagne": camp}
-                pooled_computed[k] = {**computed[k], "campagne": camp}
-                fav = computed_fav.get(k, {}).get("laeq")
-                if fav is not None:
-                    pooled_favorable[k] = {"laeq": fav, "campagne": camp}
-        if not references:
-            continue
-        offsets_by_camp = {camp: references[camp]["offset"] for camp in references}
-        result = compare_to_measure_global(version, pooled_computed, pooled_measured,
-                                           offsets_by_camp, references, campaign_ids, campaign_labels,
-                                           favorable=pooled_favorable)
-        if result:
-            measure_results.append(result)
+    measure_results, campaign_ids = build_measure_results(
+        output, versions, measure_geojson, measure_fallback, sources_geojson, campaign_labels
+    )
 
     (data_dir / "measure_comparison.json").write_text(
         json.dumps(measure_results, separators=(",", ":")))

@@ -3,6 +3,10 @@
 Compares several NoiseModelling versions on the same datasets (Clisson and La Montagne, France) and publishes the results as a
 static website on GitHub Pages: <https://universite-gustave-eiffel.github.io/NoiseModellingBenchmark/>
 
+Development currently happens on the fork
+<https://github.com/pierromond/NoiseModellingBenchmark>; the PR workflow and the
+`pr-data` branch use the repository that runs the workflow.
+
 ## Where is what
 
 | Path | What it does |
@@ -19,11 +23,17 @@ static website on GitHub Pages: <https://universite-gustave-eiffel.github.io/Noi
 | `benchmark/python/bench/compare.py` | unified comparison logic for both datasets |
 | `benchmark/python/compare_versions.py` | builds the Clisson pairwise comparisons (`comparisons.json`) — thin entry point over `benchmark/python/bench/compare.py` |
 | `benchmark/python/compare_versions_montagne.py` | builds the La Montagne comparisons — thin entry point over `benchmark/python/bench/compare.py` |
+| `benchmark/scripts/bench_pr.sh` | local/CI entry point for a pull-request benchmark (isolated from official results) |
+| `benchmark/scripts/ci/nm_pr.py` | resolves a NoiseModelling PR to its CI artifact and benchmark label |
+| `benchmark/python/compare_pr.py` | compares a PR result with the published versions and writes `website/data/pr/<pr>/` |
+| `benchmark/python/build_baseline_pack.py` | builds the compact baseline artifact used by the PR workflow |
+| `.github/workflows/benchmark-pr.yml` | manual workflow: run, compare, comment and optionally publish a PR benchmark |
 | `website/build.py` | builds `website/index.html` from `website/template.html`, `benchmark/config/benchmark.json` and the JSON files |
 | `website/template.html` | the page structure (HTML only) |
-| `website/js/` | the page JavaScript, split into ordered modules: `00-config`, `01-theme`, `02-helpers`, `03-cards`, `04-header`, `05-map`, `06-comparisons`, `07-histogram`, `08-boxplot`, `09-scatter`, `10-density`, `11-diffmap`, `12-montagne`, `13-montagne-map`, `14-start`, `15-sidebar`, `16-boot`. `js/00-constants.js` (histogram bins, silence threshold) is generated from `benchmark/config/benchmark.json` |
+| `website/js/` | the page JavaScript, split into ordered modules: `00-config`, `01-theme`, `02-helpers`, `03-cards`, `04-header`, `05-map`, `06-comparisons`, `07-histogram`, `08-boxplot`, `09-scatter`, `10-density`, `11-diffmap`, `12-montagne`, `13-montagne-map`, `14-start`, `18-pull-requests`, `15-sidebar`, `16-boot`. `js/00-constants.js` (histogram bins, silence threshold) is generated from `benchmark/config/benchmark.json` |
 | `website/index.css` | all the page CSS (dark and light themes in one file) |
 | `website/data/` | **generated, not in git**: `results.json`, `comparisons.json`, `settings.json`, `build.json`, `start.json`, and one folder of map layers per version |
+| `website/data/pr/` | **generated, non-official**: `index.json`, one `manifest.json` and comparison files per pull request |
 | `benchmark/simulations/` | the simulation scripts launched by NoiseModelling: `runscriptV5.0.groovy`, `runscriptV6.0.groovy`, plus one script per version when the API changed |
 | `benchmark/simulations/lib/NoiseBench.groovy` | shared simulation helpers: script loading, profiler CSV, LAEQ statistics |
 | `benchmark/input/clisson/` | the Clisson reference dataset (Git LFS) |
@@ -59,6 +69,38 @@ bash benchmark/drivers/benchmark_run_montagne.sh --aggregate-only  # only rebuil
 
 Needs Python 3, git-lfs (for `benchmark/input/clisson/`) and Java 11 for v4/v5 or Java 25 for v6.
 The NoiseModelling binary is downloaded automatically from the release URL in `benchmark/versions.json`.
+
+## Benchmark a pull request
+
+A pull request is never added to `benchmark/versions.json`. It gets a unique label
+(`v6.0.2-SNAPSHOT-pr1092-680a381`) and its data is written to
+`website/data/pr/<pr>/`, outside the official results.
+
+Locally:
+
+```bash
+bash benchmark/scripts/bench_pr.sh --pr 1092
+bash benchmark/scripts/bench_pr.sh --pr 1092 --dataset montagne
+bash benchmark/scripts/bench_pr.sh --pr 1092 --artifact-zip /tmp/NoiseModelling-1092_merge.zip
+```
+
+The script resolves the PR's successful `CI.yml` run, downloads its
+`NoiseModelling-*` artifact (using `GH_TOKEN`, `GITHUB_TOKEN` or `gh auth token`),
+runs Clisson and/or La Montagne with the normal benchmark configuration, and
+compares the result with the published versions. Use `--artifact-zip` when the
+artifact was downloaded manually.
+
+From GitHub, use **Actions → Benchmark PR → Run workflow** (or
+`gh workflow run benchmark-pr.yml -f pr=1092`). The workflow needs a `GH_PAT`
+secret with read access to the NoiseModelling Actions artifacts; without it,
+download the artifact manually and use the local `--artifact-zip` path. It:
+
+- uploads the JSON report and site data as artifacts;
+- posts a summary on the NoiseModelling PR only when `comment=true` (disabled by
+  default while testing);
+- with `publish=true`, pushes the PR data to the `pr-data` branch, where the
+  **Pull requests** tab reads it. PR data is clearly marked as non-official and
+  is excluded from the official results.
 
 ## Tests and guardrails
 

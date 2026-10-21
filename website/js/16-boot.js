@@ -30,6 +30,11 @@ async function applyState(data, snapshot) {
     switchDataset('start');
     return;
   }
+  if (ds === 'pr') {
+    switchDataset('pr');
+    if (typeof applyPrState === 'function') applyPrState(st);
+    return;
+  }
 
   const wanted = st.get('version');
   if (wanted && data.some(row => row.version === wanted)) {
@@ -83,6 +88,11 @@ async function init() {
   renderMethod(data);
   await initMontagne();
   await initStart();
+  await initPullRequests();
+  const afterInit = readState();
+  if ((afterInit.get('dataset') || '') === 'pr') {
+    await applyState(data, afterInit);
+  }
 }
 
 window.addEventListener('resize', debounce(() => {

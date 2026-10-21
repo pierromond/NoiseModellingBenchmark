@@ -211,7 +211,7 @@ function switchDataset(name) {
     p.classList.toggle('active', p.id === `panel-${name}`));
 
   const meta = document.getElementById('header-meta');
-  if (name === 'start') {
+  if (name === 'start' || name === 'pr') {
     if (meta) meta.style.display = 'none';
   } else if (name === 'montagne') {
     if (meta) meta.style.display = '';
@@ -223,5 +223,6 @@ function switchDataset(name) {
     if (meta) { meta.style.display = ''; if (clissonHeaderHtml) meta.innerHTML = clissonHeaderHtml; }
   }
   syncState({ dataset: name });
+  if (name === 'pr' && typeof refreshPullRequests === 'function') refreshPullRequests();
 }
 

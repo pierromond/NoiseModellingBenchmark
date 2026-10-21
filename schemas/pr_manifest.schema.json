@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pr_manifest.schema.json",
+  "title": "PR benchmark manifest",
+  "description": "Provenance of a pull-request benchmark result.",
+  "type": "object",
+  "required": ["pr", "label", "headSha", "baseSha", "datasets", "baselines", "publishedAt"],
+  "properties": {
+    "pr": {"type": "integer"},
+    "title": {"type": "string"},
+    "url": {"type": "string"},
+    "headRepo": {"type": "string"},
+    "headRef": {"type": "string"},
+    "headSha": {"type": "string"},
+    "baseSha": {"type": "string"},
+    "baseRef": {"type": "string"},
+    "version": {"type": "string"},
+    "label": {"type": "string"},
+    "java": {"type": "string"},
+    "artifactName": {"type": "string"},
+    "artifactUrl": {"type": "string"},
+    "runId": {"type": ["integer", "null"]},
+    "runUrl": {"type": "string"},
+    "datasets": {"type": "array", "items": {"type": "string"}},
+    "baselines": {"type": "object", "additionalProperties": {"type": "array", "items": {"type": "string"}}},
+    "publishedAt": {"type": "string"}
+  },
+  "additionalProperties": true
+}

@@ -17,7 +17,7 @@ doit la modifier : les garde-fous de `tools/` le vérifient.
 - `benchmark/versions.json` : `version -> URL` ; une seule entrée avec URL vide = version
   « head » (binaire fourni par un artefact CI).
 - `benchmark/config/benchmark.json` : source unique des paramètres, datasets et constantes.
-- `benchmark/input/clisson/`, `benchmark/input/montagne/` : datasets (ne pas modifier).
+- `benchmark/input/clisson/` (source brute `clisson/` + jeu benchmark `cropped/`), `benchmark/input/montagne/` : datasets (ne pas modifier sans mettre à jour les résultats publiés).
 
 ## Arborescence produite
 

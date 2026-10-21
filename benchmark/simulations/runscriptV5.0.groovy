@@ -88,28 +88,28 @@ static def exec(Connection connection, Map input) {
     if (version.startsWith("v4")){
             if (!JDBCUtilities.tableExists(connection, "BUILDINGS")) {
                 new Import_File().exec(connection,
-                        ["pathFile" : "benchmark/input/clisson/clisson/BUILDINGS.geojson",
+                        ["pathFile" : "benchmark/input/clisson/cropped/BUILDINGS.geojson",
                          "inputSRID": "2154",
                          "tableName": "BUILDINGS"])
             }
 
             if (!JDBCUtilities.tableExists(connection, "DEM")) {
                 new Import_File().exec(connection,
-                        ["pathFile" : "benchmark/input/clisson/clisson/DEM.geojson",
+                        ["pathFile" : "benchmark/input/clisson/cropped/DEM.geojson",
                          "inputSRID": 2154,
                          "tableName": "DEM"])
             }
 
             if (!JDBCUtilities.tableExists(connection, "GROUNDS")) {
                 new Import_File().exec(connection,
-                        ["pathFile" : "benchmark/input/clisson/clisson/GROUNDS.geojson",
+                        ["pathFile" : "benchmark/input/clisson/cropped/GROUNDS.geojson",
                          "inputSRID": "2154",
                          "tableName": "GROUNDS"])
             }
 
             if (!JDBCUtilities.tableExists(connection, "LW_ROADS")) {
                 new Import_File().exec(connection,
-                        ["pathFile" : "benchmark/input/clisson/clisson/LW_ROADS_LW.geojson",
+                        ["pathFile" : "benchmark/input/clisson/cropped/LW_ROADS_LW.geojson",
                          "inputSRID": 2154,
                          "tableName": "LW_ROADS_LW"])
 
@@ -117,14 +117,14 @@ static def exec(Connection connection, Map input) {
 
             if (!JDBCUtilities.tableExists(connection, "RECEIVERS")) {
                 new Import_File().exec(connection,
-                        ["pathFile" : "benchmark/input/clisson/clisson/RECEIVERS.geojson",
+                        ["pathFile" : "benchmark/input/clisson/cropped/RECEIVERS.geojson",
                          "inputSRID": "2154",
                          "tableName": "RECEIVERS"])
             }
 
             if (!JDBCUtilities.tableExists(connection, "TRIANGLES")) {
                 new Import_File().exec(connection,
-                        ["pathFile" : "benchmark/input/clisson/clisson/TRIANGLES.geojson",
+                        ["pathFile" : "benchmark/input/clisson/cropped/TRIANGLES.geojson",
                          "inputSRID": "2154",
                          "tableName": "TRIANGLES"])
             }
@@ -146,7 +146,7 @@ static def exec(Connection connection, Map input) {
             if (redoRoadsEmission) {
                 if (!JDBCUtilities.tableExists(connection, "ROADS")) {
                     new Import_File().exec(connection,
-                            ["pathFile" : "benchmark/input/clisson/clisson/ROADS.geojson",
+                            ["pathFile" : "benchmark/input/clisson/cropped/ROADS.geojson",
                              "inputSRID": "2154",
                              "tableName": "ROADS"])
                 }
@@ -245,42 +245,42 @@ static def exec(Connection connection, Map input) {
     else{
             if (!JDBCUtilities.tableExists(connection, "BUILDINGS")) {
                 new Import_File().exec(connection,
-                        ["pathFile" : "benchmark/input/clisson/clisson/BUILDINGS.geojson",
+                        ["pathFile" : "benchmark/input/clisson/cropped/BUILDINGS.geojson",
                          "inputSRID": "2154",
                          "tableName": "BUILDINGS"])
             }
 
             if (!JDBCUtilities.tableExists(connection, "DEM")) {
                 new Import_File().exec(connection,
-                        ["pathFile" : "benchmark/input/clisson/clisson/DEM.geojson",
+                        ["pathFile" : "benchmark/input/clisson/cropped/DEM.geojson",
                          "inputSRID": 2154,
                          "tableName": "DEM"])
             }
 
             if (!JDBCUtilities.tableExists(connection, "GROUNDS")) {
                 new Import_File().exec(connection,
-                        ["pathFile" : "benchmark/input/clisson/clisson/GROUNDS.geojson",
+                        ["pathFile" : "benchmark/input/clisson/cropped/GROUNDS.geojson",
                          "inputSRID": "2154",
                          "tableName": "GROUNDS"])
             }
 
             if (!JDBCUtilities.tableExists(connection, "LW_ROADS")) {
                 new Import_File().exec(connection,
-                        ["pathFile" : "benchmark/input/clisson/clisson/LW_ROADS.geojson",
+                        ["pathFile" : "benchmark/input/clisson/cropped/LW_ROADS.geojson",
                          "inputSRID": "2154",
                          "tableName": "LW_ROADS"])
             }
 
             if (!JDBCUtilities.tableExists(connection, "RECEIVERS")) {
                 new Import_File().exec(connection,
-                        ["pathFile" : "benchmark/input/clisson/clisson/RECEIVERS.geojson",
+                        ["pathFile" : "benchmark/input/clisson/cropped/RECEIVERS.geojson",
                          "inputSRID": "2154",
                          "tableName": "RECEIVERS"])
             }
 
             if (!JDBCUtilities.tableExists(connection, "TRIANGLES")) {
                 new Import_File().exec(connection,
-                        ["pathFile" : "benchmark/input/clisson/clisson/TRIANGLES.geojson",
+                        ["pathFile" : "benchmark/input/clisson/cropped/TRIANGLES.geojson",
                          "inputSRID": "2154",
                          "tableName": "TRIANGLES"])
             }
@@ -311,7 +311,7 @@ static def exec(Connection connection, Map input) {
             if (redoRoadsEmission) {
                 if (!JDBCUtilities.tableExists(connection, "ROADS")) {
                     new Import_File().exec(connection,
-                            ["pathFile" : "benchmark/input/clisson/clisson/ROADS.geojson",
+                            ["pathFile" : "benchmark/input/clisson/cropped/ROADS.geojson",
                              "inputSRID": "2154",
                              "tableName": "ROADS"])
                 }

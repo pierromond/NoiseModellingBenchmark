@@ -2,8 +2,8 @@
  * Compare your own implementation with NoiseModelling on the Clisson dataset.
  *
  * Clisson is a road-traffic scene (line sources, a full urban noise map).
- * A full run with the parameters below typically takes ~9 minutes on a
- * GitHub Actions runner. The dataset is cropped to a 300 m x 300 m receiver
+ * A full run with the parameters below typically takes ~30 minutes on a
+ * GitHub Actions runner. The dataset is cropped to a 500 m x 500 m receiver
  * area, with a 1.25 km buffer of buildings, roads and DEM around it.
  *
  * Usage:

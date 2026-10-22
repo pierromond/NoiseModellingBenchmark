@@ -26,7 +26,7 @@
       "folder": "clisson",
       "dir": "benchmark/input/clisson/cropped",
       "kind": "Road-traffic noise map (line sources)",
-      "speed": "~8 min",
+      "speed": "~30 min",
       "tutorialScript": "benchmark/simulations/getting_started/compare_clisson.groovy",
       "modelScript": "benchmark/simulations/runscriptV6.0.groovy",
       "files": [

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Regenerate the cropped Clisson benchmark dataset from the raw LFS dataset.
 #
-# Receiver area : 300 m x 300 m, centred on the raw receiver extent.
+# Receiver area : 500 m x 500 m, centred on the raw receiver extent.
 # Buffer       : 1250 m of buildings/roads/DEM around the receiver area, which
 #                covers confMaxSrcDist=800 m + confMaxReflDist=350 m.
 #
@@ -16,8 +16,8 @@ DST="benchmark/input/clisson/cropped"
 
 CX=374869.749743
 CY=6674043.597677
-RH=150
-BH=1400
+RH=250
+BH=1500
 
 RX0=$(python3 -c "print($CX-$RH)")
 RX1=$(python3 -c "print($CX+$RH)")

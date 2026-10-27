@@ -266,6 +266,11 @@
       <div class="explain-controls">
         <label class="sidebar-label" for="montagne-explain-receiver">Receiver</label>
         <select id="montagne-explain-receiver" class="sidebar-select" aria-label="Receiver"></select>
+        <label class="sidebar-label" for="montagne-explain-scenario">Scenario</label>
+        <select id="montagne-explain-scenario" class="sidebar-select" aria-label="Meteorological scenario">
+          <option value="homogene">Homogeneous</option>
+          <option value="favorable">Favorable</option>
+        </select>
         <span id="montagne-explain-model" class="explain-model"></span>
         <div class="explain-modes" id="montagne-explain-modes">
           <button class="map-btn active" data-mode="interaction">Interaction</button>
@@ -281,6 +286,16 @@
       <div class="explain-body">
         <div id="montagne-explain-map" class="explain-2d"></div>
         <div id="montagne-explain-3d" class="explain-3d" style="display:none"></div>
+      </div>
+      <div id="montagne-explain-profile" class="explain-profile empty">
+        <div class="explain-profile-head">
+          <span class="explain-profile-title">Vertical profile</span>
+          <span id="montagne-explain-profile-meta" class="explain-profile-meta"></span>
+        </div>
+        <canvas id="montagne-explain-profile-canvas"></canvas>
+        <div id="montagne-explain-profile-hint" class="explain-profile-hint">
+          Click a propagation ray (on the map or in the table) to display its vertical profile, with x = 0 at the source.
+        </div>
       </div>
       <div id="montagne-explain-summary" class="explain-summary"></div>
       <div id="montagne-explain-table" class="explain-table"></div>

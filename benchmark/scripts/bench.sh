@@ -274,9 +274,15 @@ copy_geojson_montagne() {
             if [ -f "$campgeojson" ]; then
                 cp "$campgeojson" "$DATA_DIR/$version/RECEIVERS_LEVEL_${camp}.geojson"
             fi
-            local raysgeojson="$version_dir/rays_${camp}.geojson"
-            if [ -f "$raysgeojson" ]; then
-                cp "$raysgeojson" "$DATA_DIR/$version/rays_${camp}.geojson"
+            for scenario in homogene favorable; do
+                local raysgeojson="$version_dir/rays_${camp}_${scenario}.geojson"
+                if [ -f "$raysgeojson" ]; then
+                    cp "$raysgeojson" "$DATA_DIR/$version/rays_${camp}_${scenario}.geojson"
+                fi
+            done
+            local raysalias="$version_dir/rays_${camp}.geojson"
+            if [ -f "$raysalias" ]; then
+                cp "$raysalias" "$DATA_DIR/$version/rays_${camp}.geojson"
             fi
         done
     done

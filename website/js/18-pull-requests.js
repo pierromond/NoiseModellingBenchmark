@@ -77,6 +77,11 @@ function prCurrentDataset() {
   return select ? select.value : 'clisson';
 }
 
+function prPanelActive() {
+  const panel = document.getElementById('panel-pr');
+  return !!(panel && panel.classList.contains('active'));
+}
+
 function prComparisonsFor(dataset) {
   if (!prComparison) return [];
   return (prComparison[dataset] && prComparison[dataset].comparisons) || [];
@@ -452,8 +457,10 @@ async function prRender() {
     if (table) table.innerHTML = prMontagneTable(measure ? [measure] : [], official);
     prDrawMontagne(measure);
   }
-  syncState({ dataset: 'pr', pr: String(item.pr), pr_base: document.getElementById('pr-baseline')?.value || '',
-              pr_dataset: dataset });
+  if (prPanelActive()) {
+    syncState({ dataset: 'pr', pr: String(item.pr), pr_base: document.getElementById('pr-baseline')?.value || '',
+                pr_dataset: dataset });
+  }
 }
 
 function prFillSelectors() {

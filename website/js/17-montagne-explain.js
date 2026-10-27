@@ -17,6 +17,7 @@ const explainState = {
   version: null,
   receiver: null,
   campagne: null,
+  scenario: 'homogene',
   mode: 'interaction',
   view: '2d',
   rays: null,          // full FeatureCollection for the current version/campagne
@@ -40,6 +41,32 @@ function explainEnergy(leq) {
   return (leq === null || leq === undefined) ? 0 : Math.pow(10, leq / 10);
 }
 
+// NoiseModelling ray exports have used different casings/arrays across
+// versions and scenarios. Normalise them so the table keeps showing LEQ and
+// the attenuation terms for homogeneous and favourable rays alike.
+function explainNumber(value) {
+  if (Array.isArray(value)) value = value.find(v => v !== null && v !== undefined);
+  if (typeof value === 'string' && value.trim() !== '') value = Number(value);
+  return Number.isFinite(value) ? value : null;
+}
+
+function explainAttr(properties, names) {
+  if (!properties) return null;
+  for (const name of names) {
+    const value = explainNumber(properties[name]);
+    if (value !== null) return value;
+  }
+  return null;
+}
+
+function explainLeq(properties) {
+  return explainAttr(properties, ['leq', 'LEQ', 'Leq', 'LAEQ', 'laeq']);
+}
+
+function explainAGlobal(properties) {
+  return explainAttr(properties, ['aGlobal', 'AGlobal', 'aglobal', 'AGLOBAL', 'a_global']);
+}
+
 function explainSumLeq(values) {
   const s = values.reduce((a, v) => a + explainEnergy(v), 0);
   return s > 0 ? 10 * Math.log10(s) : null;
@@ -54,10 +81,14 @@ function explainRayType(p) {
   return 'direct';
 }
 
-async function explainLoadRays(version, campagne) {
-  const key = `${version}|${campagne}`;
+async function explainLoadRays(version, campagne, scenario) {
+  const key = `${version}|${campagne}|${scenario}`;
   if (key in explainState.cache) return explainState.cache[key];
-  const data = await loadJson(`data/montagne/${version}/rays_${campagne}.geojson`, null);
+  let data = await loadJson(`data/montagne/${version}/rays_${campagne}_${scenario}.geojson`, null);
+  // Older publications only contain the homogeneous alias.
+  if ((!data || !data.features) && scenario === 'homogene') {
+    data = await loadJson(`data/montagne/${version}/rays_${campagne}.geojson`, null);
+  }
   explainState.cache[key] = data;
   return data;
 }
@@ -236,7 +267,7 @@ function explainInitMap() {
 
 function explainColorPath(p, mode) {
   if (mode === 'attenuation') {
-    const a = (p.aGlobal != null) ? p.aGlobal : null;
+    const a = explainAGlobal(p);
     if (a === null) return '#888';
     const lo = 40, hi = 110;
     const t = Math.max(0, Math.min(1, (a - lo) / (hi - lo)));
@@ -270,7 +301,11 @@ function explainDraw2D(rays, buildings, mode) {
       weight: selected ? 8 : 2,
       opacity: selected ? 1 : 0.85,
     });
-    line.bindTooltip(`LEQ ${p.leq?.toFixed?.(1) ?? p.leq} dB · ${explainRayType(p)} · aDiv ${fmt(p.aDiv)} aDif ${fmt(p.aDif)} aRef ${fmt(p.aRef)}`, { sticky: true });
+    line.bindTooltip(`LEQ ${fmt(explainLeq(p), 1)} dB · ${explainRayType(p)} · aDiv ${fmt(explainAttr(p, ['aDiv','ADiv','adiv']))} aDif ${fmt(explainAttr(p, ['aDif','ADif','adif']))} aRef ${fmt(explainAttr(p, ['aRef','ARef','aref']))} (click for profile)`, { sticky: true });
+    line.on('click', (event) => {
+      if (event && event.originalEvent) L.DomEvent.stopPropagation(event.originalEvent);
+      explainHighlightRay(i);
+    });
     line.addTo(explainState.mapGroup);
     if (selected) line.bringToFront();
     explainState.rayLines2D[i] = { line, color };
@@ -514,7 +549,7 @@ function explainRenderSummary(rays, rec) {
   const el = document.getElementById('montagne-explain-summary');
   if (!el) return;
   const share = { direct: 0, reflected: 0, diffracted: 0, mixed: 0 };
-  rays.forEach(f => { share[explainRayType(f.properties)] += explainEnergy(f.properties.leq); });
+  rays.forEach(f => { share[explainRayType(f.properties)] += explainEnergy(explainLeq(f.properties)); });
   const total = Object.values(share).reduce((a, b) => a + b, 0) || 1;
   const pct = k => Math.round(100 * share[k] / total);
   const delta = (rec && rec.error !== undefined) ? rec.error : null;
@@ -541,6 +576,187 @@ function explainRayLength(f) {
   return L;
 }
 
+function explainDemElevation(x, y) {
+  const dem = explainState.dem;
+  if (!dem || !dem.z || !dem.cell) return null;
+  const fx = (x - dem.xmin) / dem.cell - 0.5;
+  const fy = (y - dem.ymin) / dem.cell - 0.5;
+  const ix = Math.floor(fx), iy = Math.floor(fy);
+  if (ix < 0 || iy < 0 || ix >= dem.nx - 1 || iy >= dem.ny - 1) return null;
+  const tx = fx - ix, ty = fy - iy;
+  const z00 = dem.z[iy] ? dem.z[iy][ix] : null;
+  const z10 = dem.z[iy] ? dem.z[iy][ix + 1] : null;
+  const z01 = dem.z[iy + 1] ? dem.z[iy + 1][ix] : null;
+  const z11 = dem.z[iy + 1] ? dem.z[iy + 1][ix + 1] : null;
+  if ([z00, z10, z01, z11].some(v => v === null || v === undefined)) return null;
+  return (z00 * (1 - tx) + z10 * tx) * (1 - ty) + (z01 * (1 - tx) + z11 * tx) * ty;
+}
+
+function explainProfileSamples(coords) {
+  const samples = [];
+  let distance = 0;
+  for (let i = 0; i < coords.length; i++) {
+    const [x, y, z] = coords[i];
+    if (i > 0) {
+      const [px, py] = coords[i - 1];
+      distance += Math.hypot(x - px, y - py);
+    }
+    samples.push({ d: distance, z: Number.isFinite(z) ? z : null, x, y });
+  }
+  return samples;
+}
+
+function explainDrawProfile() {
+  const wrap = document.getElementById('montagne-explain-profile');
+  const canvas = document.getElementById('montagne-explain-profile-canvas');
+  const meta = document.getElementById('montagne-explain-profile-meta');
+  if (!wrap || !canvas) return;
+  const index = explainState.selectedRay;
+  const ray = (index !== null && explainState.receiverRays[index]) ? explainState.receiverRays[index] : null;
+  if (!ray) {
+    wrap.classList.add('empty');
+    if (meta) meta.textContent = '';
+    return;
+  }
+  const props = ray.properties || {};
+  const coords = (ray.geometry?.coordinates || []).filter(c => Array.isArray(c) && Number.isFinite(c[0]) && Number.isFinite(c[1]));
+  if (coords.length < 2) {
+    wrap.classList.add('empty');
+    return;
+  }
+  wrap.classList.remove('empty');
+  const leq = explainLeq(props);
+  const aGlobal = explainAGlobal(props);
+  if (meta) {
+    meta.textContent = `ray #${index + 1} · ${explainRayType(props)} · ${props.meteo || ''}` +
+      ` · LEQ ${fmt(leq, 1)} dB · aGlobal ${fmt(aGlobal, 1)} dB · ${Math.round(explainRayLength(ray))} m`;
+  }
+
+  const rayPts = explainProfileSamples(coords);
+  const maxD = rayPts[rayPts.length - 1].d || 1;
+  // Ground profile: resample the DEM along the same plan-view path.
+  const ground = [];
+  for (let i = 1; i < coords.length; i++) {
+    const [x0, y0] = coords[i - 1];
+    const [x1, y1] = coords[i];
+    const seg = Math.hypot(x1 - x0, y1 - y0);
+    const steps = Math.max(1, Math.ceil(seg / 5));
+    for (let k = 0; k <= steps; k++) {
+      const t = k / steps;
+      const x = x0 + (x1 - x0) * t;
+      const y = y0 + (y1 - y0) * t;
+      const d = rayPts[i - 1].d + seg * t;
+      ground.push({ d, z: explainDemElevation(x, y) });
+    }
+  }
+
+  const rect = canvas.getBoundingClientRect();
+  const width = Math.max(320, Math.round(rect.width));
+  const height = 240;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(width * dpr);
+  canvas.height = Math.round(height * dpr);
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, width, height);
+
+  const allZ = [];
+  rayPts.forEach(p => { if (p.z !== null) allZ.push(p.z); });
+  ground.forEach(p => { if (p.z !== null) allZ.push(p.z); });
+  if (!allZ.length) {
+    wrap.classList.add('empty');
+    return;
+  }
+  let zMin = Math.min(...allZ), zMax = Math.max(...allZ);
+  if (zMax - zMin < 8) { const mid = (zMax + zMin) / 2; zMin = mid - 4; zMax = mid + 4; }
+  const padZ = (zMax - zMin) * 0.12;
+  zMin -= padZ; zMax += padZ;
+
+  const m = { left: 52, right: 18, top: 14, bottom: 34 };
+  const w = width - m.left - m.right;
+  const h = height - m.top - m.bottom;
+  const sx = d => m.left + (d / maxD) * w;
+  const sy = z => m.top + (1 - (z - zMin) / (zMax - zMin)) * h;
+
+  // grid
+  ctx.strokeStyle = 'rgba(255,255,255,.12)';
+  ctx.fillStyle = 'rgba(255,255,255,.55)';
+  ctx.lineWidth = 1;
+  ctx.font = '10px monospace';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  const yTicks = 5;
+  for (let i = 0; i <= yTicks; i++) {
+    const z = zMin + (zMax - zMin) * i / yTicks;
+    const py = sy(z);
+    ctx.beginPath(); ctx.moveTo(m.left, py); ctx.lineTo(m.left + w, py); ctx.stroke();
+    ctx.fillText(`${z.toFixed(0)} m`, m.left - 7, py);
+  }
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  const xTicks = 5;
+  for (let i = 0; i <= xTicks; i++) {
+    const d = maxD * i / xTicks;
+    const px = sx(d);
+    ctx.beginPath(); ctx.moveTo(px, m.top); ctx.lineTo(px, m.top + h); ctx.stroke();
+    ctx.fillText(`${d.toFixed(0)} m`, px, m.top + h + 7);
+  }
+  ctx.fillStyle = 'rgba(255,255,255,.65)';
+  ctx.fillText('distance from source (x = 0 at source)', m.left + w / 2, m.top + h + 20);
+
+  // ground
+  const groundValid = ground.filter(p => p.z !== null);
+  if (groundValid.length > 1) {
+    ctx.beginPath();
+    groundValid.forEach((p, i) => {
+      const px = sx(p.d), py = sy(p.z);
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    });
+    ctx.lineTo(sx(groundValid[groundValid.length - 1].d), m.top + h);
+    ctx.lineTo(sx(groundValid[0].d), m.top + h);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(150,160,175,.28)';
+    ctx.fill();
+    ctx.beginPath();
+    groundValid.forEach((p, i) => {
+      const px = sx(p.d), py = sy(p.z);
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    });
+    ctx.strokeStyle = 'rgba(190,200,215,.85)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+  }
+
+  // ray
+  const rayValid = rayPts.filter(p => p.z !== null);
+  if (rayValid.length > 1) {
+    ctx.beginPath();
+    rayValid.forEach((p, i) => {
+      const px = sx(p.d), py = sy(p.z);
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    });
+    ctx.strokeStyle = '#ccff00';
+    ctx.lineWidth = 2.2;
+    ctx.stroke();
+  }
+
+  // source / receiver markers
+  const first = rayValid[0];
+  const last = rayValid[rayValid.length - 1];
+  if (first) {
+    ctx.beginPath(); ctx.arc(sx(first.d), sy(first.z), 4.5, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffd400'; ctx.fill(); ctx.strokeStyle = '#111'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,.8)'; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+    ctx.fillText('source', sx(first.d) + 7, sy(first.z) - 5);
+  }
+  if (last) {
+    ctx.beginPath(); ctx.arc(sx(last.d), sy(last.z), 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#00e5ff'; ctx.fill(); ctx.strokeStyle = '#111'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,.8)'; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+    ctx.fillText(`Rx #${props.receiver ?? ''}`, sx(last.d) - 7, sy(last.z) - 5);
+  }
+}
+
 const EXPLAIN_COLUMNS = [
   { key: '#', label: '#' },
   { key: 'type', label: 'Type' },
@@ -555,19 +771,19 @@ const EXPLAIN_COLUMNS = [
 ];
 
 function explainTableRows(rays) {
-  const lossOf = p => ['aDiv', 'aDif', 'aRef', 'aAtm'].reduce((s, k) => s + (p[k] != null ? p[k] : 0), 0);
+  const lossOf = p => ['aDiv', 'aDif', 'aRef', 'aAtm'].reduce((s, k) => s + (explainAttr(p, [k, k.toUpperCase()]) ?? 0), 0);
   return rays.map((f, i) => {
     const p = f.properties;
     return {
       i, f, p,
       type: explainRayType(p),
       meteo: p.meteo || '',
-      LEQ: p.leq,
-      aGlobal: p.aGlobal,
-      aDiv: p.aDiv,
-      aDif: p.aDif,
-      aRef: p.aRef,
-      aAtm: p.aAtm,
+      LEQ: explainLeq(p),
+      aGlobal: explainAGlobal(p),
+      aDiv: explainAttr(p, ['aDiv', 'ADiv', 'adiv']),
+      aDif: explainAttr(p, ['aDif', 'ADif', 'adif']),
+      aRef: explainAttr(p, ['aRef', 'ARef', 'aref']),
+      aAtm: explainAttr(p, ['aAtm', 'AAtm', 'aatm']),
       len: Math.round(explainRayLength(f)),
       loss: lossOf(p),
     };
@@ -630,6 +846,7 @@ function explainRenderTable(rays) {
 
 function explainHighlightRay(idx) {
   explainState.selectedRay = (explainState.selectedRay === idx) ? null : idx;
+  explainDrawProfile();
   explainState.rayLines2D.forEach((entry, i) => {
     if (!entry) return;
     const on = explainState.selectedRay === i;
@@ -716,7 +933,7 @@ function explainBuildKml(rays, buildings) {
   const rayPlacemarks = rays.map(f => {
     const p = f.properties;
     const coords = f.geometry.coordinates.map(([x, y, z]) => `${x},${y},${z}`).join(' ');
-    return `<Placemark><name>ray ${explainRayType(p)} LEQ ${p.leq}</name>` +
+    return `<Placemark><name>ray ${explainRayType(p)} LEQ ${fmt(explainLeq(p), 1)}</name>` +
       `<Style><LineStyle><color>${kmlColor(p)}</color><width>2</width></LineStyle></Style>` +
       `<LineString><altitudeMode>absolute</altitudeMode><coordinates>${coords}</coordinates></LineString></Placemark>`;
   }).join('');
@@ -784,7 +1001,7 @@ async function renderMontagneExplain() {
   const rec = entry.receivers.find(r => r[0] === current);
   explainState.campagne = rec ? (rec[6] || 'c1') : 'c1';
 
-  const raysData = await explainLoadRays(version, explainState.campagne);
+  const raysData = await explainLoadRays(version, explainState.campagne, explainState.scenario);
   if (!raysData || !raysData.features || !raysData.features.length) { section.style.display = 'none'; return; }
   explainState.rays = raysData;
 
@@ -792,10 +1009,12 @@ async function renderMontagneExplain() {
   await explainLoadDem();
 
   section.style.display = '';
+  const scenarioSelect = document.getElementById('montagne-explain-scenario');
+  if (scenarioSelect) scenarioSelect.value = explainState.scenario;
   document.getElementById('montagne-explain-intro').innerHTML =
     `Propagation rays are exported for the latest snapshot only (<b>${version}</b>), so this section is shown ` +
-    `only when that model is selected on the map. Pick a receiver to see its rays (homogeneous scenario), ` +
-    `where the sound is attenuated, and the ray contributions. 2D and 3D views; KML download for Google Earth.`;
+    `only when that model is selected on the map. Pick a receiver and a weather scenario to see its rays, ` +
+    `their LEQ / aGlobal terms and the vertical profile (x = 0 at the source). 2D and 3D views; KML download for Google Earth.`;
 
   select.innerHTML = entry.receivers.map(r =>
     `<option value="${r[0]}"${r[0] === current ? ' selected' : ''}>#${r[0]} (${r[6] || 'c1'})</option>`).join('');
@@ -816,6 +1035,7 @@ async function explainRenderAll() {
   explainLegend(explainState.mode);
   explainRenderSummary(rays, recObj);
   explainRenderTable(rays);
+  explainDrawProfile();
   if (explainState.view === '3d') {
     const basemap = await explainLoadBasemap(bbox);
     explainDraw3D(rays, buildings, bbox, basemap);
@@ -831,11 +1051,9 @@ function explainWire() {
     explainState.receiver = Number(select.value);
     const rec = explainState.receivers.find(r => r[0] === explainState.receiver);
     const camp = rec ? (rec[6] || 'c1') : 'c1';
-    if (camp !== explainState.campagne) {
-      explainState.campagne = camp;
-      const data = await explainLoadRays(explainState.version, camp);
-      if (data) explainState.rays = data;
-    }
+    explainState.campagne = camp;
+    const data = await explainLoadRays(explainState.version, camp, explainState.scenario);
+    if (data) explainState.rays = data;
     explainState.selectedRay = null;
     explainRenderAll();
   });
@@ -858,6 +1076,14 @@ function explainWire() {
       if (el3d) el3d.style.display = explainState.view === '3d' ? '' : 'none';
       explainRenderAll();
     });
+  });
+  const scenarioSelect = document.getElementById('montagne-explain-scenario');
+  if (scenarioSelect) scenarioSelect.addEventListener('change', async () => {
+    explainState.scenario = scenarioSelect.value;
+    explainState.selectedRay = null;
+    const data = await explainLoadRays(explainState.version, explainState.campagne, explainState.scenario);
+    if (data) explainState.rays = data;
+    explainRenderAll();
   });
   const kml = document.getElementById('montagne-explain-kml');
   if (kml) kml.addEventListener('click', explainDownloadKml);

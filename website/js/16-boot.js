@@ -103,6 +103,9 @@ window.addEventListener('resize', debounce(() => {
     drawMontagneScatter(montagneEntries());
   }
   if (montagneMap && mp && mp.classList.contains('active')) montagneMap.invalidateSize();
+  if (typeof explainDrawProfile === 'function' && document.getElementById('montagne-explain-profile')) {
+    explainDrawProfile();
+  }
 }, 250));
 
 init();

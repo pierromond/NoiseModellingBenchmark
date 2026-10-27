@@ -206,11 +206,12 @@ static def exec(Connection connection, Map input) {
                      "tableToExport": "RECEIVERS_LEVEL_D"])
         }
 
-        if (homogene) try {
+        try {
             def notableTypes = ['Reflection', 'DIFH', 'DIFH_RCRIT', 'VEdgeDiffraction', 'Diffraction'] as Set
             def raysFeatures = []
             def pathSlurper = new JsonSlurper()
-            sql.eachRow("SELECT IDRECEIVER, IDSOURCE, LEQ, METEO, PERIOD, PATH FROM RAYS") { row ->
+            String expectedMeteo = homogene ? 'homogeneous' : 'favorable'
+            sql.eachRow("SELECT IDRECEIVER, IDSOURCE, LEQ, METEO, PERIOD, PATH FROM RAYS WHERE METEO = '" + expectedMeteo + "'") { row ->
                 def path = pathSlurper.parseText(row.PATH as String)
                 def cutPoints = path.cutProfile?.cutPoints ?: []
                 def coords = cutPoints.collect { c -> [finite(c.coordinate.x), finite(c.coordinate.y), finite(c.coordinate.z)] }
@@ -246,7 +247,9 @@ static def exec(Connection connection, Map input) {
                                   crs : [type: 'name', properties: [name: 'urn:ogc:def:crs:EPSG::2154']],
                                   features: raysFeatures]
             new File("$outputFolder/rays_${campagne}_${scenario}.geojson").text = JsonOutput.toJson(raysCollection)
-            new File("$outputFolder/rays_${campagne}.geojson").text = JsonOutput.toJson(raysCollection)
+            if (homogene) {
+                new File("$outputFolder/rays_${campagne}.geojson").text = JsonOutput.toJson(raysCollection)
+            }
         } catch (Exception e) {
             println("Ray export skipped: " + e.message)
         }

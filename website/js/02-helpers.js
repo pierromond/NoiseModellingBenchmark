@@ -13,7 +13,16 @@ function debounce(fn, ms) {
 function readState() {
   const fromHash = new URLSearchParams(location.hash.replace(/^#/, ''));
   if ([...fromHash.keys()].length) return fromHash;
-  try { return new URLSearchParams(localStorage.getItem(STATE_KEY) || ''); } catch (e) { return new URLSearchParams(); }
+  // A bare URL must stay on the default dataset. Only restore the view-level
+  // preferences (version, layers, comparisons) from the last visit, never the
+  // dataset itself or the PR panel, otherwise the home page is redirected to
+  // the last PR route on load.
+  try {
+    const saved = new URLSearchParams(localStorage.getItem(STATE_KEY) || '');
+    saved.delete('dataset');
+    PR_STATE_KEYS.forEach(k => saved.delete(k));
+    return saved;
+  } catch (e) { return new URLSearchParams(); }
 }
 
 const CLISSON_STATE_KEYS = ['version', 'layers', 'a', 'b'];

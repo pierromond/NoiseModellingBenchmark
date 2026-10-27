@@ -38,6 +38,8 @@
               "aRef": {"type": ["number", "null"]},
               "aGlobal": {"type": ["number", "null"]},
               "ground": {},
+              "groundCoefficients": {"type": "array", "items": {"type": ["number", "null"]}},
+              "cutProfile": {"type": "array", "items": {"type": "array", "items": {"type": ["number", "null"]}}},
               "nReflections": {"type": "integer"},
               "nDiffractions": {"type": "integer"},
               "nodes": {"type": "array"}

@@ -687,6 +687,39 @@
       height: 240px;
     }
 
+    .explain-profile-legend {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: .7rem;
+      padding: .35rem 0 .2rem;
+      font-family: var(--font-mono);
+      font-size: .58rem;
+      color: var(--text-muted);
+    }
+
+    .profile-key {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      margin-right: .25rem;
+      border-radius: 1px;
+      vertical-align: -1px;
+    }
+
+    .profile-key-ground {
+      width: 22px;
+      background: linear-gradient(90deg, #2166ac, #4dac26);
+    }
+
+    .profile-key-dashed {
+      width: 18px;
+      height: 0;
+      border-top: 1px dashed rgba(225,225,235,.75);
+      border-radius: 0;
+      vertical-align: 3px;
+    }
+
     .explain-profile-hint {
       position: absolute;
       inset: 2.2rem .6rem .6rem;
@@ -740,6 +773,12 @@
       font-size: .68rem;
       color: var(--text-muted);
       line-height: 1.8;
+    }
+
+    .explain-row.selected {
+      background: rgba(204,255,0,.15);
+      outline: 1px solid rgba(204,255,0,.55);
+      outline-offset: -1px;
     }
 
     .legend-swatch {

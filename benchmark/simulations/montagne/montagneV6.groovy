@@ -215,7 +215,11 @@ static def exec(Connection connection, Map input) {
                 def path = pathSlurper.parseText(row.PATH as String)
                 def cutPoints = path.cutProfile?.cutPoints ?: []
                 def coords = cutPoints.collect { c -> [finite(c.coordinate.x), finite(c.coordinate.y), finite(c.coordinate.z)] }
-                if (!coords.isEmpty()) {
+                def rayCoords = (path.lineString?.coordinates ?: []).collect { c -> [finite(c[0]), finite(c[1]), finite(c[2])] }
+                if (rayCoords.isEmpty()) {
+                    rayCoords = coords
+                }
+                if (!coords.isEmpty() && !rayCoords.isEmpty()) {
                     def nodes = cutPoints.findAll { c -> notableTypes.contains(c.type) }
                             .collect { c -> [c.type, finite(c.coordinate.x), finite(c.coordinate.y), finite(c.coordinate.z)] }
                     def nRefl = cutPoints.count { it.type == 'Reflection' }
@@ -235,11 +239,13 @@ static def exec(Connection connection, Map input) {
                                     aRef        : finite(path.aRef ? path.aRef[0] : null),
                                     aGlobal     : finite(path.aGlobal ? path.aGlobal[0] : null),
                                     ground      : finite(path.groundAttenuation),
+                                    groundCoefficients: cutPoints.collect { c -> finite(c.groundCoefficient) },
+                                    cutProfile  : coords,
                                     nReflections: nRefl,
                                     nDiffractions: nDiff,
                                     nodes       : nodes
                             ],
-                            geometry: [type: 'LineString', coordinates: coords]
+                            geometry: [type: 'LineString', coordinates: rayCoords]
                     ]
                 }
             }

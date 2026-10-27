@@ -32,6 +32,8 @@ const explainState = {
   sortKey: 'loss',     // table sort column
   sortDir: 'asc',
   highlightRibbon: null, // yellow camera-facing ribbon highlighting the selected ray in 3D
+  profileZoom: { x0: 0, x1: 1 }, // visible fraction of the profile x-axis
+  profileRayIndex: null,
   map: null,
   mapGroup: null,
   three: null,
@@ -592,7 +594,7 @@ function explainDemElevation(x, y) {
   return (z00 * (1 - tx) + z10 * tx) * (1 - ty) + (z01 * (1 - tx) + z11 * tx) * ty;
 }
 
-function explainProfileSamples(coords) {
+function explainProfileSamples(coords, coefficients) {
   const samples = [];
   let distance = 0;
   for (let i = 0; i < coords.length; i++) {
@@ -601,9 +603,109 @@ function explainProfileSamples(coords) {
       const [px, py] = coords[i - 1];
       distance += Math.hypot(x - px, y - py);
     }
-    samples.push({ d: distance, z: Number.isFinite(z) ? z : null, x, y });
+    const rawCoefficient = coefficients && coefficients[i];
+    samples.push({
+      d: distance,
+      z: Number.isFinite(z) ? z : null,
+      x, y,
+      g: (rawCoefficient === null || rawCoefficient === undefined) ? null : Number(rawCoefficient),
+    });
   }
   return samples;
+}
+
+function explainDensePath(coords, step = 2) {
+  const points = [];
+  let distance = 0;
+  for (let i = 0; i < coords.length; i++) {
+    const [x, y] = coords[i];
+    if (i > 0) {
+      const [px, py] = coords[i - 1];
+      const seg = Math.hypot(x - px, y - py);
+      const n = Math.max(1, Math.ceil(seg / step));
+      for (let k = 1; k <= n; k++) {
+        const t = k / n;
+        points.push({ x: px + (x - px) * t, y: py + (y - py) * t, d: distance + seg * t });
+      }
+      distance += seg;
+    } else {
+      points.push({ x, y, d: 0 });
+    }
+  }
+  return points;
+}
+
+function explainPointInRing(x, y, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0], yi = ring[i][1];
+    const xj = ring[j][0], yj = ring[j][1];
+    if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) inside = !inside;
+  }
+  return inside;
+}
+
+function explainBuildingIntervals(pathPoints, buildings) {
+  const intervals = [];
+  if (!pathPoints.length) return intervals;
+  const xs = pathPoints.map(p => p.x);
+  const ys = pathPoints.map(p => p.y);
+  const pathBbox = [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
+  buildings.forEach(f => {
+    const geometry = f.geometry;
+    if (!geometry) return;
+    const height = Number(f.properties && f.properties.height) || 4;
+    const polygons = geometry.type === 'MultiPolygon' ? geometry.coordinates : [geometry.coordinates];
+    polygons.forEach(poly => {
+      const ring = poly && poly[0];
+      if (!ring || ring.length < 4) return;
+      let bx0 = Infinity, by0 = Infinity, bx1 = -Infinity, by1 = -Infinity;
+      ring.forEach(([x, y]) => {
+        if (x < bx0) bx0 = x; if (x > bx1) bx1 = x;
+        if (y < by0) by0 = y; if (y > by1) by1 = y;
+      });
+      if (bx1 < pathBbox[0] || bx0 > pathBbox[2] || by1 < pathBbox[1] || by0 > pathBbox[3]) return;
+      let start = null;
+      for (let i = 0; i < pathPoints.length; i++) {
+        const p = pathPoints[i];
+        const inside = (p.x >= bx0 && p.x <= bx1 && p.y >= by0 && p.y <= by1) &&
+          explainPointInRing(p.x, p.y, ring);
+        if (inside && start === null) start = p.d;
+        if (!inside && start !== null) {
+          intervals.push({ d0: start, d1: pathPoints[i - 1].d, ring, height });
+          start = null;
+        }
+      }
+      if (start !== null) intervals.push({ d0: start, d1: pathPoints[pathPoints.length - 1].d, ring, height });
+    });
+  });
+  return intervals;
+}
+
+function explainNodeKind(type) {
+  if (/reflect/i.test(type)) return { letter: 'R', color: '#d62728', label: 'reflection' };
+  if (/difh/i.test(type)) return { letter: 'DH', color: '#2ca02c', label: 'horizontal diffraction' };
+  if (/difv|vedge/i.test(type)) return { letter: 'DV', color: '#17becf', label: 'vertical diffraction' };
+  if (/diff/i.test(type)) return { letter: 'D', color: '#2ca02c', label: 'diffraction' };
+  return { letter: 'O', color: '#9467bd', label: type || 'other' };
+}
+
+function explainGroundCoefficientColor(g) {
+  if (g === null || g === undefined || !Number.isFinite(g)) return 'rgba(150,150,150,.45)';
+  const t = Math.max(0, Math.min(1, g));
+  const r = Math.round(33 + (77 - 33) * t);
+  const gr = Math.round(102 + (172 - 102) * t);
+  const b = Math.round(172 + (38 - 172) * t);
+  return `rgb(${r},${gr},${b})`;
+}
+
+function explainNiceStep(span, target = 5) {
+  if (!Number.isFinite(span) || span <= 0) return 1;
+  const raw = span / target;
+  const magnitude = Math.pow(10, Math.floor(Math.log10(raw)));
+  const normalized = raw / magnitude;
+  const step = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10;
+  return step * magnitude;
 }
 
 function explainDrawProfile() {
@@ -619,40 +721,55 @@ function explainDrawProfile() {
     return;
   }
   const props = ray.properties || {};
-  const coords = (ray.geometry?.coordinates || []).filter(c => Array.isArray(c) && Number.isFinite(c[0]) && Number.isFinite(c[1]));
-  if (coords.length < 2) {
+  const rayCoords = (ray.geometry?.coordinates || []).filter(c => Array.isArray(c) && Number.isFinite(c[0]) && Number.isFinite(c[1]));
+  const cutCoords = (Array.isArray(props.cutProfile) && props.cutProfile.length >= 2 ? props.cutProfile : rayCoords)
+    .filter(c => Array.isArray(c) && Number.isFinite(c[0]) && Number.isFinite(c[1]));
+  if (rayCoords.length < 2 || cutCoords.length < 2) {
     wrap.classList.add('empty');
     return;
   }
   wrap.classList.remove('empty');
   const leq = explainLeq(props);
   const aGlobal = explainAGlobal(props);
+  const coefficients = Array.isArray(props.groundCoefficients) ? props.groundCoefficients : [];
+  const cutPts = explainProfileSamples(cutCoords, coefficients);
+  const rayPts = explainProfileSamples(rayCoords, []);
+  const densePath = explainDensePath(cutCoords, 2);
+  const maxD = Math.max(cutPts[cutPts.length - 1].d, rayPts[rayPts.length - 1].d) || 1;
+  const buildings = explainState.layers?.buildings || [];
+  const buildingIntervals = explainBuildingIntervals(densePath, buildings);
+  const nodes = Array.isArray(props.nodes) ? props.nodes : [];
   if (meta) {
+    const nodeCounts = nodes.reduce((acc, node) => {
+      const kind = explainNodeKind(node[0]);
+      acc[kind.letter] = (acc[kind.letter] || 0) + 1;
+      return acc;
+    }, {});
+    const nodeText = ['R', 'D', 'O'].filter(k => nodeCounts[k]).map(k => `${k}×${nodeCounts[k]}`).join(' ');
     meta.textContent = `ray #${index + 1} · ${explainRayType(props)} · ${props.meteo || ''}` +
-      ` · LEQ ${fmt(leq, 1)} dB · aGlobal ${fmt(aGlobal, 1)} dB · ${Math.round(explainRayLength(ray))} m`;
+      ` · LEQ ${fmt(leq, 1)} dB · aGlobal ${fmt(aGlobal, 1)} dB · ${Math.round(explainRayLength(ray))} m` +
+      (nodeText ? ` · ${nodeText}` : '');
   }
 
-  const rayPts = explainProfileSamples(coords);
-  const maxD = rayPts[rayPts.length - 1].d || 1;
   // Ground profile: resample the DEM along the same plan-view path.
   const ground = [];
-  for (let i = 1; i < coords.length; i++) {
-    const [x0, y0] = coords[i - 1];
-    const [x1, y1] = coords[i];
+  for (let i = 1; i < cutCoords.length; i++) {
+    const [x0, y0] = cutCoords[i - 1];
+    const [x1, y1] = cutCoords[i];
     const seg = Math.hypot(x1 - x0, y1 - y0);
     const steps = Math.max(1, Math.ceil(seg / 5));
     for (let k = 0; k <= steps; k++) {
       const t = k / steps;
       const x = x0 + (x1 - x0) * t;
       const y = y0 + (y1 - y0) * t;
-      const d = rayPts[i - 1].d + seg * t;
+      const d = cutPts[i - 1].d + seg * t;
       ground.push({ d, z: explainDemElevation(x, y) });
     }
   }
 
   const rect = canvas.getBoundingClientRect();
   const width = Math.max(320, Math.round(rect.width));
-  const height = 240;
+  const height = 260;
   const dpr = window.devicePixelRatio || 1;
   canvas.width = Math.round(width * dpr);
   canvas.height = Math.round(height * dpr);
@@ -662,7 +779,9 @@ function explainDrawProfile() {
 
   const allZ = [];
   rayPts.forEach(p => { if (p.z !== null) allZ.push(p.z); });
+  cutPts.forEach(p => { if (p.z !== null) allZ.push(p.z); });
   ground.forEach(p => { if (p.z !== null) allZ.push(p.z); });
+  buildingIntervals.forEach(b => { if (Number.isFinite(b.height)) allZ.push((explainDemElevation(...(b.ring[0] || [0, 0])) || 0) + b.height); });
   if (!allZ.length) {
     wrap.classList.add('empty');
     return;
@@ -672,10 +791,12 @@ function explainDrawProfile() {
   const padZ = (zMax - zMin) * 0.12;
   zMin -= padZ; zMax += padZ;
 
-  const m = { left: 52, right: 18, top: 14, bottom: 34 };
+  const m = { left: 60, right: 18, top: 14, bottom: 44 };
   const w = width - m.left - m.right;
   const h = height - m.top - m.bottom;
-  const sx = d => m.left + (d / maxD) * w;
+  const viewD0 = Math.max(0, Math.min(maxD, explainState.profileZoom.x0 * maxD));
+  const viewD1 = Math.max(viewD0 + 1, Math.min(maxD, explainState.profileZoom.x1 * maxD));
+  const sx = d => m.left + ((d - viewD0) / (viewD1 - viewD0)) * w;
   const sy = z => m.top + (1 - (z - zMin) / (zMax - zMin)) * h;
 
   // grid
@@ -685,24 +806,36 @@ function explainDrawProfile() {
   ctx.font = '10px monospace';
   ctx.textAlign = 'right';
   ctx.textBaseline = 'middle';
-  const yTicks = 5;
-  for (let i = 0; i <= yTicks; i++) {
-    const z = zMin + (zMax - zMin) * i / yTicks;
+  const yStep = explainNiceStep(zMax - zMin, 5);
+  for (let z = Math.ceil(zMin / yStep) * yStep; z <= zMax + yStep * 0.01; z += yStep) {
     const py = sy(z);
     ctx.beginPath(); ctx.moveTo(m.left, py); ctx.lineTo(m.left + w, py); ctx.stroke();
     ctx.fillText(`${z.toFixed(0)} m`, m.left - 7, py);
   }
+  ctx.save();
+  ctx.translate(11, m.top + h / 2);
+  ctx.rotate(-Math.PI / 2);
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
-  const xTicks = 5;
-  for (let i = 0; i <= xTicks; i++) {
-    const d = maxD * i / xTicks;
+  ctx.fillStyle = 'rgba(255,255,255,.65)';
+  ctx.fillText('altitude (m)', 0, 0);
+  ctx.restore();
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  const xStep = explainNiceStep(viewD1 - viewD0, 6);
+  for (let d = Math.ceil(viewD0 / xStep) * xStep; d <= viewD1 + xStep * 0.01; d += xStep) {
     const px = sx(d);
     ctx.beginPath(); ctx.moveTo(px, m.top); ctx.lineTo(px, m.top + h); ctx.stroke();
     ctx.fillText(`${d.toFixed(0)} m`, px, m.top + h + 7);
   }
   ctx.fillStyle = 'rgba(255,255,255,.65)';
-  ctx.fillText('distance from source (x = 0 at source)', m.left + w / 2, m.top + h + 20);
+  ctx.fillText('distance from source (m) — x = 0 at source · scroll to zoom x · double-click to reset', m.left + w / 2, m.top + h + 24);
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(m.left, m.top, w, h);
+  ctx.clip();
 
   // ground
   const groundValid = ground.filter(p => p.z !== null);
@@ -727,6 +860,51 @@ function explainDrawProfile() {
     ctx.stroke();
   }
 
+  // buildings along the cut
+  buildingIntervals.forEach(b => {
+    const mx = b.ring.reduce((sum, p) => sum + p[0], 0) / b.ring.length;
+    const my = b.ring.reduce((sum, p) => sum + p[1], 0) / b.ring.length;
+    const groundZ = explainDemElevation(mx, my);
+    if (groundZ === null) return;
+    const roofZ = groundZ + b.height;
+    const x0 = sx(b.d0), x1 = sx(b.d1);
+    const y0 = sy(roofZ), y1 = sy(groundZ);
+    ctx.fillStyle = 'rgba(145,155,170,.55)';
+    ctx.fillRect(x0, y0, Math.max(1, x1 - x0), Math.max(1, y1 - y0));
+    ctx.strokeStyle = 'rgba(205,210,220,.55)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x0, y0, Math.max(1, x1 - x0), Math.max(1, y1 - y0));
+  });
+
+  // ground coefficient band, drawn just below the terrain line
+  for (let i = 1; i < cutPts.length; i++) {
+    const a = cutPts[i - 1], b = cutPts[i];
+    const za = explainDemElevation(a.x, a.y);
+    const zb = explainDemElevation(b.x, b.y);
+    if (za === null || zb === null) continue;
+    ctx.beginPath();
+    ctx.moveTo(sx(a.d), sy(za) + 3);
+    ctx.lineTo(sx(b.d), sy(zb) + 3);
+    ctx.strokeStyle = explainGroundCoefficientColor(a.g !== null ? a.g : b.g);
+    ctx.lineWidth = 5;
+    ctx.stroke();
+  }
+
+  // CNOSSOS cut profile (terrain + walls) vs actual propagation ray
+  const cutValid = cutPts.filter(p => p.z !== null);
+  if (cutValid.length > 1) {
+    ctx.beginPath();
+    cutValid.forEach((p, i) => {
+      const px = sx(p.d), py = sy(p.z);
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    });
+    ctx.setLineDash([4, 3]);
+    ctx.strokeStyle = 'rgba(225,225,235,.65)';
+    ctx.lineWidth = 1.1;
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
   // ray
   const rayValid = rayPts.filter(p => p.z !== null);
   if (rayValid.length > 1) {
@@ -739,6 +917,38 @@ function explainDrawProfile() {
     ctx.lineWidth = 2.2;
     ctx.stroke();
   }
+
+  // interactions: reflection / diffraction / other, at their cut-point position
+  const nodeKey = (x, y) => `${Number(x).toFixed(3)},${Number(y).toFixed(3)}`;
+  const distanceByPoint = new Map(cutPts.map(p => [nodeKey(p.x, p.y), p.d]));
+  nodes.forEach(node => {
+    if (!Array.isArray(node) || node.length < 3) return;
+    const [type, x, y, z] = node;
+    const d = distanceByPoint.get(nodeKey(x, y));
+    if (d === undefined || !Number.isFinite(z) || d < viewD0 || d > viewD1) return;
+    const kind = explainNodeKind(type);
+    const px = sx(d), py = sy(z);
+    const groundZ = explainDemElevation(x, y);
+    if (groundZ !== null) {
+      ctx.beginPath();
+      ctx.setLineDash([3, 3]);
+      ctx.moveTo(px, sy(groundZ));
+      ctx.lineTo(px, py);
+      ctx.strokeStyle = kind.color;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI * 2);
+    ctx.fillStyle = kind.color; ctx.fill();
+    ctx.strokeStyle = '#111'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = kind.color;
+    ctx.font = 'bold 10px monospace';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.fillText(kind.letter, px, py - 6);
+  });
+
+  ctx.restore();
 
   // source / receiver markers
   const first = rayValid[0];
@@ -814,7 +1024,7 @@ function explainRenderTable(rays) {
 
   const body = rows.map(r => {
     const sel = explainState.selectedRay === r.i;
-    return `<tr data-ray="${r.i}" class="explain-row" style="cursor:pointer${sel ? ';background:rgba(204,255,0,.15)' : ''}">
+    return `<tr data-ray="${r.i}" class="explain-row${sel ? ' selected' : ''}" style="cursor:pointer" aria-selected="${sel}">
       <td>${r.i + 1}</td><td>${r.type}</td><td>${r.meteo}</td>
       <td>${fmt(r.LEQ)}</td><td>${fmt(r.aGlobal)}</td><td>${fmt(r.aDiv)}</td>
       <td>${fmt(r.aDif)}</td><td>${fmt(r.aRef)}</td><td>${fmt(r.aAtm)}</td><td>${r.len}</td>
@@ -846,6 +1056,10 @@ function explainRenderTable(rays) {
 
 function explainHighlightRay(idx) {
   explainState.selectedRay = (explainState.selectedRay === idx) ? null : idx;
+  if (explainState.selectedRay !== explainState.profileRayIndex) {
+    explainState.profileZoom = { x0: 0, x1: 1 };
+    explainState.profileRayIndex = explainState.selectedRay;
+  }
   explainDrawProfile();
   explainState.rayLines2D.forEach((entry, i) => {
     if (!entry) return;
@@ -890,7 +1104,11 @@ function explainHighlightRay(idx) {
   }
   const el = document.getElementById('montagne-explain-table');
   if (el) el.querySelectorAll('tr.explain-row').forEach(tr => {
-    tr.style.background = (Number(tr.dataset.ray) === explainState.selectedRay) ? 'rgba(204,255,0,.15)' : '';
+    const on = Number(tr.dataset.ray) === explainState.selectedRay;
+    tr.classList.toggle('selected', on);
+    tr.setAttribute('aria-selected', String(on));
+    tr.style.background = on ? 'rgba(204,255,0,.15)' : '';
+    if (on) tr.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   });
 }
 
@@ -1044,6 +1262,43 @@ async function explainRenderAll() {
   }
 }
 
+function explainBindProfileZoom() {
+  const canvas = document.getElementById('montagne-explain-profile-canvas');
+  if (!canvas || canvas.dataset.zoomBound === '1') return;
+  canvas.dataset.zoomBound = '1';
+  const margins = { left: 60, right: 18 };
+  canvas.addEventListener('wheel', event => {
+    if (explainState.selectedRay === null || !explainState.receiverRays[explainState.selectedRay]) return;
+    const ray = explainState.receiverRays[explainState.selectedRay];
+    const coords = (ray.geometry?.coordinates || []).filter(c => Array.isArray(c) && Number.isFinite(c[0]) && Number.isFinite(c[1]));
+    const points = explainProfileSamples(coords, []);
+    const maxD = (points.length ? points[points.length - 1].d : 1) || 1;
+    const rect = canvas.getBoundingClientRect();
+    const px = event.clientX - rect.left;
+    const plotWidth = rect.width - margins.left - margins.right;
+    if (plotWidth <= 0 || px < margins.left || px > margins.left + plotWidth) return;
+    event.preventDefault();
+    const frac = (px - margins.left) / plotWidth;
+    const zoom = explainState.profileZoom;
+    const d0 = zoom.x0 * maxD, d1 = zoom.x1 * maxD;
+    const cursor = d0 + frac * (d1 - d0);
+    let span = (d1 - d0) * (event.deltaY < 0 ? 0.8 : 1.25);
+    span = Math.max(Math.min(20, maxD), Math.min(maxD, span));
+    let nd0 = cursor - frac * span;
+    let nd1 = cursor + (1 - frac) * span;
+    if (nd0 < 0) { nd1 -= nd0; nd0 = 0; }
+    if (nd1 > maxD) { nd0 -= (nd1 - maxD); nd1 = maxD; }
+    nd0 = Math.max(0, nd0);
+    nd1 = Math.min(maxD, nd1);
+    explainState.profileZoom = { x0: nd0 / maxD, x1: nd1 / maxD };
+    explainDrawProfile();
+  }, { passive: false });
+  canvas.addEventListener('dblclick', () => {
+    explainState.profileZoom = { x0: 0, x1: 1 };
+    explainDrawProfile();
+  });
+}
+
 // ── UI wiring ──
 function explainWire() {
   const select = document.getElementById('montagne-explain-receiver');
@@ -1085,6 +1340,7 @@ function explainWire() {
     if (data) explainState.rays = data;
     explainRenderAll();
   });
+  explainBindProfileZoom();
   const kml = document.getElementById('montagne-explain-kml');
   if (kml) kml.addEventListener('click', explainDownloadKml);
 }

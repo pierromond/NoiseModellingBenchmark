@@ -13,23 +13,21 @@ function debounce(fn, ms) {
 function readState() {
   const fromHash = new URLSearchParams(location.hash.replace(/^#/, ''));
   if ([...fromHash.keys()].length) return fromHash;
-  // A bare URL must stay on the default dataset. Only restore the view-level
-  // preferences (version, layers, comparisons) from the last visit, never the
-  // dataset itself or the PR panel, otherwise the home page is redirected to
-  // the last PR route on load.
-  try {
-    const saved = new URLSearchParams(localStorage.getItem(STATE_KEY) || '');
-    saved.delete('dataset');
-    PR_STATE_KEYS.forEach(k => saved.delete(k));
-    return saved;
-  } catch (e) { return new URLSearchParams(); }
+  // A bare URL must stay bare and on the default dataset. Restoring the last
+  // visited state here would immediately rewrite the URL (and previously sent
+  // the home page to the last PR route).
+  return new URLSearchParams();
 }
 
 const CLISSON_STATE_KEYS = ['version', 'layers', 'a', 'b'];
 const MONTAGNE_STATE_KEYS = ['m_models', 'm_map', 'm_layers', 'm_rel'];
 const PR_STATE_KEYS = ['pr', 'pr_base', 'pr_dataset'];
+let stateSyncEnabled = false;
 
 function syncState(patch) {
+  // Bootstrap calls switchVersion/refresh before the first paint. Do not turn
+  // a clean entry URL into a deep link until the initial state is applied.
+  if (!stateSyncEnabled && !location.hash) return;
   const cur = new URLSearchParams(location.hash.replace(/^#/, ''));
   const ds = patch.dataset || cur.get('dataset') || 'clisson';
   // Keep the URL scoped to the active dataset only.

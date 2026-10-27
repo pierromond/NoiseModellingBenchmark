@@ -93,6 +93,7 @@ async function init() {
   if ((afterInit.get('dataset') || '') === 'pr') {
     await applyState(data, afterInit);
   }
+  stateSyncEnabled = true;
 }
 
 window.addEventListener('resize', debounce(() => {

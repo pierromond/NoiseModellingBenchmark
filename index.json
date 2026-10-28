@@ -1,5 +1,47 @@
 [
   {
+    "pr": 1140,
+    "title": "Fix RAYS geometry ordering for mixed reflection/diffraction paths",
+    "url": "https://github.com/Universite-Gustave-Eiffel/NoiseModelling/pull/1140",
+    "label": "v6.0.2-SNAPSHOT-pr1140-6008b09",
+    "version": "6.0.2-SNAPSHOT",
+    "headSha": "6008b09d4d0a79e1546db82c4facd198668dad23",
+    "baseSha": "56a2de6c7f0db5f57267bc6db531bc0e16c3830d",
+    "runId": 40677999082,
+    "runUrl": "https://github.com/Universite-Gustave-Eiffel/NoiseModelling/actions/runs/40677999082",
+    "publishedAt": "2026-10-28T12:48:16Z",
+    "datasets": [
+      "clisson",
+      "montagne"
+    ],
+    "baselines": {
+      "clisson": [
+        "v4.0.0",
+        "v4.0.1",
+        "v4.0.2",
+        "v4.0.4",
+        "v4.0.5",
+        "v5.0.0",
+        "v5.0.1",
+        "v6.0.0",
+        "v6.0.1",
+        "v6.0.2-SNAPSHOT"
+      ],
+      "montagne": [
+        "v4.0.0",
+        "v4.0.1",
+        "v4.0.2",
+        "v4.0.4",
+        "v4.0.5",
+        "v5.0.0",
+        "v5.0.1",
+        "v6.0.0",
+        "v6.0.1",
+        "v6.0.2-SNAPSHOT"
+      ]
+    }
+  },
+  {
     "pr": 1092,
     "title": "Fix mixed geometry results when clipping line sources",
     "url": "https://github.com/Universite-Gustave-Eiffel/NoiseModelling/pull/1092",

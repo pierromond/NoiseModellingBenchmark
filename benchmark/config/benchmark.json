@@ -131,6 +131,15 @@
             "confTemperature": 18.8,
             "confHumidity": 79
           }
+        },
+        "c3": {
+          "label": "Campagne 3 (04/11/2026)",
+          "date": "04_11_2026",
+          "referenceReceiver": 22,
+          "exec": {
+            "confTemperature": 10,
+            "confHumidity": 65
+          }
         }
       },
       "scenarios": {

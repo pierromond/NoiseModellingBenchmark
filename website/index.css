@@ -681,6 +681,31 @@
       color: var(--text-muted);
     }
 
+    .explain-profile-modes {
+      display: inline-flex;
+      gap: .25rem;
+      margin-left: auto;
+    }
+
+    .explain-profile-mode {
+      font-family: var(--font-mono);
+      font-size: .58rem;
+      letter-spacing: .04em;
+      text-transform: none;
+      padding: .2rem .45rem;
+      color: var(--text-muted);
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      cursor: pointer;
+    }
+
+    .explain-profile-mode.active {
+      color: var(--bg);
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
     .explain-profile canvas {
       display: block;
       width: 100%;
@@ -715,9 +740,26 @@
     .profile-key-dashed {
       width: 18px;
       height: 0;
-      border-top: 1px dashed rgba(225,225,235,.75);
+      border-top: 1px dashed currentColor;
       border-radius: 0;
       vertical-align: 3px;
+      color: var(--text-muted);
+    }
+
+    .explain-profile-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: .3rem;
+      cursor: pointer;
+    }
+
+    .explain-profile-note {
+      padding: 0 0 .35rem;
+      font-family: var(--font-mono);
+      font-size: .56rem;
+      line-height: 1.5;
+      color: var(--text-muted);
+      opacity: .85;
     }
 
     .explain-profile-hint {

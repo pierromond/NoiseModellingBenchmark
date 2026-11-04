@@ -22,6 +22,7 @@ function applyTheme(theme) {
   try { localStorage.setItem('nm-theme', theme); } catch (e) {}
   const btn = document.getElementById('theme-toggle');
   if (btn) btn.textContent = theme === 'light' ? 'Dark' : 'Light';
+  if (typeof explainDrawProfile === 'function') explainDrawProfile();
 }
 
 function toggleTheme() {

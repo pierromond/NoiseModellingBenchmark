@@ -2,17 +2,19 @@
 # Single orchestration entry point for the benchmark drivers.
 #
 # Usage:
-#   bash scripts/bench.sh --dataset <clisson|montagne> [--version <v> | --aggregate-only]
+#   bash scripts/bench.sh --dataset <clisson|montagne> [--version <v> | --aggregate-only] [--campaign <id>]
 #
 # The historical entry points (benchmark_run_clisson.sh / benchmark_run_montagne.sh)
 # are thin wrappers around this script; their CLI and behaviour are unchanged.
 set -eo pipefail
 
 DATASET=""
+CAMPAIGN=""
 ARGS=()
 while [ $# -gt 0 ]; do
     case "$1" in
         --dataset) DATASET="$2"; shift 2 ;;
+        --campaign) CAMPAIGN="$2"; shift 2 ;;
         *) ARGS+=("$1"); shift ;;
     esac
 done
@@ -49,6 +51,17 @@ case "$DATASET" in
         ;;
 esac
 
+if [ -n "$CAMPAIGN" ]; then
+    case "$CAMPAIGN" in
+        c1|c2|c3) ;;
+        *) echo "Campagne inconnue : $CAMPAIGN (attendu : c1, c2 ou c3)" >&2; exit 2 ;;
+    esac
+    if [ "$DATASET" != "montagne" ]; then
+        echo "--campaign est disponible uniquement pour le dataset montagne" >&2
+        exit 2
+    fi
+fi
+
 # Shared helpers (versions, download, binary discovery).
 source "$SCRIPT_DIR/lib/common.sh"
 
@@ -74,7 +87,11 @@ run_simulation_montagne() {
         wps_bin=$(find_wps_binary "$nm_dir") || return 1
     fi
 
-    for campagne in c1 c2; do
+    local campaigns=(c1 c2 c3)
+    if [ -n "$CAMPAIGN" ]; then
+        campaigns=("$CAMPAIGN")
+    fi
+    for campagne in "${campaigns[@]}"; do
         for scenario in homogene favorable; do
             local workspace="$out_dir/workspace_${campagne}_${scenario}"
             mkdir -p "$workspace"

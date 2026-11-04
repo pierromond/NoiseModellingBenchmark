@@ -290,6 +290,11 @@
       <div id="montagne-explain-profile" class="explain-profile empty">
         <div class="explain-profile-head">
           <span class="explain-profile-title">Vertical profile</span>
+          <span class="explain-profile-modes" role="group" aria-label="Profile geometry">
+            <button type="button" class="explain-profile-mode" data-mode="both" aria-pressed="true">Both</button>
+            <button type="button" class="explain-profile-mode" data-mode="ray" aria-pressed="false">Ray</button>
+            <button type="button" class="explain-profile-mode" data-mode="cut" aria-pressed="false">Cut profile</button>
+          </span>
           <span id="montagne-explain-profile-meta" class="explain-profile-meta"></span>
         </div>
         <canvas id="montagne-explain-profile-canvas"></canvas>
@@ -298,10 +303,19 @@
           <span><i class="profile-key profile-key-ground"></i>ground coefficient: 0 (hard) → 1 (soft)</span>
           <span><i class="profile-key" style="background:#d62728"></i>R reflection</span>
           <span><i class="profile-key" style="background:#2ca02c"></i>DH horizontal diffraction</span>
+          <span><i class="profile-key" style="background:#ff8c00"></i>DHc critical diffraction (no ray bend)</span>
           <span><i class="profile-key" style="background:#17becf"></i>DV vertical diffraction</span>
           <span><i class="profile-key" style="background:#9467bd"></i>O other</span>
-          <span><i class="profile-key profile-key-dashed"></i>cut profile</span>
+          <span><i class="profile-key profile-key-dashed"></i>cut profile (DEM + walls)</span>
           <span><i class="profile-key" style="background:#ccff00"></i>ray</span>
+          <label class="explain-profile-toggle">
+            <input type="checkbox" id="montagne-explain-cutpoints"> show cut-profile vertices
+          </label>
+        </div>
+        <div class="explain-profile-note">
+          The dashed cut profile is sampled from the DEM; its many vertices are terrain points.
+          Dark-gray squares are building walls, gray blocks are buildings, and coloured markers are acoustic interactions.
+          The default view overlays the CNOSSOS cut profile and the propagation ray. With the fixed RAYS build they share the same path distance and reflection/diffraction points. Use the buttons to show either geometry alone.
         </div>
         <div id="montagne-explain-profile-hint" class="explain-profile-hint">
           Click a propagation ray (on the map or in the table) to display its vertical profile, with x = 0 at the source.

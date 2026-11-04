@@ -5,7 +5,7 @@ let montagneChart = null;
 let montagneData = [];
 let pendingMontagne = null;
 // Display mode shared by the scatter plot and the map: absolute levels, or
-// levels relative to each campaign reference receiver (#10 for c1, #11 for c2).
+// levels relative to each campaign's own reference receiver.
 let montagneRelative = false;
 
 function montagneRefLevel(entry, camp) {
@@ -109,7 +109,7 @@ function drawMontagneScatter(entries) {
         borderColor: color,
         pointRadius: 4,
         pointHoverRadius: 7,
-        pointStyle: camp === 'c2' ? 'rect' : 'circle',
+        pointStyle: camp === 'c2' ? 'rect' : (camp === 'c3' ? 'triangle' : 'circle'),
         order: 2,
         errorBars: true,
       });

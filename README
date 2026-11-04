@@ -64,6 +64,7 @@ bash benchmark/drivers/benchmark_run_clisson.sh --version v5.0.1   # one Clisson
 bash benchmark/drivers/benchmark_run_clisson.sh                    # every version of benchmark/versions.json (skips the head)
 bash benchmark/drivers/benchmark_run_clisson.sh --aggregate-only   # only rebuild the Clisson site data from benchmark/output/
 bash benchmark/drivers/benchmark_run_montagne.sh --version v5.0.1  # one La Montagne version
+bash benchmark/drivers/benchmark_run_montagne.sh --version v6.0.2-SNAPSHOT --campaign c3  # one campaign
 bash benchmark/drivers/benchmark_run_montagne.sh --aggregate-only  # only rebuild the La Montagne site data from benchmark/output/montagne/
 ```
 

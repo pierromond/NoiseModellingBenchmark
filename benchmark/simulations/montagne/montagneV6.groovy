@@ -222,6 +222,29 @@ static def exec(Connection connection, Map input) {
                 if (!coords.isEmpty() && !rayCoords.isEmpty()) {
                     def nodes = cutPoints.findAll { c -> notableTypes.contains(c.type) }
                             .collect { c -> [c.type, finite(c.coordinate.x), finite(c.coordinate.y), finite(c.coordinate.z)] }
+                    // Use the actual propagation-path vertices for interaction markers,
+                    // otherwise the marker can be far from the displayed ray (the cut
+                    // profile and the ray diverge for reflected/diffracted paths).
+                    def rayNodes = []
+                    def pointList = path.propagationPath?.pointList ?: []
+                    if (pointList.size() == rayCoords.size()) {
+                        // pointList is not always ordered by distance for mixed
+                        // reflection/diffraction paths. Sort the vertices by the
+                        // path distance before exporting both the ray and markers.
+                        def rayPath = []
+                        pointList.eachWithIndex { pt, idx ->
+                            def d = finite(pt.coordinate?.x)
+                            rayPath << [d: d == null ? Double.MAX_VALUE : d, ord: idx,
+                                        type: pt.type as String, coord: rayCoords[idx]]
+                        }
+                        rayPath.sort { a, b -> a.d == b.d ? a.ord <=> b.ord : a.d <=> b.d }
+                        rayCoords = rayPath.collect { it.coord }
+                        rayNodes = rayPath.findAll { it.type != 'SRCE' && it.type != 'RECV' }
+                                .collect { it -> [it.type, it.coord[0], it.coord[1], it.coord[2], it.d] }
+                    }
+                    if (rayNodes.isEmpty()) {
+                        rayNodes = nodes
+                    }
                     def nRefl = cutPoints.count { it.type == 'Reflection' }
                     def nDiff = cutPoints.count { notableTypes.contains(it.type) && it.type != 'Reflection' }
                     raysFeatures << [
@@ -241,9 +264,12 @@ static def exec(Connection connection, Map input) {
                                     ground      : finite(path.groundAttenuation),
                                     groundCoefficients: cutPoints.collect { c -> finite(c.groundCoefficient) },
                                     cutProfile  : coords,
+                                    cutProfileTypes: cutPoints.collect { c -> c.type },
+                                    cutProfileZGround: cutPoints.collect { c -> finite(c.zGround) },
                                     nReflections: nRefl,
                                     nDiffractions: nDiff,
-                                    nodes       : nodes
+                                    nodes       : nodes,
+                                    rayNodes    : rayNodes
                             ],
                             geometry: [type: 'LineString', coordinates: rayCoords]
                     ]

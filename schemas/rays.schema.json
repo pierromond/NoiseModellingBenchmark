@@ -40,9 +40,12 @@
               "ground": {},
               "groundCoefficients": {"type": "array", "items": {"type": ["number", "null"]}},
               "cutProfile": {"type": "array", "items": {"type": "array", "items": {"type": ["number", "null"]}}},
+              "cutProfileTypes": {"type": "array", "items": {"type": ["string", "null"]}},
+              "cutProfileZGround": {"type": "array", "items": {"type": ["number", "null"]}},
               "nReflections": {"type": "integer"},
               "nDiffractions": {"type": "integer"},
-              "nodes": {"type": "array"}
+              "nodes": {"type": "array"},
+              "rayNodes": {"type": "array"}
             },
             "additionalProperties": true
           }

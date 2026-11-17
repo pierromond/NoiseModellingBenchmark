@@ -1,5 +1,47 @@
 [
   {
+    "pr": 1168,
+    "title": "Curved profile of reflected paths: use the abscissa along the unfolded path",
+    "url": "https://github.com/Universite-Gustave-Eiffel/NoiseModelling/pull/1168",
+    "label": "v6.0.2-SNAPSHOT-pr1168-5c0f611",
+    "version": "6.0.2-SNAPSHOT",
+    "headSha": "5c0f6114248e2b542af86726ac116ad9dd4bb43f",
+    "baseSha": "73e3c611fc5756443f741297c6a84cf398d8bf43",
+    "runId": 44096640265,
+    "runUrl": "https://github.com/Universite-Gustave-Eiffel/NoiseModelling/actions/runs/44096640265",
+    "publishedAt": "2026-11-17T17:31:25Z",
+    "datasets": [
+      "clisson",
+      "montagne"
+    ],
+    "baselines": {
+      "clisson": [
+        "v4.0.0",
+        "v4.0.1",
+        "v4.0.2",
+        "v4.0.4",
+        "v4.0.5",
+        "v5.0.0",
+        "v5.0.1",
+        "v6.0.0",
+        "v6.0.1",
+        "v6.0.2-SNAPSHOT"
+      ],
+      "montagne": [
+        "v4.0.0",
+        "v4.0.1",
+        "v4.0.2",
+        "v4.0.4",
+        "v4.0.5",
+        "v5.0.0",
+        "v5.0.1",
+        "v6.0.0",
+        "v6.0.1",
+        "v6.0.2-SNAPSHOT"
+      ]
+    }
+  },
+  {
     "pr": 1140,
     "title": "Fix RAYS geometry ordering for mixed reflection/diffraction paths",
     "url": "https://github.com/Universite-Gustave-Eiffel/NoiseModelling/pull/1140",
